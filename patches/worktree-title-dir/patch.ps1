@@ -2,7 +2,7 @@
 # renameSession() writes the title to the MAIN repo dir, but the transcript lives
 # under the WORKTREE dir - creating a title-only phantom that shadows the real
 # transcript. Fix: resolve <sid>.jsonl to the dir that actually holds it (largest
-# file). Uses the shared __ccWtResolve helper. Pairs with phantom-cleanup.
+# file). Uses the shared __ccWtResolve helper.
 function Invoke-Patch {
     param($Ctx)
     $js = Read-Text $Ctx.Js

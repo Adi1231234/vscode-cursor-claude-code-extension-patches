@@ -34,7 +34,6 @@ $order = @(
     'worktree-title-dir'
     'worktree-fork-diff'
     'reload-restore'
-    'phantom-cleanup'
 )
 
 foreach ($name in $order) {

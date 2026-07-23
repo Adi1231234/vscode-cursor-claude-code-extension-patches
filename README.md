@@ -52,7 +52,6 @@ Each links to its folder's README for the full root cause + proof.
 - 🧵 [**ELECTRON_RUN_AS_NODE leak**](patches/electron-run-as-node) — the flag leaks into every subprocess the CLI spawns; stripped at each site.
 - 📜 [**Worktree sessions in history**](patches/worktree-history) — `includeWorktrees` was hardcoded off.
 - 🏷️ [**Worktree title dir**](patches/worktree-title-dir) — the title was written to the main repo dir, creating a phantom that shadows the real transcript → session opens **empty**.
-- 🧹 [**Phantom cleanup**](patches/phantom-cleanup) — removes those phantom files (only when a real transcript twin exists).
 - 🍴 [**Worktree fork / diff**](patches/worktree-fork-diff) — "Session not found" because the loader only reads the main dir.
 - 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the sessionID was dropped on deserialize; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s + retry `activate` instead of new-chatting. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`.
 
