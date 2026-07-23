@@ -1,7 +1,9 @@
 # Prompt Queue (Codex-style) - two parts:
-#   queue.css -> appended to the webview stylesheet
-#   queue.js  -> injected into extension.js after the INPUTRTL (or ZOOM) script
-# The queue script uses the webview nonce and the image-preview class hash.
+#   queue.css       -> appended to the webview stylesheet
+#   queue/*.js       -> concatenated in name order into one script, then injected
+#                       into extension.js after the INPUTRTL (or ZOOM) script.
+# The queue script is split into ordered fragments (each < 150 lines); they are a
+# single logical script reassembled here. Uses the nonce + image-preview hash.
 function Invoke-Patch {
     param($Ctx)
 
@@ -18,7 +20,8 @@ function Invoke-Patch {
     $js = Read-Text $Ctx.Js
     if ($js -match '/\* QUEUE \*/') { Write-Skip 'queue JS already patched'; return }
 
-    $script = Read-Text (Join-Path $PSScriptRoot 'queue.js')
+    $parts = Get-ChildItem (Join-Path $PSScriptRoot 'queue') -Filter *.js | Sort-Object Name
+    $script = ($parts | ForEach-Object { Read-Text $_.FullName }) -join ''
     $script = $script -replace '__NONCE__', $Ctx.Nonce
     $script = $script -replace '__PVHASH__', $Ctx.PvHash
 
