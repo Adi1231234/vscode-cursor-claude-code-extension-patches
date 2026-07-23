@@ -1,8 +1,5 @@
-# RTL text - appends rtl.css to the webview stylesheet.
+# RTL text - right-to-left rendering for chat + dialogs (code blocks stay LTR).
 function Invoke-Patch {
     param($Ctx)
-    $css = Read-Text $Ctx.Css
-    if ($css -match '/\* RTL patch \*/') { Write-Skip 'RTL CSS already present'; return }
-    Add-Text $Ctx.Css ("`r`n`r`n" + (Read-Text (Join-Path $PSScriptRoot 'rtl.css')))
-    Write-Ok 'RTL CSS appended'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'rtl.css') '/* RTL patch */' 'RTL CSS'
 }
