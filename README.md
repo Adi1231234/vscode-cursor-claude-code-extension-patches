@@ -1,97 +1,124 @@
-# Cursor Claude Code Patches
+<div align="center">
 
-A single PowerShell script that patches the **Claude Code extension for Cursor** (`anthropic.claude-code-*`) to fix a set of real bugs and add quality-of-life features. Every patch was derived from **runtime evidence** (instrumented logs, stack traces, reproduction), not guesswork - the root cause of each fix is documented below.
+# 🩹 Claude Code — VS Code / Cursor Extension Patches
 
-> These patches edit the extension's bundled, minified `extension.js` / `webview/index.js` in place. Re-run the script **after each extension update** (Cursor replaces the files on update). Every patch is guarded and **fail-safe**: if an anchor is not found on a future version, that patch simply skips instead of corrupting anything, and the regexes capture minified variable names so they survive minor version bumps.
+**One PowerShell script that fixes real bugs in the Claude Code extension — every fix proven from runtime logs, not guesswork.**
 
-## Usage
+![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
+![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?logo=powershell&logoColor=white)
+![Editor](https://img.shields.io/badge/Cursor%20%2F%20VS%20Code-000000?logo=visualstudiocode&logoColor=white)
+![Fixes](https://img.shields.io/badge/bug%20fixes-6%20proven%20from%20logs-2ea44f)
+![Fail-safe](https://img.shields.io/badge/patching-fail--safe%20%26%20idempotent-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+<sub>Patches the bundled, minified <code>extension.js</code> / <code>webview/index.js</code> in place · re-run after each extension update · nothing here is a workaround — each patch is a root-cause fix.</sub>
+
+</div>
+
+---
+
+Most of these are genuine defects in how the extension handles **git worktrees** and **webview restoration** — the kind that make your Claude tabs come back **blank** or as a **new chat** after a window reload, or make a worktree session open **empty**. Each was tracked down by instrumenting the extension on both sides of the webview boundary, reproducing the failure, and reading the evidence. The root cause of every fix is written up below.
+
+## ⚡ Quick start
 
 ```powershell
-# run in PowerShell (Windows)
+# Windows PowerShell
 ./patch-claude-code.ps1
-# then: Cursor -> Ctrl+Shift+P -> "Developer: Reload Window"
 ```
 
-The script auto-detects the newest installed `anthropic.claude-code-*` extension under `%USERPROFILE%\.cursor\extensions`. It reads/writes UTF-8 (no BOM) and is idempotent - already-applied patches are skipped.
+Then reload the window: **`Ctrl+Shift+P` → “Developer: Reload Window”**.
 
-## What it patches
+The script auto-detects the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, writes UTF-8 (no BOM), and is **idempotent** — already-applied patches are skipped, so it's safe to run every time the extension updates.
 
-Features (personal preference):
-- **RTL text** - right-to-left rendering for chat + AskUserQuestion dialogs (Hebrew/Arabic).
-- **Input RTL** - `dir=auto` on the composer so mixed-direction input renders correctly.
-- **Zoom** - Ctrl+Scroll / pinch to zoom the webview.
-- **Prompt Queue** - Codex-style queue: hold messages while Claude is busy, edit/reorder/skip, send one per turn.
-- **Bypass permission mode** - default the webview to `bypassPermissions`.
+## ✨ Features
 
-Bug fixes (proven from logs - see below):
-- **ELECTRON_RUN_AS_NODE leak** - stop `ELECTRON_RUN_AS_NODE=1` leaking into every subprocess the CLI spawns.
-- **Worktree sessions in history** - flip `includeWorktrees` on so history lists sessions from all worktrees.
-- **Worktree title dir** - session titles were written to the wrong project dir, hiding the real transcript.
-- **Phantom title cleanup** - delete the empty title-only session files that bug already created.
-- **Worktree fork/diff** - `fork`/inline-diff failed with "Session not found" for worktree sessions.
-- **Reload restore** - Claude tabs came back blank / as a new chat after "Reload Window".
+- 🌐 **RTL text** — right-to-left rendering for chat + AskUserQuestion dialogs (Hebrew / Arabic), with code blocks kept LTR.
+- ⌨️ **Input RTL** — `dir=auto` on the composer so mixed-direction input renders correctly.
+- 🔍 **Zoom** — `Ctrl`+Scroll / pinch to zoom the webview.
+- 📥 **Prompt Queue** — Codex-style queue: hold messages while Claude is busy, edit / reorder / skip, sent one per turn.
+- 🔓 **Bypass permission mode** — default the webview to `bypassPermissions`.
 
-The feature patches (RTL, Zoom, Queue, etc.) are personal preference. The **bug fixes** below are the interesting part - each is a genuine defect in the extension's handling of **git worktrees** and **webview restoration**, proven from logs.
+## 🐞 Bug fixes — with proven root causes
 
----
+> The through-line: a worktree session's transcript lives under the **worktree's** `~/.claude/projects/<encoded-cwd>/` folder, but much of the extension's bookkeeping only looks at the **main repo's** folder. That mismatch is the source of most of these.
 
-## Bug fixes - root causes (the interesting part)
+<details>
+<summary><b>🧵 <code>ELECTRON_RUN_AS_NODE</code> leaks into every subprocess</b></summary>
 
-Context: the extension stores each session's transcript under `~/.claude/projects/<encoded-cwd>/<sessionId>.jsonl`. When you work in a **git worktree**, the CLI writes the transcript under the *worktree's* project dir, but much of the extension's session bookkeeping only looks at the *main repo's* project dir. That mismatch is the source of most of these bugs.
+<br>
 
-### 1. Worktree session titles written to the wrong dir (+ phantom files)
+Cursor sets `ELECTRON_RUN_AS_NODE=1` on its extension host; the extension re-spreads `process.env` unfiltered into every child env it builds, so the flag leaks into every subprocess the CLI spawns (Bash tool, PowerShell tool, terminal). **Fix:** strip it at each construction site.
+</details>
 
-**Symptom:** a worktree session shows in history with a title but opens **empty**.
+<details>
+<summary><b>📜 Worktree sessions missing from history</b></summary>
 
-**Root cause:** `renameSession()` writes the custom/ai title to `join(nu(this.projectRoot), <sid>.jsonl)` - the **main** repo's project dir - but the transcript lives under the **worktree's** dir. `appendFile` then *creates* a title-only "phantom" `<sid>.jsonl` in the main dir. The open-content resolver (`bRt`) checks the main dir **first** and returns the first file with `size>0`, so the phantom (129 bytes, title only) **shadows** the real transcript, and the session opens empty.
+<br>
 
-**Fix:** before writing the title, resolve `<sid>.jsonl` to whichever project dir actually holds it (largest existing file = the real transcript). Plus a cleanup pass that deletes the phantom files already on disk (only when a real, larger transcript for the same sid exists elsewhere - never touches a file without a content twin).
+The history-list handler hardcoded `includeWorktrees` **off**. **Fix:** flip it on so `/resume` and the history panel list sessions from every worktree of the repo.
+</details>
 
-### 2. Worktree fork / inline-diff "Session not found"
+<details>
+<summary><b>🏷️ Worktree session opens empty (title written to the wrong folder)</b></summary>
 
-**Symptom:** forking a message (or the inline diff view) in a worktree session throws `Session <sid> not found`.
+<br>
 
-**Root cause:** `forkSession()` (and the diff view) call `ensureSessionLoaded(sid)`, which reads **only** `nu(this.projectRoot)/<sid>.jsonl` = the main dir. For a worktree session the transcript is elsewhere, so nothing loads and `sessionMessages` has no entry. Fork also re-reads the original file a second time for its `file-history` (checkpoint) data via the same wrong path.
+**Symptom:** a worktree session shows in history with a title but opens **blank**.
 
-**Fix:** resolve the session file across worktree dirs before loading, in both the message load and the file-history read.
+**Root cause:** `renameSession()` writes the title to `join(nu(this.projectRoot), <sid>.jsonl)` — the **main** repo's folder — but the transcript lives under the **worktree's** folder. `appendFile` then *creates* a title-only “phantom” `<sid>.jsonl` in the main folder. The open-content resolver (`bRt`) checks the main folder **first** and returns the first file with `size > 0`, so the 129-byte phantom **shadows** the real transcript → empty.
 
-### 3. Blank / new-chat tabs after "Reload Window"
+**Fix:** before writing, resolve `<sid>.jsonl` to whichever folder actually holds it (largest file = real transcript). A companion cleanup deletes phantoms already on disk — but only when a real, larger transcript for the same id exists elsewhere; a file with no content twin is never touched.
+</details>
 
-This one took the most digging - it is **three** distinct defects that all surface as "my Claude tabs are broken after reload". All were proven with an on-disk log the patch temporarily writes from both the extension host and the webview.
+<details>
+<summary><b>🍴 Fork / inline-diff fails with “Session not found”</b></summary>
 
-#### 3a. The session id was thrown away on restore
+<br>
 
-`deserializeWebviewPanel(panel, state)` restored each tab but called `setupPanel(panel, void 0, ...)` - it read `state.isFullEditor` yet **ignored `state.sessionID`** (which VS Code hands right back in `state`). So the restored tab had no session; restoration then fell onto a fragile webview-side fallback gated by a 10-minute freshness window, which usually failed. **Proof:** `HOST setupPanel session=undefined` while `savedState={... "sessionID":"a3925312-..."}`.
+`forkSession()` and the inline diff view call `ensureSessionLoaded(sid)`, which reads **only** the main folder — so a worktree session loads nothing and throws. Fork also re-reads the original a second time for its `file-history` (checkpoint) data via the same wrong path.
 
-**Fix:** pass `state.sessionID` to `setupPanel`.
+**Fix:** resolve the session file across worktree folders in both the message load and the file-history read.
+</details>
 
-#### 3b. VS Code silently fails to load some restored webview iframes
+<details open>
+<summary><b>🔄 Blank / new-chat tabs after “Reload Window” — three defects in one symptom</b></summary>
 
-Even with the session passed correctly, VS Code/Cursor sometimes **never loads the iframe** of a restored webview panel - the panel reports `visible=true active=true`, its HTML is set, but its script **never runs** and focusing it does not help. **Proof:** the very first line of `index.js` posts an `IFRAME-SCRIPT-START` message; for a blank tab that message *never arrives*, while its sibling tab's does. This is a platform-level webview-restoration race, not the extension's fault.
+<br>
 
-**Fix (recovery):** after `setupPanel`, if the panel's webview sends **no message within a few seconds** (or on focus while still blank), force a reload by re-assigning `webview.html` (a fresh nonce each time forces the iframe to reload). Retries a few times.
+This one took the most digging. “My Claude tabs are broken after reload” turned out to be **three independent bugs**, each caught with an on-disk log the patch temporarily writes from *both* the extension host and the webview.
 
-#### 3c. `git worktree list` timeout drops sessions -> restore opens a new chat
+**3a — the session id was thrown away.**
+`deserializeWebviewPanel(panel, state)` restored the tab but called `setupPanel(panel, void 0, …)` — it read `state.isFullEditor` yet **ignored `state.sessionID`** that VS Code hands right back.
+🔎 *Proof:* `HOST setupPanel session=undefined` while `savedState={… "sessionID":"a3925312-…"}`.
+✅ *Fix:* pass `state.sessionID` through.
 
-**Symptom (rare):** a tab restores as a **brand-new chat** instead of the conversation. Switching sessions and back doesn't help; only opening a fresh tab and re-picking the session works.
+**3b — VS Code sometimes never loads a restored iframe.**
+Even with the session passed, Cursor/VS Code occasionally **never runs the webview's script** — the panel reports `visible=true active=true`, its HTML is set, but nothing executes and focusing it doesn't help.
+🔎 *Proof:* the very first line of `index.js` posts an `IFRAME-SCRIPT-START` message; for a blank tab it **never arrives**, while its sibling's does. A platform-level webview race, not the extension.
+✅ *Fix (recovery):* if a panel's webview sends no message within a few seconds (or on focus while still blank), force a reload by re-assigning `webview.html` (a fresh nonce forces the iframe to reload). Retries a few times.
 
-**Root cause:** on restore, the webview asks the host for the session list; `activateSessionFromServer(sid)` returns `false` and the stock code then calls `createSession()` (a new chat). It returns false because the session was **absent from `listSessions()`**. Why absent? The host enumerates worktree sessions by running `git worktree list --porcelain` with a **5-second timeout**. On reload (many worktrees + several webviews each scanning at once + a busy machine) that command occasionally exceeds 5s, hits the timeout, and `catch{return []}` returns **empty** -> `VRt` concludes "no worktrees" -> every worktree session vanishes from the list -> `activate` fails -> new chat.
+**3c — `git worktree list` timeout drops sessions → new chat.**
+On restore the webview asks for the session list; `activateSessionFromServer(sid)` returns `false` and the stock code then opens a **new chat**. It returns false because the session was **absent from `listSessions()`** — the host enumerates worktree sessions with `git worktree list --porcelain` on a **5-second timeout**, and on reload (10 worktrees + several webviews scanning at once + a busy machine) it occasionally exceeds 5s, hits the timeout, and `catch { return [] }` returns **empty** → “no worktrees” → every worktree session vanishes.
+🔎 *Proof:* `HOST Xpe empty dur=5270` (git ran 5.27s and timed out) at the exact moment of `activate(<sid>) → FAILED-newChat`; the duration distribution is normally ~600 ms but spikes past 5 s under load.
+✅ *Fix:* bump the timeout `5000 → 20000` so the slow-but-successful scan completes, **and** retry `activate` up to 10× (1 s apart) before ever falling back to a new chat — the session exists, so a retry finds it.
+</details>
 
-**Proof:** `HOST Xpe empty dur=5270` (the git command ran 5.27s and timed out), with the duration distribution showing it is normally ~600ms but spikes past 5s under load; and `activate(<sid>) -> FAILED-newChat` at the exact moment.
+## 🔬 How the intermittent bugs were caught
 
-**Fix:** two coupled changes. (1) bump the `git worktree list` timeout `5000 -> 20000` so the slow-but-successful scan completes; (2) on the webview side, if `activateSessionFromServer` fails during restore, **retry** up to 10x (1s apart) before ever falling back to a new chat - the session exists, so a retry finds it once the list is complete.
+Some of these reproduce only once in dozens of reloads. They were diagnosed by injecting logging at the decisive points on **both** sides of the webview boundary, then reloading until the failure fired and reading the evidence:
 
----
+- **Host** (`extension.js`, Node) — `fs.appendFileSync` to a temp file: deserialize state, `setupPanel` session + caller stack, panel visibility / dispose events, the recovery mechanism firing, `git worktree list` timing / result / errors, and the raw `listSessions` result.
+- **Webview** (`index.js`, sandboxed — no filesystem) — capture the `vscode` API once at the very top and `postMessage` diagnostics to the host, which writes them to the same file: iframe-start, the restore-decision inputs, and the branch actually taken.
 
-## How these were found
+All instrumentation is stripped from the shipped patch — only the fixes remain.
 
-The reload bugs are intermittent (some only reproduce once in dozens of reloads). They were diagnosed by temporarily injecting logging at the decisive points on **both** sides of the webview boundary:
+## 🛡️ Safe by design
 
-- **Host** (`extension.js`, runs in Node): writes to a plain file via `fs.appendFileSync` - deserialize state, `setupPanel` session + caller stack, panel visibility/dispose events, the recovery mechanism firing, `git worktree list` timing/result/errors, and the raw `listSessions` result.
-- **Webview** (`index.js`, sandboxed, no fs): captures the `vscode` API once at the top and `postMessage`s diagnostics to the host, which the host writes to the same file - iframe-start, the restore-decision inputs, and the branch actually taken.
+- **Fail-safe** — every patch is guarded; if an anchor isn't found on a future version, that patch **skips** instead of corrupting anything.
+- **Version-tolerant** — regexes capture the minified variable names, so patches survive minor version bumps.
+- **Idempotent** — re-running never double-applies.
+- **No secrets, no hardcoded user paths** — everything is derived from `%USERPROFILE%` / `os.homedir()`.
 
-Then reload until the bug fires, read the file, and the root cause is unambiguous. All instrumentation is removed from the shipped patch; only the fixes remain.
+## 📄 License
 
----
-
-*Personal tooling, shared in case it helps others hitting the same worktree / reload issues. No warranty. The patches target extension version 2.1.x; anchors are written to survive minor updates but may need a refresh on major ones.*
+MIT — personal tooling, shared in case it helps others hitting the same worktree / reload issues. No warranty. Targets extension `2.1.x`; anchors are written to survive minor updates but may need a refresh on a major one.
