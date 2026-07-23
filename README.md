@@ -21,11 +21,15 @@ Most of these are genuine defects in how the extension handles **git worktrees**
 
 ## ⚡ Quick start
 
+One line in **PowerShell** — no clone, no git required:
+
 ```powershell
-./apply.ps1     # then: Ctrl+Shift+P -> Developer: Reload Window
+irm https://raw.githubusercontent.com/Adi1231234/vscode-cursor-claude-code-extension-patches/master/install.ps1 | iex
 ```
 
-`apply.ps1` finds the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, writes UTF-8 (no BOM), and is **idempotent** — already-applied patches skip, so it's safe to run on every update.
+Then reload: `Ctrl+Shift+P` → `Developer: Reload Window`. That's it.
+
+It downloads this repo to a temp folder, runs `apply.ps1` against the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, and cleans up. **Idempotent** — already-applied patches skip, so re-run it after every extension update. *(Cloned the repo instead? Just run `./apply.ps1`.)*
 
 ## 🗂️ Layout
 
