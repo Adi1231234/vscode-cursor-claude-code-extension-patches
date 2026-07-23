@@ -1,0 +1,10 @@
+/* RTL patch */
+[class*="messagesContainer_"]{direction:rtl;text-align:right}
+[class*="userMessageContainer_"]{text-align:right!important}
+pre,code,.monaco-editor,[class*="codeBlock"]{direction:ltr!important;text-align:left!important;unicode-bidi:embed!important}
+/* AskUserQuestion dialog RTL - scoped via :has() so regular permission prompts stay LTR */
+[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]){direction:rtl}
+[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="button_"]{text-align:right}
+[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="shortcutNum_"]{padding-right:0;padding-left:4px}
+[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="otherInput_"] [class*="input_"]{unicode-bidi:plaintext}
+[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="otherInput_"] [class*="placeholder_"]{left:auto;right:8px}

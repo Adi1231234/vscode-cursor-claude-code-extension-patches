@@ -2,7 +2,7 @@
 
 # 🩹 Claude Code — VS Code / Cursor Extension Patches
 
-**One PowerShell script that fixes real bugs in the Claude Code extension — every fix proven from runtime logs, not guesswork.**
+**One command applies a folder of small, self-contained patches that fix real bugs in the Claude Code extension — every fix proven from runtime logs, not guesswork.**
 
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?logo=powershell&logoColor=white)
@@ -23,12 +23,25 @@ Most of these are genuine defects in how the extension handles **git worktrees**
 
 ```powershell
 # Windows PowerShell
-./patch-claude-code.ps1
+./apply.ps1
 ```
 
 Then reload the window: **`Ctrl+Shift+P` → “Developer: Reload Window”**.
 
-The script auto-detects the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, writes UTF-8 (no BOM), and is **idempotent** — already-applied patches are skipped, so it's safe to run every time the extension updates.
+`apply.ps1` auto-detects the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, writes UTF-8 (no BOM), and is **idempotent** — already-applied patches are skipped, so it's safe to run every time the extension updates.
+
+## 🗂️ Repository layout
+
+Each feature / bug fix is a **self-contained folder** under `patches/`, and the shared plumbing lives in `lib/` — so every patch does exactly one thing and is easy to read, reuse, or drop.
+
+- **`apply.ps1`** — orchestrator: finds the extension, then dot-sources and runs each patch in order.
+- **`lib/`** — reusable helpers: `Io.ps1` (UTF-8 no-BOM read/write), `Ui.ps1` (console output), `Extension.ps1` (locate the extension + detect the minified nonce / class names into a shared `$Ctx`).
+- **`patches/<name>/`** — one folder per patch. Each has:
+  - `patch.ps1` — defines a single `Invoke-Patch $Ctx` function (single responsibility, fail-safe).
+  - `README.md` — what it does, which file it touches, its guard marker.
+  - resource files where relevant (`rtl.css`, `queue.js`, `queue.css`, `cleanup.js`, …).
+
+Adding a patch = drop a new `patches/<name>/patch.ps1` that defines `Invoke-Patch`, and add its name to the ordered list in `apply.ps1`. Nothing else.
 
 ## ✨ Features
 
