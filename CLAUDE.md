@@ -32,7 +32,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 
 1. `mkdir patches/<kebab-name>`; add `patch.ps1` with `function Invoke-Patch { param($Ctx) ... }` and a short `README.md`.
 2. Add `<kebab-name>` to the `$order` array in `apply.ps1`. Order matters only for the webview-script chain (`zoom` -> `input-rtl` -> `prompt-queue`) and for `worktree-title-dir` before `worktree-fork-diff` (shared helper). Everything else is independent.
-3. Reuse the `lib/Patch.ps1` helpers instead of re-writing read/guard/inject/write:
+3. Put any injected JS in its own `.js` file (never a PS string - see conventions below) and pull it in with the loaders:
+   - `Get-InjectedJs <jsPath> @{ '__TOKEN__' = $value; ... }` - read a `.js` resource and substitute its `__TOKEN__` placeholders (literal `.Replace`). This is how zoom / input-rtl / reload-restore inject their scripts.
+   - `Expand-JsTokens <string> @{ ... }` - same substitution on an already-built string (e.g. `prompt-queue`, which joins its `queue/*.js` fragments first).
+4. Reuse the `lib/Patch.ps1` helpers instead of re-writing read/guard/inject/write:
    - `Add-StyleBlock $Ctx <cssPath> '<guard>' '<label>'` - append a CSS resource once.
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
@@ -43,6 +46,8 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Guard marker.** Every patch writes a unique `/* NAME */` comment and returns early via `Write-Skip` if it is already present. This is what makes re-running safe.
 - **Fail-safe.** If an anchor is missing, `Write-Miss` and return / skip that site - never write a partial or guessed edit. A missing anchor must leave the file untouched.
 - **Version tolerance.** Anchor on semantic, non-minified tokens where possible; when you must match minified code, capture the minified names with regex groups (`(\w+)`) rather than hardcoding them.
+- **No JS inside a PowerShell string - ever.** Never write JS (a `<script>`, an injected runtime, a multi-line replacement body) as a string literal in a `.ps1`. Languages do not mix in one file. Every injected script lives in its own real, formatted `.js` file and is pulled in with `Get-InjectedJs` (single resource) or `Expand-JsTokens` (a pre-joined string). The `.ps1` only *anchors, fills placeholders, and writes* - it never *contains* the JS. Parameterize the JS with `__TOKEN__` placeholders (e.g. `__NONCE__`, `__PE__`) that the loader substitutes with `.Replace` (literal, never regex). The **only** things that may stay inline in a `.ps1` are surgical token-level rewrites of a matched minified anchor - a handful of tokens that transform *that exact* anchor and can't stand alone as a file (e.g. `electron-run-as-node`'s arrow-fn env wrappers, `worktree-*`'s `${1}` regex replacements). A standalone program or any multi-statement runtime is never that; extract it.
+- **The extracted `.js` obeys the same rules as any code.** Injected JS is not exempt: SRP, DRY, reusable helpers, under 150 lines (split into named fragments like `patches/prompt-queue/queue/*.js`), and **properly formatted** - real indentation and line breaks, never a minified one-liner. This includes shared runtimes in `lib/js/`.
 - **No duplication.** Shared runtime JS goes in `lib/js/` and is injected via a `lib/Patch.ps1` helper. Shared PowerShell goes in `lib/`. If you copy a block twice, extract it.
 - **File size.** Every file under 150 lines (hard), aim under 100. Split large injected JS into descriptively named fragments (see `patches/prompt-queue/queue/*.js`, concatenated in the explicit `$order` list in that patch's `patch.ps1` - do not rely on filename sorting).
 - **UTF-8 no BOM.** Only touch files through the `lib/Io.ps1` helpers.

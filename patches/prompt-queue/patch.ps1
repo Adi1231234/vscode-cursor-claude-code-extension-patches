@@ -15,6 +15,6 @@ function Invoke-Patch {
         'render-panel', 'render-rows', 'resize-input', 'flush-init'
     )
     $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "queue/$_.js") }) -join ''
-    $script = $script -replace '__NONCE__', $Ctx.Nonce -replace '__PVHASH__', $Ctx.PvHash
+    $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce; '__PVHASH__' = $Ctx.PvHash })
     Add-ScriptAfterMarker $Ctx $script '/* QUEUE */' 'queue JS' @('/* INPUTRTL */', '/* ZOOM */')
 }

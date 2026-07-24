@@ -37,6 +37,22 @@ function Add-ScriptAfterRegex {
     Write-Ok "$Label injected"
 }
 
+# Substitute __TOKEN__ placeholders in an injected-JS string. Literal .Replace
+# (not -replace) so substitution values are never treated as regex. Keeps every
+# injected script as real, formatted JS in its own .js file - never a PS string.
+function Expand-JsTokens {
+    param([string]$Js, $Subs)
+    foreach ($k in $Subs.Keys) { $Js = $Js.Replace($k, [string]$Subs[$k]) }
+    $Js
+}
+
+# Read a .js resource and expand its __TOKEN__ placeholders. The one way patches
+# pull in JS: no JS ever lives inside a PowerShell string literal.
+function Get-InjectedJs {
+    param([string]$Path, $Subs = @{})
+    Expand-JsTokens (Read-Text $Path) $Subs
+}
+
 # The shared worktree-session resolver (used by worktree-title-dir + worktree-fork-diff).
 function Get-CcWtResolveHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccWtResolve.js')).Trim() }
 
