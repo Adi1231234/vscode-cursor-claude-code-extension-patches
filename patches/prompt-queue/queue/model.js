@@ -46,9 +46,27 @@
     render();
   }
 
+  /* Which item sends next:
+     1) an absolute schedule (timer / at-time) that is DUE jumps ahead, even
+        while paused - a commitment to a wall-clock moment.
+     2) otherwise the ordered lane runs from the front (only when not paused):
+        pending absolute schedules are transparent, an 'after' item GATES the
+        queue (nothing behind it goes until it is armed and due), and the first
+        plain item sends. missed / rearm items are inactive and skipped. */
   function firstSendableIndex() {
-    for (var k = 0; k < Q.length; k++) {
-      if (!Q[k].off) return k;
+    var k, it;
+    for (k = 0; k < Q.length; k++) {
+      it = Q[k];
+      if (it.off || it.missed || it.rearm) continue;
+      if ((it.mode === "timer" || it.mode === "time") && isDue(it)) return k;
+    }
+    if (paused) return -1;
+    for (k = 0; k < Q.length; k++) {
+      it = Q[k];
+      if (it.off || it.missed || it.rearm) continue;
+      if (it.mode === "timer" || it.mode === "time") continue;
+      if (it.mode === "after") return (it.at && isDue(it)) ? k : -1;
+      return k;
     }
     return -1;
   }
