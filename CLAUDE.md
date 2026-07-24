@@ -44,8 +44,12 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Fail-safe.** If an anchor is missing, `Write-Miss` and return / skip that site - never write a partial or guessed edit. A missing anchor must leave the file untouched.
 - **Version tolerance.** Anchor on semantic, non-minified tokens where possible; when you must match minified code, capture the minified names with regex groups (`(\w+)`) rather than hardcoding them.
 - **No duplication.** Shared runtime JS goes in `lib/js/` and is injected via a `lib/Patch.ps1` helper. Shared PowerShell goes in `lib/`. If you copy a block twice, extract it.
-- **File size.** Every file under 150 lines (hard), aim under 100. Split large injected JS into ordered fragments (see `patches/prompt-queue/queue/*.js`, concatenated in name order).
+- **File size.** Every file under 150 lines (hard), aim under 100. Split large injected JS into descriptively named fragments (see `patches/prompt-queue/queue/*.js`, concatenated in the explicit `$order` list in that patch's `patch.ps1` - do not rely on filename sorting).
 - **UTF-8 no BOM.** Only touch files through the `lib/Io.ps1` helpers.
+- **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
+  1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
+  2. **No backslash escapes that the template literal evaluates inside strings** - `\n`, `\t`, `\r`, `\b`, `\f` become a real newline/char *before the browser sees them*, turning `join("\n")` into a broken multi-line string literal - the whole injected `<script>` then fails to parse and **nothing runs** (no error you can see). `✓`-style escapes that yield a normal glyph are fine (they're used for icons). For a real newline use `String.fromCharCode(10)`. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+- **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 
 ## Testing a change (without touching your real install)
 
@@ -58,3 +62,15 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 4. Verify: `node --check` on the patched `extension.js` and `webview/index.js`,
    confirm the guard markers landed, then re-run `apply.ps1` and confirm every
    patch reports `[skip]` (idempotency).
+5. **For any webview-JS change, also check the template-literal-evaluated form**
+   (what the browser actually runs, see conventions hazard #2): extract the
+   injected `<script>` body from the patched `extension.js`, evaluate it as a
+   template literal, and `node --check` the result:
+   ```
+   node -e 'const fs=require("fs"),d=fs.readFileSync("extension.js","utf8"),
+     q=d.indexOf("/* QUEUE */"),g=d.indexOf(">",d.lastIndexOf("<script",q)),
+     c=d.indexOf("</"+"script>",q),u="NONCE";
+     fs.writeFileSync("_eval.js",eval("`"+d.slice(g+1,c)+"`"))' && node --check _eval.js
+   ```
+   A plain `node --check` passes on the two-char `\n`; only this catches the
+   real newline that breaks the served script.

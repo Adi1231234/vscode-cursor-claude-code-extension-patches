@@ -1,5 +1,5 @@
   /* ---------- React fiber / session discovery ---------- */
-  var _session = null, _sessEl = null, _ctx = null;
+  var _session = null, _sessEl = null;
 
   function fiberOf(node) {
     if (!node) return null;
@@ -14,7 +14,6 @@
 
   function sessionFromProps(p) {
     if (p && p.session && typeof p.session.send === "function") {
-      if (p.context) _ctx = p.context;
       return p.session;
     }
     return null;
@@ -69,14 +68,5 @@
     _session = null;
     _sessEl = null;
     return null;
-  }
-
-  function useCtrlEnter() {
-    try {
-      getSession();
-      return !!(_ctx && _ctx.useCtrlEnterToSend === true);
-    } catch (e) {
-      return false;
-    }
   }
 

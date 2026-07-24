@@ -17,17 +17,25 @@
     window.addEventListener("pointerup", up);
   }
 
-  /* ---------- Composer interception (enqueue while busy) ---------- */
-  function commitComposerToQueue(ev, e) {
+  /* ---------- Composer: explicit queue only ----------
+     Plain Enter and the app's send button are left completely untouched -
+     they send immediately, exactly as normal. The ONLY thing that enqueues
+     is the explicit gesture (Alt+Enter / the add button). hold=true parks
+     the queue when idle so a deliberately-built batch doesn't auto-fire;
+     the panel's play button releases it. Returns false (event untouched)
+     when there is nothing safe to queue. */
+  function commitComposerToQueue(ev, e, hold) {
     var t = (e.textContent || "").trim();
-    if (!t) return;
+    if (!t || hasUnmanagedChips()) return false;
     var files = readChips();
     ev.preventDefault();
     ev.stopImmediatePropagation();
     enqueue(t, files);
     setText(e, "");
     if (files.length) clearChips();
+    if (hold && !isBusy()) paused = true;
     render();
+    return true;
   }
 
   function onComposerKeydown(ev) {
@@ -35,25 +43,9 @@
       if (flushing) return;
       var e = inp();
       if (!e || ev.target !== e) return;
-      if (ev.key !== "Enter" || ev.shiftKey || ev.isComposing) return;
-      if (useCtrlEnter() && !(ev.ctrlKey || ev.metaKey)) return;
+      if (ev.key !== "Enter" || ev.shiftKey || ev.isComposing || !ev.altKey) return;
       if (suggestionsOpen()) return;
-      if (!isBusy()) return;
-      if (hasUnmanagedChips()) return;
-      commitComposerToQueue(ev, e);
-    } catch (err) {}
-  }
-
-  function onComposerSubmit(ev) {
-    try {
-      if (flushing) return;
-      var e = inp();
-      if (!e) return;
-      var f = e.closest("form");
-      if (!f || ev.target !== f) return;
-      if (!isBusy()) return;
-      if (hasUnmanagedChips()) return;
-      commitComposerToQueue(ev, e);
+      commitComposerToQueue(ev, e, true);  /* Alt+Enter: add to queue (idle or busy) */
     } catch (err) {}
   }
 
