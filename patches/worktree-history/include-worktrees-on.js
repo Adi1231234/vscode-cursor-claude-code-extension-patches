@@ -1,0 +1,1 @@
+dir:this.cwd,includeWorktrees:!0

@@ -1,0 +1,1 @@
+(({ELECTRON_RUN_AS_NODE:__ERD__,...__REST__})=>({...__REST__,...__EXTRA__}))(process.env)

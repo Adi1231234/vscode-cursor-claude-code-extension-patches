@@ -3,30 +3,38 @@
 # it builds for the child CLI, leaking the flag into every subprocess the CLI
 # spawns. Strip it at each construction site. Each site is optional (some may not
 # exist on a given version); the patch applies whatever it finds.
+# The authored replacement JS lives in js/*.js - `Anchor` only *locates* existing
+# bundle code (a search key, never authored runtime). 'Append' adds the fragment
+# after the anchor; 'Replace' swaps the anchor for the (placeholder-filled) fragment.
 function Invoke-Patch {
     param($Ctx)
     $js = Read-Text $Ctx.Js
     if ($js -match '/\* ELECTRONFIX \*/') { Write-Skip 'already patched'; return }
+    $dir = Join-Path $PSScriptRoot 'js'
 
     $sites = @(
-        @{ Old = 'function Id(e){let t=lfe(Tn("environmentVariables")),r={...process.env};';
-           New = 'function Id(e){let t=lfe(Tn("environmentVariables")),r={...process.env};delete r.ELECTRON_RUN_AS_NODE;';
+        @{ Anchor = 'function Id(e){let t=lfe(Tn("environmentVariables")),r={...process.env};'
+           File = 'delete-flag.js'; Mode = 'Append'; Subs = @{}
            Label = 'Id() env builder' }
-        @{ Old = 'env:c={...process.env}';
-           New = 'env:c=(({ELECTRON_RUN_AS_NODE:__erdA,...__envRestA})=>__envRestA)(process.env)';
+        @{ Anchor = 'env:c={...process.env}'
+           File = 'env-object.js'; Mode = 'Replace'; Subs = @{}
            Label = 'SDK transport initialize() default env' }
-        @{ Old = '{...process.env,...e.env}';
-           New = '(({ELECTRON_RUN_AS_NODE:__erdB,...__baseB})=>({...__baseB,...e.env}))(process.env)';
+        @{ Anchor = '{...process.env,...e.env}'
+           File = 'spread-merge.js'; Mode = 'Replace'
+           Subs = [ordered]@{ '__ERD__' = '__erdB'; '__REST__' = '__baseB'; '__EXTRA__' = 'e.env' }
            Label = 'auth spawn (...e.env)' }
-        @{ Old = '{...process.env,...r.env}';
-           New = '(({ELECTRON_RUN_AS_NODE:__erdC,...__baseC})=>({...__baseC,...r.env}))(process.env)';
+        @{ Anchor = '{...process.env,...r.env}'
+           File = 'spread-merge.js'; Mode = 'Replace'
+           Subs = [ordered]@{ '__ERD__' = '__erdC'; '__REST__' = '__baseC'; '__EXTRA__' = 'r.env' }
            Label = 'runClaudeCommandRaw (...r.env)' }
     )
 
     $any = $false
     foreach ($s in $sites) {
-        if ($js.Contains($s.Old)) { $js = $js.Replace($s.Old, $s.New); $any = $true; Write-Ok $s.Label }
-        else { Write-Miss ($s.Label + ' not found') }
+        if (-not $js.Contains($s.Anchor)) { Write-Miss ($s.Label + ' not found'); continue }
+        $frag = Get-InjectedJs (Join-Path $dir $s.File) $s.Subs
+        $new = if ($s.Mode -eq 'Append') { $s.Anchor + $frag } else { $frag }
+        $js = $js.Replace($s.Anchor, $new); $any = $true; Write-Ok $s.Label
     }
 
     if ($any) {

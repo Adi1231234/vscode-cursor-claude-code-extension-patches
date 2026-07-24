@@ -1,0 +1,1 @@
+env:c=(({ELECTRON_RUN_AS_NODE:__erdA,...__envRestA})=>__envRestA)(process.env)
