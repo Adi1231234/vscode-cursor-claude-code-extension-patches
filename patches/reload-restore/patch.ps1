@@ -17,11 +17,11 @@ function Invoke-Patch {
     } else {
         $applied = $false
 
-        # (1) session id through deserialize
+        # (1) session id through deserialize (runtime: js/session-id.js, __STATE__ -> ${3})
         $rx1 = '(deserializeWebviewPanel\((\w+),(\w+)\)\{[\s\S]{0,200}?\w+\.setupPanel\(\2,)void 0(,void 0,\w+\))'
         if ($js -match $rx1) {
-            $state = $matches[3]
-            $js = [regex]::Replace($js, $rx1, ('${1}' + $state + '?.sessionID${4}'))
+            $sid = Get-InjectedJs (Join-Path $PSScriptRoot 'js/session-id.js') @{ '__STATE__' = '${3}' }
+            $js = [regex]::Replace($js, $rx1, ('${1}' + $sid + '${4}'))
             $applied = $true; Write-Ok 'session-restore (deserialize passes sessionID)'
         } else { Write-Miss 'deserialize anchor not found' }
 
@@ -39,10 +39,11 @@ function Invoke-Patch {
             } else { Write-Miss 'setupPanel view-state anchor not found' }
         } else { Write-Miss 'setupPanel signature not found' }
 
-        # (3) git worktree list timeout 5s -> 20s
+        # (3) git worktree list timeout 5s -> 20s (runtime value: js/timeout.js)
         $rxT = '("worktree","list","--porcelain"\],\{cwd:\w+,timeout:)5000(,windowsHide)'
         if ($js -match $rxT) {
-            $js = [regex]::Replace($js, $rxT, '${1}20000${2}')
+            $timeout = Get-InjectedJs (Join-Path $PSScriptRoot 'js/timeout.js')
+            $js = [regex]::Replace($js, $rxT, ('${1}' + $timeout + '${2}'))
             $applied = $true; Write-Ok 'git-worktree-list timeout 5000->20000'
         } else { Write-Miss 'git-worktree-list timeout anchor not found' }
 

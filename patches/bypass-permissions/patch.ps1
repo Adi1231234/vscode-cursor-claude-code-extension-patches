@@ -1,5 +1,6 @@
 # Bypass permission mode - default the webview's permission mode to
-# "bypassPermissions" instead of "default".
+# "bypassPermissions" instead of "default". The replacement (with the captured
+# minified signal-fn name filled into __FN__) lives in bypass-mode.js.
 function Invoke-Patch {
     param($Ctx)
     if (-not (Test-Path $Ctx.WebJs)) { Write-Miss "webview/index.js not found"; return }
@@ -7,7 +8,8 @@ function Invoke-Patch {
     if ($wc -match 'permissionMode=\w+\("bypassPermissions"\)') { Write-Skip 'already patched'; return }
     if ($wc -match 'permissionMode=(\w+)\("default"\)') {
         $fn = $matches[1]
-        $wc = $wc.Replace("permissionMode=$fn(`"default`")", "permissionMode=$fn(`"bypassPermissions`")")
+        $new = Get-InjectedJs (Join-Path $PSScriptRoot 'bypass-mode.js') @{ '__FN__' = $fn }
+        $wc = $wc.Replace("permissionMode=$fn(`"default`")", $new)
         Write-Text $Ctx.WebJs $wc
         Write-Ok "bypass mode (signal fn: $fn)"
     } else {
