@@ -43,7 +43,7 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 🔓 Bypass permission mode.
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode.
 
 ## 🐞 Bug fixes
 

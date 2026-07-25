@@ -1,0 +1,81 @@
+/* COPYMSG */
+/* Copy-to-clipboard icon for chat messages. Two placements, both driven by
+   copy-message.js:
+     - user messages: inside the app's own "Message actions" container, wearing
+       the app's actionButton class - so everything visual is inherited and
+       nothing is duplicated here;
+     - everything else: normal flow, its own line at the end of the message.
+
+   Deliberately hash-free: the only names are our own classes plus generic
+   attribute matches, so no minified class is baked into the stylesheet. */
+
+/* ---------- normal-flow placement (assistant messages) ----------
+   Flow rather than absolute positioning: the rtl patch flips the panel to
+   direction:rtl, which would fling an inset-inline-end-pinned button to the far
+   side of the viewport (the message wrapper is full-width). */
+.__ccCopy:not(.__ccCopyAct) {
+  align-self: flex-start;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--corner-radius-small, 4px);
+  background: transparent;
+  color: var(--app-secondary-foreground, currentColor);
+  cursor: pointer;
+  opacity: .3;
+  transition: opacity .12s ease, background-color .12s ease;
+}
+
+:hover > .__ccCopy:not(.__ccCopyAct),
+.__ccCopy:not(.__ccCopyAct):hover,
+.__ccCopy:not(.__ccCopyAct):focus-visible {
+  opacity: 1;
+}
+
+.__ccCopy:not(.__ccCopyAct):hover {
+  background: var(--app-hover-background, var(--app-secondary-background));
+}
+
+/* ---------- alongside the app's message-actions button (user messages) ----------
+   The container stacks block-level children, so it has to become a row once a
+   second button joins it. :has() keeps this scoped to that one container. */
+div:has(> .__ccCopyAct) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Reveal, mirroring the app's own button exactly: while the message is hovered
+   the app adds a "subtly visible" class to that button, so :has() on the
+   container is the faithful signal - our icon appears and disappears with
+   the app's, never on its own.
+
+   Do NOT key off the container's own hover class: the CSS module has no
+   messageHovered entry, so the app renders it as the literal string
+   "undefined" and no selector can match it. That was the bug. */
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct {
+  opacity: .7;
+}
+
+/* Direct interaction wins - last, and at least as specific as the rule above. */
+.__ccCopyAct:hover,
+.__ccCopyAct:focus-visible,
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct:hover,
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct:focus-visible {
+  opacity: 1;
+}
+
+/* Copied confirmation - colour only, deliberately no opacity. Forcing the
+   button visible here would pin it on screen for the full 1.2s even after the
+   pointer left; visibility stays owned by hover, so the check shows while you
+   are still there and vanishes with the button the moment you leave. */
+.__ccCopy.__ccCopyOk {
+  color: var(--app-success-foreground, #3fb950);
+}
