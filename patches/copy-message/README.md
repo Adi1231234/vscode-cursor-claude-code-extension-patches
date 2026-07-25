@@ -1,5 +1,9 @@
 # copy-message
 
+> Layout: `patch.ps1` + `copy-message.css` + `copy/*.js` fragments, concatenated
+> in the explicit `$order` in `patch.ps1` (`config-clipboard` opens the IIFE /
+> `<script>`, `place-observe` closes it).
+
 Adds a copy-to-clipboard icon to **every** chat message - the user's and
 Claude's - so any single message can be lifted out without selecting it by hand.
 
