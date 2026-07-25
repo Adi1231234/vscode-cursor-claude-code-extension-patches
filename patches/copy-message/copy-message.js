@@ -91,11 +91,20 @@
   function place(m, b) {
     var acts = actionsOf(m);
     if (acts) {
+      /* Inside the actions container, position does not matter (both children
+         are laid out by flex, and the app's popup is absolutely positioned), so
+         only re-parent - never re-order, or we would fight React every time it
+         mounts or unmounts that popup. */
       b.classList.add("__ccCopyAct", ACTBTN);
       if (b.parentNode !== acts) acts.appendChild(b);
     } else {
+      /* In normal flow the button must stay the LAST child. React knows nothing
+         about it, so while a reply streams in it appends new paragraphs after
+         our button, stranding the icon in the middle - visually at the top of
+         the answer. Re-append whenever it is no longer last; on an already
+         attached node that is a move, so it stays idempotent. */
       b.classList.remove("__ccCopyAct", ACTBTN);
-      if (b.parentNode !== m) m.appendChild(b);
+      if (m.lastElementChild !== b) m.appendChild(b);
     }
   }
 

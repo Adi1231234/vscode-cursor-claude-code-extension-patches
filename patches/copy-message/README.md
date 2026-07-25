@@ -26,6 +26,13 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   re-asserted every pass - `appendChild` on an already-attached node just moves
   it, which makes that idempotent. Observer bursts are coalesced into one
   `requestAnimationFrame` pass.
+- **In normal flow the button is kept as the *last* child, every pass.**
+  Checking only "is it still parented to the message" is not enough: React
+  knows nothing about our node, so while a reply streams in it appends each new
+  paragraph *after* it, stranding the icon in the middle - visually at the top
+  of the answer, which is what it looked like from the outside. Inside the
+  actions container the opposite rule applies: only re-parent, never re-order,
+  or we would fight React each time it mounts or unmounts its popup there.
 - **Anchored on `[title="Message actions"]`,** a semantic string, rather than on
   the container's minified class.
 - **Copies the bubble, not the wrapper.** A user message's wrapper also holds
