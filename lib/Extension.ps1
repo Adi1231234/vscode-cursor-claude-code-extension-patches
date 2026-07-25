@@ -23,6 +23,10 @@ function Find-ClaudeExtension {
         PvHash             = 'vRjSkQ'
         MsgHash            = '07S1Yg'
         MsgActionBtnClass  = 'actionButton_v2CdxQ'
+        MdRootClass        = 'root_-a7MRw'
+        ThinkingClass      = 'thinking_aHyQPQ'
+        ToolUseClass       = 'toolUse_uq5aLg'
+        ToolResultClass    = 'toolResult_uq5aLg'
     }
 
     if (Test-Path $ctx.Js) {
@@ -40,6 +44,13 @@ function Find-ClaudeExtension {
         # The round "Message actions" button beside a user bubble. Four modules
         # define an actionButton_<h>; anchor on subtleVisible_<h>, unique to this one.
         if ($wc -match 'subtleVisible:"subtleVisible_([a-zA-Z0-9]+)"') { $ctx.MsgActionBtnClass = "actionButton_$($matches[1])" }
+        # Content-block kinds inside an assistant message: rendered markdown vs a
+        # thinking block vs a tool call. Anchored on the unique sibling key of each
+        # module ("root"/"thinking" alone are far too common to match on).
+        if ($wc -match 'codeBlockWrapper:"codeBlockWrapper_([-a-zA-Z0-9]+)"') { $ctx.MdRootClass = "root_$($matches[1])" }
+        if ($wc -match 'thinkingSummary:"thinkingSummary_([a-zA-Z0-9]+)"') { $ctx.ThinkingClass = "thinking_$($matches[1])" }
+        if ($wc -match 'toolUse:"(toolUse_[a-zA-Z0-9]+)"') { $ctx.ToolUseClass = $matches[1] }
+        if ($wc -match 'toolResult:"(toolResult_[a-zA-Z0-9]+)"') { $ctx.ToolResultClass = $matches[1] }
     }
 
     return $ctx
