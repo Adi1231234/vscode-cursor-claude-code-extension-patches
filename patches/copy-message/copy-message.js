@@ -61,6 +61,15 @@
     copyText(t).then(function () { flash(b); }, function () {});
   }
 
+  /* A click focuses the button, and the app's own actionButton rule includes
+     :focus{opacity:1} - which would pin our icon on screen after a copy even
+     once the pointer had left the message, while the app's button faded out.
+     Suppressing the pointer's default focus keeps the two in lockstep;
+     keyboard focus (Tab) is untouched and still reveals the button. */
+  function keepFocusOffPointer(ev) {
+    ev.preventDefault();
+  }
+
   function make() {
     var b = document.createElement("button");
     b.type = "button";
@@ -68,6 +77,7 @@
     b.title = "Copy message";
     b.setAttribute("aria-label", "Copy message");
     b.innerHTML = COPY_ICON;
+    b.addEventListener("mousedown", keepFocusOffPointer);
     b.addEventListener("click", onClick);
     return b;
   }

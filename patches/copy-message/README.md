@@ -51,6 +51,18 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   own button in the same render, so the rule is
   `div:has(> [class*="subtleVisible"]) > .__ccCopyAct`. Our icon then appears
   and disappears exactly with the app's, never on its own.
+- **The pointer must not focus the button.** Inheriting the app's
+  `actionButton_<hash>` also inherits its `:focus{opacity:1}`, so a click left
+  our icon pinned on screen after the pointer had moved away - the app's own
+  button faded, ours stayed, and only after a copy, since only a copy involves
+  a click. `mousedown` + `preventDefault()` suppresses the pointer's default
+  focus; keyboard focus (Tab) is untouched and still reveals the button.
+  Verified by isolation: with everything else held constant, a bare `blur()`
+  took the button from opacity 1 to 0.
+- **The copied check sets colour only, never opacity.** Forcing it visible
+  would pin the button for the full 1.2s after the pointer left; visibility
+  stays owned by hover, so the check shows while you are there and vanishes
+  with the app's button when you leave.
 - **Hash-free CSS.** The stylesheet names only our own classes plus generic
   attribute matches (`[class*="subtleVisible"]`, `div:has(> .__ccCopyAct)`).
   The minified names live in `lib/Extension.ps1` as `$Ctx.MsgHash` (from the
