@@ -52,15 +52,23 @@ div:has(> .__ccCopyAct) {
   gap: 4px;
 }
 
-/* The app flags the container while its message is hovered, and adds its own
-   "subtly visible" class to its own button only - mirror that reveal here. */
-[class*="messageHovered"] > .__ccCopyAct {
+/* Reveal, mirroring the app's own button exactly: while the message is hovered
+   the app adds a "subtly visible" class to that button, so :has() on the
+   container is the faithful signal - our icon appears and disappears with
+   the app's, never on its own.
+
+   Do NOT key off the container's own hover class: the CSS module has no
+   messageHovered entry, so the app renders it as the literal string
+   "undefined" and no selector can match it. That was the bug. */
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct {
   opacity: .7;
 }
 
-[class*="messageHovered"]:hover > .__ccCopyAct,
+/* Direct interaction wins - last, and at least as specific as the rule above. */
 .__ccCopyAct:hover,
-.__ccCopyAct:focus-visible {
+.__ccCopyAct:focus-visible,
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct:hover,
+div:has(> [class*="subtleVisible"]) > .__ccCopyAct:focus-visible {
   opacity: 1;
 }
 

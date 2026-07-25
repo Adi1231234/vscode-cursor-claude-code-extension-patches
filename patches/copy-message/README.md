@@ -42,8 +42,17 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   `inset-inline-end`-pinned button to the far side of the viewport (the message
   wrapper is full-width). Flow layout keeps the icon next to its message under
   both directions and never covers the last line of text.
+- **The reveal is keyed off the app's own button, not the container.** The
+  container is rendered as
+  `` `${lu.container} ${c ? lu.messageHovered : ""}` `` - but the CSS module map
+  `lu` has **no `messageHovered` entry**, so while a message is hovered the app
+  literally emits `class="container_<hash> undefined"`. Nothing can select that.
+  The signal that does work is `subtleVisible_<hash>`, which the app adds to its
+  own button in the same render, so the rule is
+  `div:has(> [class*="subtleVisible"]) > .__ccCopyAct`. Our icon then appears
+  and disappears exactly with the app's, never on its own.
 - **Hash-free CSS.** The stylesheet names only our own classes plus generic
-  attribute matches (`[class*="messageHovered"]`, `div:has(> .__ccCopyAct)`).
+  attribute matches (`[class*="subtleVisible"]`, `div:has(> .__ccCopyAct)`).
   The minified names live in `lib/Extension.ps1` as `$Ctx.MsgHash` (from the
   unique `messagesContainer_<hash>`) and `$Ctx.MsgActionBtnClass` (from
   `subtleVisible_<hash>` - four modules define an `actionButton_<hash>`, and

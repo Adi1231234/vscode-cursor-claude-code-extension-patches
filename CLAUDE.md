@@ -59,6 +59,12 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   full-width container: the element lands at the *far side of the viewport*, not
   beside its content. Prefer normal flow, and check the result under RTL - a
   browser harness over the patched `webview/index.css` shows it in seconds.
+- **Build the test harness from the markup the app *emits*, not from what the
+  source looks like it emits.** A CSS-module lookup that has no matching key
+  (`lu.messageHovered` where `lu` never defines it) renders as the literal
+  string `undefined` in `class`, so a selector written from reading the JSX
+  silently matches nothing. Grep the module map for the key before keying off
+  it, and mirror the exact `class` attribute in the harness.
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 
 ## Testing a change (without touching your real install)
