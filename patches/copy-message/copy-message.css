@@ -72,8 +72,10 @@ div:has(> [class*="subtleVisible"]) > .__ccCopyAct:focus-visible {
   opacity: 1;
 }
 
-/* Copied confirmation - last, so it wins in both placements. */
+/* Copied confirmation - colour only, deliberately no opacity. Forcing the
+   button visible here would pin it on screen for the full 1.2s even after the
+   pointer left; visibility stays owned by hover, so the check shows while you
+   are still there and vanishes with the button the moment you leave. */
 .__ccCopy.__ccCopyOk {
-  opacity: 1;
   color: var(--app-success-foreground, #3fb950);
 }
