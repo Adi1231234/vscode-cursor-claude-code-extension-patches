@@ -22,6 +22,7 @@ function Find-ClaudeExtension {
         MentionMirrorClass = 'mentionMirror_cKsPxg'
         PvHash             = 'vRjSkQ'
         MsgHash            = '07S1Yg'
+        MsgActionBtnClass  = 'actionButton_v2CdxQ'
     }
 
     if (Test-Path $ctx.Js) {
@@ -36,6 +37,9 @@ function Find-ClaudeExtension {
         # The chat CSS module: messagesContainer_<h> is unique, and message_<h> /
         # userMessageContainer_<h> share that same <h>.
         if ($wc -match 'messagesContainer:"messagesContainer_([a-zA-Z0-9]+)"') { $ctx.MsgHash = $matches[1] }
+        # The round "Message actions" button beside a user bubble. Four modules
+        # define an actionButton_<h>; anchor on subtleVisible_<h>, unique to this one.
+        if ($wc -match 'subtleVisible:"subtleVisible_([a-zA-Z0-9]+)"') { $ctx.MsgActionBtnClass = "actionButton_$($matches[1])" }
     }
 
     return $ctx

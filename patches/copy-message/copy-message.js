@@ -1,16 +1,23 @@
 <script nonce="${__NONCE__}">/* COPYMSG */(function(){
-  /* A copy-to-clipboard icon at the end of every chat message (user and
-     assistant alike). The app re-renders its message list constantly, so the
-     button is (re)attached from a MutationObserver rather than once at load. */
+  /* A copy-to-clipboard icon for every chat message. Two placements:
+       - user messages: inside the app's own "Message actions" container, next
+         to the round rewind/fork button, wearing the app's actionButton class
+         so it inherits that look and hover reveal exactly;
+       - everything else: normal flow, on its own line at the end of the message.
+     The app re-renders its message list constantly, so both the button and its
+     placement are re-asserted from a MutationObserver rather than once at load. */
 
-  var MSG = ".__MSG__";   /* message_<hash> - the wrapper of a single chat message */
+  var MSG = ".__MSG__";          /* message_<hash> - one chat message wrapper */
+  var USERMSG = ".__USERMSG__";  /* userMessage_<hash> - the user's text bubble */
+  var ACTBTN = "__ACTBTN__";     /* the app's round message-actions button class */
+  var ACTS = '[title="Message actions"]';
   var COPY_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
   var DONE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>';
 
-  /* The button holds only an <svg>, which innerText ignores - so the message
-     text needs no filtering. */
-  function textOf(msg) {
-    return (msg.innerText || "").trim();
+  /* Copy the message's own text: for a user message that is the bubble, which
+     excludes the actions container (and its popup) sitting inside the wrapper. */
+  function textOf(m) {
+    return ((m.querySelector(USERMSG) || m).innerText || "").trim();
   }
 
   /* clipboard.writeText is available in the webview; keep the execCommand path
@@ -47,7 +54,7 @@
     ev.preventDefault();
     ev.stopPropagation();
     var b = ev.currentTarget;
-    var msg = b.parentNode;
+    var msg = b.closest(MSG);
     if (!msg) return;
     var t = textOf(msg);
     if (!t) return;
@@ -65,11 +72,31 @@
     return b;
   }
 
+  /* The container of the app's own action button, when this message has one. */
+  function actionsOf(m) {
+    var t = m.querySelector(ACTS);
+    return t ? t.parentNode : null;
+  }
+
+  function place(m, b) {
+    var acts = actionsOf(m);
+    if (acts) {
+      b.classList.add("__ccCopyAct", ACTBTN);
+      if (b.parentNode !== acts) acts.appendChild(b);
+    } else {
+      b.classList.remove("__ccCopyAct", ACTBTN);
+      if (b.parentNode !== m) m.appendChild(b);
+    }
+  }
+
   function ensure() {
     document.querySelectorAll(MSG).forEach(function (m) {
-      if (m.querySelector(":scope > .__ccCopy")) return;
-      if (!textOf(m)) return;            /* nothing to copy yet - retry on the next mutation */
-      m.appendChild(make());
+      var b = m.querySelector(".__ccCopy");
+      if (!b) {
+        if (!textOf(m)) return;    /* nothing to copy yet - retry on the next mutation */
+        b = make();
+      }
+      place(m, b);                 /* re-asserted: the actions container appears later */
     });
   }
 

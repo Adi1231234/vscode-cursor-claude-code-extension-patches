@@ -1,15 +1,19 @@
 /* COPYMSG */
-/* Copy-to-clipboard icon pinned to the end of every chat message.
+/* Copy-to-clipboard icon for chat messages. Two placements, both driven by
+   copy-message.js:
+     - user messages: inside the app's own "Message actions" container, wearing
+       the app's actionButton class - so everything visual is inherited and
+       nothing is duplicated here;
+     - everything else: normal flow, its own line at the end of the message.
 
-   Deliberately hash-free: the button carries our own .__ccCopy class and the
-   hover rule keys off the generic parent, so no minified class name is baked
-   into the stylesheet (the JS side owns the message selector). */
+   Deliberately hash-free: the only names are our own classes plus generic
+   attribute matches, so no minified class is baked into the stylesheet. */
 
-/* In normal flow as the message's last child - never overlaps the text, and
-   lands at the message's start edge under both LTR and RTL (the rtl patch
-   flips the whole panel, so an absolute inset-inline-end would fly off to the
-   far side of the viewport). */
-.__ccCopy {
+/* ---------- normal-flow placement (assistant messages) ----------
+   Flow rather than absolute positioning: the rtl patch flips the panel to
+   direction:rtl, which would fling an inset-inline-end-pinned button to the far
+   side of the viewport (the message wrapper is full-width). */
+.__ccCopy:not(.__ccCopyAct) {
   align-self: flex-start;
   flex: none;
   display: flex;
@@ -28,18 +32,39 @@
   transition: opacity .12s ease, background-color .12s ease;
 }
 
-/* Reveal on hover over the message itself (any ancestor), the button, or focus. */
-:hover > .__ccCopy,
-.__ccCopy:hover,
-.__ccCopy:focus-visible {
+:hover > .__ccCopy:not(.__ccCopyAct),
+.__ccCopy:not(.__ccCopyAct):hover,
+.__ccCopy:not(.__ccCopyAct):focus-visible {
   opacity: 1;
 }
 
-.__ccCopy:hover {
+.__ccCopy:not(.__ccCopyAct):hover {
   background: var(--app-hover-background, var(--app-secondary-background));
 }
 
-/* Copied confirmation - green check, held for a beat by the script. */
+/* ---------- alongside the app's message-actions button (user messages) ----------
+   The container stacks block-level children, so it has to become a row once a
+   second button joins it. :has() keeps this scoped to that one container. */
+div:has(> .__ccCopyAct) {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The app flags the container while its message is hovered, and adds its own
+   "subtly visible" class to its own button only - mirror that reveal here. */
+[class*="messageHovered"] > .__ccCopyAct {
+  opacity: .7;
+}
+
+[class*="messageHovered"]:hover > .__ccCopyAct,
+.__ccCopyAct:hover,
+.__ccCopyAct:focus-visible {
+  opacity: 1;
+}
+
+/* Copied confirmation - last, so it wins in both placements. */
 .__ccCopy.__ccCopyOk {
   opacity: 1;
   color: var(--app-success-foreground, #3fb950);
