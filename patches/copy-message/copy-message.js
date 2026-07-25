@@ -11,6 +11,8 @@
   var USERMSG = ".__USERMSG__";  /* userMessage_<hash> - the user's text bubble */
   var ACTBTN = "__ACTBTN__";     /* the app's round message-actions button class */
   var ACTS = '[title="Message actions"]';
+  var MD = ".__MD__";            /* root_<hash> - a rendered markdown span */
+  var NOTTEXT = ".__THINK__,.__TOOLUSE__,.__TOOLRES__";   /* thinking / tool wrappers */
   var COPY_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
   var DONE_ICON = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>';
 
@@ -108,11 +110,32 @@
     }
   }
 
+  /* Real reply prose: rendered markdown that is not nested inside a thinking
+     block or a tool call. An expanded thinking block renders markdown too, which
+     is why the ancestor check is needed rather than a plain lookup. */
+  function hasReplyText(m) {
+    var md = m.querySelectorAll(MD);
+    for (var i = 0; i < md.length; i++) {
+      if (!md[i].closest(NOTTEXT)) return true;
+    }
+    return false;
+  }
+
+  /* Only actual messages get an icon. An assistant message is split into one
+     message_<hash> block per content item, so a bare tool call, a tool result
+     and a collapsed "Thinking" row are each their own block - none of them is
+     something you would want to copy, and decorating them buried the chat in
+     icons. */
+  function wanted(m) {
+    if (!textOf(m)) return false;   /* nothing to copy yet - retry on the next mutation */
+    return !!m.querySelector(USERMSG) || hasReplyText(m);
+  }
+
   function ensure() {
     document.querySelectorAll(MSG).forEach(function (m) {
       var b = m.querySelector(".__ccCopy");
       if (!b) {
-        if (!textOf(m)) return;    /* nothing to copy yet - retry on the next mutation */
+        if (!wanted(m)) return;
         b = make();
       }
       place(m, b);                 /* re-asserted: the actions container appears later */

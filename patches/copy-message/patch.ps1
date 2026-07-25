@@ -11,6 +11,10 @@ function Invoke-Patch {
         '__MSG__'     = "message_$($Ctx.MsgHash)"
         '__USERMSG__' = "userMessage_$($Ctx.MsgHash)"
         '__ACTBTN__'  = $Ctx.MsgActionBtnClass
+        '__MD__'      = $Ctx.MdRootClass
+        '__THINK__'   = $Ctx.ThinkingClass
+        '__TOOLUSE__' = $Ctx.ToolUseClass
+        '__TOOLRES__' = $Ctx.ToolResultClass
     })
     Add-ScriptAfterMarker $Ctx $script '/* COPYMSG */' 'copy-message JS' @('/* QUEUE */', '/* INPUTRTL */', '/* ZOOM */')
 }

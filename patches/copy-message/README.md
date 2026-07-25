@@ -5,6 +5,14 @@ Claude's - so any single message can be lifted out without selecting it by hand.
 
 ## What it does
 
+Only **actual messages** are decorated. An assistant reply is split into one
+`message_<hash>` block per content item, so a tool call, a tool result and a
+collapsed "Thinking" row are each a separate block - decorating every one of
+them buried the transcript in icons. A block qualifies when it is a user bubble,
+or when it renders markdown (`root_<hash>`) that is *not* nested inside a
+thinking block or a tool wrapper. The ancestor check matters: an expanded
+thinking block renders markdown of its own, so a plain lookup would match it.
+
 Two placements, chosen per message by the script:
 
 - **User messages** - the icon joins the app's own *Message actions* container
@@ -72,7 +80,11 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   with the app's button when you leave.
 - **Hash-free CSS.** The stylesheet names only our own classes plus generic
   attribute matches (`[class*="subtleVisible"]`, `div:has(> .__ccCopyAct)`).
-  The minified names live in `lib/Extension.ps1` as `$Ctx.MsgHash` (from the
-  unique `messagesContainer_<hash>`) and `$Ctx.MsgActionBtnClass` (from
-  `subtleVisible_<hash>` - four modules define an `actionButton_<hash>`, and
-  only this one defines `subtleVisible`), substituted into the JS.
+  The minified names live in `lib/Extension.ps1` and are substituted into the
+  JS. Each is anchored on a key that is unique across the whole bundle, since
+  the obvious ones are not: `$Ctx.MsgHash` from `messagesContainer_<hash>`;
+  `$Ctx.MsgActionBtnClass` from `subtleVisible_<hash>` (four modules define an
+  `actionButton_<hash>`, only this one defines `subtleVisible`);
+  `$Ctx.MdRootClass` from `codeBlockWrapper_<hash>` (`root` alone is far too
+  common); `$Ctx.ThinkingClass` from `thinkingSummary_<hash>`; plus
+  `$Ctx.ToolUseClass` / `$Ctx.ToolResultClass`.
