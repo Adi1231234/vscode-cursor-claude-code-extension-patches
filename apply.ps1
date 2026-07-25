@@ -28,6 +28,7 @@ $order = @(
     'zoom'
     'input-rtl'
     'prompt-queue'
+    'copy-message'
     'bypass-permissions'
     'electron-run-as-node'
     'worktree-history'

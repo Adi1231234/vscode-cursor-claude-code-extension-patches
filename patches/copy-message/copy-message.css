@@ -1,0 +1,46 @@
+/* COPYMSG */
+/* Copy-to-clipboard icon pinned to the end of every chat message.
+
+   Deliberately hash-free: the button carries our own .__ccCopy class and the
+   hover rule keys off the generic parent, so no minified class name is baked
+   into the stylesheet (the JS side owns the message selector). */
+
+/* In normal flow as the message's last child - never overlaps the text, and
+   lands at the message's start edge under both LTR and RTL (the rtl patch
+   flips the whole panel, so an absolute inset-inline-end would fly off to the
+   far side of the viewport). */
+.__ccCopy {
+  align-self: flex-start;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--corner-radius-small, 4px);
+  background: transparent;
+  color: var(--app-secondary-foreground, currentColor);
+  cursor: pointer;
+  opacity: .3;
+  transition: opacity .12s ease, background-color .12s ease;
+}
+
+/* Reveal on hover over the message itself (any ancestor), the button, or focus. */
+:hover > .__ccCopy,
+.__ccCopy:hover,
+.__ccCopy:focus-visible {
+  opacity: 1;
+}
+
+.__ccCopy:hover {
+  background: var(--app-hover-background, var(--app-secondary-background));
+}
+
+/* Copied confirmation - green check, held for a beat by the script. */
+.__ccCopy.__ccCopyOk {
+  opacity: 1;
+  color: var(--app-success-foreground, #3fb950);
+}

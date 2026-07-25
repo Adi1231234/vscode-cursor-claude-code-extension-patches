@@ -21,6 +21,7 @@ function Find-ClaudeExtension {
         MessageInputClass  = 'messageInput_cKsPxg'
         MentionMirrorClass = 'mentionMirror_cKsPxg'
         PvHash             = 'vRjSkQ'
+        MsgHash            = '07S1Yg'
     }
 
     if (Test-Path $ctx.Js) {
@@ -32,6 +33,9 @@ function Find-ClaudeExtension {
     if (Test-Path $ctx.WebJs) {
         $wc = [System.IO.File]::ReadAllText($ctx.WebJs)
         if ($wc -match 'previewOverlay:"previewOverlay_([a-zA-Z0-9]+)"') { $ctx.PvHash = $matches[1] }
+        # The chat CSS module: messagesContainer_<h> is unique, and message_<h> /
+        # userMessageContainer_<h> share that same <h>.
+        if ($wc -match 'messagesContainer:"messagesContainer_([a-zA-Z0-9]+)"') { $ctx.MsgHash = $matches[1] }
     }
 
     return $ctx
