@@ -29,6 +29,7 @@ $order = @(
     'input-rtl'
     'prompt-queue'
     'copy-message'
+    'message-bidi'
     'bypass-permissions'
     'electron-run-as-node'
     'worktree-history'

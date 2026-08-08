@@ -1,0 +1,37 @@
+/* MSGBIDI */
+/* Per-block base direction for rendered chat messages.
+
+   The extension's own markdown stylesheet ships
+
+     .root_<hash> :is(p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th){unicode-bidi:plaintext}
+
+   and "plaintext" tells the UA to ignore the computed `direction` and derive each
+   block's base direction from the FIRST STRONG character instead (rules P2/P3 of
+   the Unicode bidi algorithm). So the rtl patch's direction:rtl never reaches a
+   message block: a Hebrew answer whose first word happens to be English lays out
+   LTR - the Latin token pinned to the left edge, the closing "." on the left,
+   segments visually out of order. `text-align` is not affected by unicode-bidi, so
+   the block still looks right-aligned, which is what hides the diagnosis.
+
+   This is not a specificity fight - direction:rtl!important on the block itself is
+   ignored just the same. The only way out is to override `unicode-bidi`.
+
+   message-bidi.js replaces that first-strong-character heuristic with a
+   majority-of-letters one and writes its answer to `dir`. The rule below is what
+   lets `dir` take effect: it has to out-specify the plaintext rule above (0,1,1),
+   hence the extra class + attribute (0,3,1). Scoped to [dir] so it only applies to
+   blocks the script has actually decided on - with the script absent, nothing here
+   changes and the app's own behaviour is untouched. */
+[class*="messagesContainer_"] [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th)[dir] {
+  unicode-bidi: isolate;
+}
+
+/* Lists themselves keep the panel direction, so their markers stay together on
+   one side. The exception is an item that ends up reading the other way: its
+   marker would hang off the far side of the message, past the list padding
+   (which sits on the opposite side), where the markdown root's overflow:hidden
+   clips it away. That one item draws its marker inline instead - the class is
+   set by bidi/observe.js. */
+[class*="messagesContainer_"] [class*="root_"] li.__ccBidiOdd {
+  list-style-position: inside;
+}
