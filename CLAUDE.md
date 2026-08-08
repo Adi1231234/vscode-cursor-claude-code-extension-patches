@@ -65,6 +65,15 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   string `undefined` in `class`, so a selector written from reading the JSX
   silently matches nothing. Grep the module map for the key before keying off
   it, and mirror the exact `class` attribute in the harness.
+- **UI injected into the message list must add no height.** The chat pins
+  itself to the bottom with `stuck = scrollHeight - scrollTop - clientHeight <
+  50`, then sets `scrollTop = scrollHeight` in a layout effect. Anything a
+  `MutationObserver` adds lands a frame later, i.e. *after* that scroll: the
+  view ends up that many pixels off the bottom, the app never notices, and the
+  next update re-pins and swallows the gap in one jump. Cancel the contribution
+  (a negative margin equal to the box, or take it out of flow) and verify by
+  measuring `scrollHeight - scrollTop - clientHeight` both after the app's frame
+  and after your own pass - it must stay ~0 in both.
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 
 ## Testing a change (without touching your real install)
