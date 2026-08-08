@@ -56,6 +56,19 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   copied text needs no filtering of our own markup.
 - **`clipboard.writeText` with an `execCommand` fallback.** The webview grants
   the async clipboard API, but it rejects when the document is not focused.
+- **The flow-placed icon must contribute ZERO height.** This is the subtlest
+  constraint in the patch. The app decides whether to keep the transcript
+  pinned with `stuck = scrollHeight - scrollTop - clientHeight < 50` and then,
+  in a layout effect, sets `scrollTop = scrollHeight`. Our button is attached
+  one frame *later*, from the MutationObserver - so any height it adds lands
+  after the app has already scrolled. The view then sits that many pixels above
+  the bottom with the app unaware, and the next update re-pins and takes up the
+  slack in one step: a visible jump on every block of reply text. A negative
+  bottom margin equal to the box (`height:16px; margin:0 0 -16px`) cancels the
+  contribution exactly; the icon overhangs into the 16px gap the app's own 8px
+  padding already leaves between blocks. `position:relative; z-index:1` keeps it
+  clickable, since the next block is painted after it. Measured: without this,
+  6 of 12 agent steps left the view 19px off the bottom; with it, 0 of 12.
 - **Normal flow, not absolute positioning, for the non-bubble placement.** The
   `rtl` patch flips the whole panel to `direction: rtl`, which sends an
   `inset-inline-end`-pinned button to the far side of the viewport (the message
