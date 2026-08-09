@@ -3,9 +3,11 @@
 # it builds for the child CLI, leaking the flag into every subprocess the CLI
 # spawns. Strip it at each construction site. Each site is optional (some may not
 # exist on a given version); the patch applies whatever it finds.
-# The authored replacement JS lives in js/*.js - `Anchor` only *locates* existing
+# The authored replacement JS lives in js/*.js - `Anchor`/`Rx` only *locate* existing
 # bundle code (a search key, never authored runtime). 'Append' adds the fragment
 # after the anchor; 'Replace' swaps the anchor for the (placeholder-filled) fragment.
+# A site with `Rx` matches by regex and feeds its capture groups (`Captures`:
+# placeholder -> group number) into the fragment, so minified names are never assumed.
 function Invoke-Patch {
     param($Ctx)
     $js = Read-Text $Ctx.Js
@@ -13,9 +15,9 @@ function Invoke-Patch {
     $dir = Join-Path $PSScriptRoot 'js'
 
     $sites = @(
-        @{ Anchor = 'function Id(e){let t=lfe(Tn("environmentVariables")),r={...process.env};'
-           File = 'delete-flag.js'; Mode = 'Append'; Subs = @{}
-           Label = 'Id() env builder' }
+        @{ Rx = 'function [\w$]+\([\w$]+\)\{let [\w$]+=[\w$]+\([\w$]+\("environmentVariables"\)\),([\w$]+)=\{\.\.\.process\.env\};'
+           File = 'delete-flag.js'; Mode = 'Append'; Captures = [ordered]@{ '__ENV__' = 1 }
+           Label = 'environmentVariables env builder' }
         @{ Anchor = 'env:c={...process.env}'
            File = 'env-object.js'; Mode = 'Replace'; Subs = @{}
            Label = 'SDK transport initialize() default env' }
@@ -31,10 +33,20 @@ function Invoke-Patch {
 
     $any = $false
     foreach ($s in $sites) {
-        if (-not $js.Contains($s.Anchor)) { Write-Miss ($s.Label + ' not found'); continue }
-        $frag = Get-InjectedJs (Join-Path $dir $s.File) $s.Subs
-        $new = if ($s.Mode -eq 'Append') { $s.Anchor + $frag } else { $frag }
-        $js = $js.Replace($s.Anchor, $new); $any = $true; Write-Ok $s.Label
+        if ($s.Rx) {
+            $m = [regex]::Match($js, $s.Rx)
+            if (-not $m.Success) { Write-Miss ($s.Label + ' not found'); continue }
+            $anchor = $m.Value
+            $subs = [ordered]@{}
+            foreach ($k in $s.Captures.Keys) { $subs[$k] = $m.Groups[$s.Captures[$k]].Value }
+        } else {
+            if (-not $js.Contains($s.Anchor)) { Write-Miss ($s.Label + ' not found'); continue }
+            $anchor = $s.Anchor
+            $subs = $s.Subs
+        }
+        $frag = Get-InjectedJs (Join-Path $dir $s.File) $subs
+        $new = if ($s.Mode -eq 'Append') { $anchor + $frag } else { $frag }
+        $js = $js.Replace($anchor, $new); $any = $true; Write-Ok $s.Label
     }
 
     if ($any) {
