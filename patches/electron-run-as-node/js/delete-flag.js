@@ -1,1 +1,1 @@
-delete r.ELECTRON_RUN_AS_NODE;
+delete __ENV__.ELECTRON_RUN_AS_NODE;

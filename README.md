@@ -53,6 +53,7 @@ Each links to its folder's README for the full root cause + proof.
 - 📜 [**Worktree sessions in history**](patches/worktree-history) — `includeWorktrees` was hardcoded off.
 - 🏷️ [**Worktree title dir**](patches/worktree-title-dir) — the title was written to the main repo dir, creating a phantom that shadows the real transcript → session opens **empty**.
 - 🍴 [**Worktree fork / diff**](patches/worktree-fork-diff) — "Session not found" because the loader only reads the main dir.
+- 🔤 [**cwd drive-letter case**](patches/cwd-drive-case) — from **CLI 2.1.222** on, IDE-started worktree sessions die on resume with `process exited with code 1`. `URI.fsPath` hands the CLI `c:\…`, git reports `C:/…`, and the new isolation-worktree guard compares them **case-sensitively**. *Proof:* same repo, same session, only the drive letter changed → exit 0 vs exit 1; and 2.1.221 resumes where 2.1.222 refuses.
 - 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the sessionID was dropped on deserialize; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s + retry `activate` instead of new-chatting. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`.
 
 ## 🔬 How the intermittent bugs were caught

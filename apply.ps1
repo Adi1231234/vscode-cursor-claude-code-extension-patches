@@ -35,6 +35,7 @@ $order = @(
     'worktree-history'
     'worktree-title-dir'
     'worktree-fork-diff'
+    'cwd-drive-case'
     'reload-restore'
 )
 
