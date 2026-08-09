@@ -26,7 +26,10 @@ function Invoke-Patch {
         } else { Write-Miss 'deserialize anchor not found' }
 
         # (2) recovery: re-load an iframe that never started (runtime: js/blank-iframe-recovery.js)
-        $sig = [regex]::Match($js, 'setupPanel\((\w),(\w),(\w),(\w)\)\{let \w=\{isVisible')
+        # The trailing `{` is what separates the definition from the call sites,
+        # which pass expressions rather than four bare identifiers; matching the
+        # body's first statement instead would break on every refactor of it.
+        $sig = [regex]::Match($js, 'setupPanel\((\w),(\w),(\w),(\w)\)\{')
         if ($sig.Success) {
             $rx2 = '(\w\?\.fromClient\(\w\)\},null,this\.disposables\);)(let \w=\w\?[A-Za-z]+\.ViewColumn\.Active:' + $sig.Groups[1].Value + '\.viewColumn;' + $sig.Groups[1].Value + '\.onDidChangeViewState)'
             if ($js -match $rx2) {
@@ -55,12 +58,17 @@ function Invoke-Patch {
     $wc = Read-Text $Ctx.WebJs
     if ($wc -match 'let __ra=function') { Write-Skip 'webview activate-retry already patched'; return }
 
-    $rxR = 'else if\((\w)\.initialSession\)(\w)\.activateSessionFromServer\(\1\.initialSession,\1\.initialPrompt\)\.then\(\((\w)\)=>\{if\(!\3\)\2\.createSession\(\{isExplicit:!1\}\)\.then\(\((\w)\)=>\{if\(\4&&\1\.initialPrompt\)\4\.initialPrompt\.value=\1\.initialPrompt\}\)\}\);'
+    # 2.1.222+ added a cleanup call before the fallback createSession and a .catch
+    # tail; both are optional here so the anchor still matches older bundles. When
+    # the cleanup fn is absent __PCALL__ becomes `void 0`, a no-op in both positions.
+    $rxR = 'else if\(([\w$]+)\.initialSession\)([\w$]+)\.activateSessionFromServer\(\1\.initialSession,\1\.initialPrompt\)\.then\(\(([\w$]+)\)=>\{if\(!\3\)(?:([\w$]+)\(\),)?\2\.createSession\(\{isExplicit:!1\}\)\.then\(\(([\w$]+)\)=>\{if\(\5&&\1\.initialPrompt\)\5\.initialPrompt\.value=\1\.initialPrompt\}\)\}\)(?:\.catch\(\(\)=>[\w$]+\(\)\))?;'
     $m = [regex]::Match($wc, $rxR)
     if ($m.Success) {
+        $pcall = if ($m.Groups[4].Success) { $m.Groups[4].Value + '()' } else { 'void 0' }
         $rep = Get-InjectedJs (Join-Path $PSScriptRoot 'js/activate-retry.js') ([ordered]@{
             '__U__' = $m.Groups[1].Value; '__L__' = $m.Groups[2].Value
-            '__G__' = $m.Groups[3].Value; '__V__' = $m.Groups[4].Value
+            '__G__' = $m.Groups[3].Value; '__V__' = $m.Groups[5].Value
+            '__PCALL__' = $pcall
         })
         $wc = $wc.Replace($m.Value, $rep)
         Write-Text $Ctx.WebJs $wc
