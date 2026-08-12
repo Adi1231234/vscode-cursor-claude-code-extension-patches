@@ -29,14 +29,16 @@ irm https://raw.githubusercontent.com/Adi1231234/vscode-cursor-claude-code-exten
 
 Then reload: `Ctrl+Shift+P` → `Developer: Reload Window`. That's it.
 
-It downloads this repo to a temp folder, runs `apply.ps1` against the newest `anthropic.claude-code-*` under `%USERPROFILE%\.cursor\extensions`, and cleans up. **Idempotent** — already-applied patches skip, so re-run it after every extension update. *(Cloned the repo instead? Just run `./apply.ps1`.)*
+It downloads this repo to a temp folder, runs `apply.ps1`, and cleans up. **Idempotent** — already-applied patches skip, so re-run it after every extension update. *(Cloned the repo instead? Just run `./apply.ps1`.)*
+
+**Both editors at once.** It patches the newest `anthropic.claude-code-*` in **every** editor that has it installed — `%USERPROFILE%\.cursor\extensions`, `.vscode`, `.vscode-insiders`, `.vscode-oss` — so a machine with Cursor *and* VS Code gets both in one run; an editor without the extension is just reported and skipped. Custom `--extensions-dir`? `./apply.ps1 -ExtensionsDir '<path>'`.
 
 ## 🗂️ Layout
 
 Each feature / bug fix is a **self-contained folder** under `patches/`; the shared plumbing lives in `lib/` — so every patch does one thing and is easy to read or reuse.
 
-- **`apply.ps1`** — finds the extension, then dot-sources and runs each patch in order.
-- **`lib/`** — reusable helpers: `Io` (UTF-8 read/write), `Ui` (output), `Extension` (locate + detect minified names into a shared `$Ctx`), `Patch` (css/script injectors + the shared worktree resolver).
+- **`apply.ps1`** — finds every install, then dot-sources and runs each patch in order against each one.
+- **`lib/`** — reusable helpers: `Io` (UTF-8 read/write), `Ui` (output), `Editors` (where each editor keeps its extensions), `Extension` (locate + detect minified names into a shared `$Ctx`), `Patch` (css/script injectors + the shared worktree resolver).
 - **`patches/<name>/`** — one folder per patch: a `patch.ps1` exposing a single `Invoke-Patch $Ctx` (fail-safe, idempotent), its own `README.md`, and any resource files (`*.css`, `queue/*.js`, `cleanup.js`).
 
 *Add a patch* = drop `patches/<name>/patch.ps1` defining `Invoke-Patch`, add its name to the list in `apply.ps1`. Nothing else.

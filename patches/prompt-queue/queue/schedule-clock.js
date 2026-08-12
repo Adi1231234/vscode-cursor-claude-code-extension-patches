@@ -19,7 +19,7 @@
 
   /* Hover tooltip explains the state + the initial trigger time. */
   function clockTitle(it) {
-    if (it.missed) return "Missed - was due " + fmtStamp(it.at) + " while Cursor was closed. Click to reschedule.";
+    if (it.missed) return "Missed - was due " + fmtStamp(it.at) + " while the editor was closed. Click to reschedule.";
     if (it.rearm) return "Timer stopped on restart. Click to run " + labelMins(Math.round((it.dur || 0) / 60000)) + " again.";
     if (it.mode === "after") return it.at
       ? "Running a " + afterMins(it) + " timer, started when the previous message finished."

@@ -7,11 +7,12 @@ in place. Read this before changing anything so the structure stays clean.
 ## Layout
 
 - **`install.ps1`** - one-line bootstrap: downloads the repo zip, runs `apply.ps1`, cleans up. Users never edit this.
-- **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, builds `$Ctx`, then runs each patch in the `$order` list.
+- **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, finds every install (one `$Ctx` each), then runs each patch in the `$order` list against each of them. `-ExtensionsDir <dir>` patches one specific dir instead of auto-discovering.
 - **`lib/`** - shared plumbing, one file per concern. Never put patch-specific logic here.
   - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
-  - `Extension.ps1` - `Find-ClaudeExtension` -> the `$Ctx` object (see below).
+  - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
+  - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
   - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
   - `js/ccWtResolve.js` - the one copy of the `__ccWtResolve` runtime helper.
 - **`patches/<name>/`** - one folder per feature or bug fix. Contains:
@@ -22,7 +23,8 @@ in place. Read this before changing anything so the structure stays clean.
 ## The `$Ctx` contract
 
 `Find-ClaudeExtension` returns a hashtable every patch receives:
-`Dir`, `Name`, `Js` (extension.js path), `WebJs` (webview/index.js path),
+`Editor` (display name, e.g. `Cursor` / `VS Code`), `Dir`, `Name`,
+`Js` (extension.js path), `WebJs` (webview/index.js path),
 `Css` (webview/index.css path), plus detected minified identifiers
 `Nonce`, `MessageInputClass`, `MentionMirrorClass`, `PvHash`.
 Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ctx`
@@ -43,6 +45,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 
 ## Non-negotiable conventions
 
+- **Editor-agnostic.** Cursor and VS Code get the *same* bundles, so a patch never
+  branches on the editor: no `.cursor`/`.vscode` path anywhere outside `lib/Editors.ps1`,
+  and no editor name in user-visible strings ("the editor", not "Cursor"). Everything a
+  patch needs about the install is already on `$Ctx`.
 - **Guard marker.** Every patch writes a unique `/* NAME */` comment and returns early via `Write-Skip` if it is already present. This is what makes re-running safe.
 - **Fail-safe.** If an anchor is missing, `Write-Miss` and return / skip that site - never write a partial or guessed edit. A missing anchor must leave the file untouched.
 - **Version tolerance.** Anchor on semantic, non-minified tokens where possible; when you must match minified code, capture the minified names with regex groups (`(\w+)`) rather than hardcoding them. Anchor on the *shape that identifies the site*, not on whatever happened to be next to it - matching a function body's first statement breaks the moment that statement is rewritten, while the signature plus its `{` keeps working. When a site's neighbourhood grows an optional piece across versions (a cleanup call, a `.catch` tail), make it an optional group and thread it into the injected JS as a placeholder rather than forking the resource.
@@ -82,9 +88,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 1. Download the exact pristine version from OpenVSX, e.g.
    `https://open-vsx.org/api/Anthropic/claude-code/win32-x64/<version>/file/Anthropic.claude-code-<version>@win32-x64.vsix`
    (it is a zip; the files are under `extension/`).
-2. Place them in `<tmp>/.cursor/extensions/anthropic.claude-code-<version>-win32-x64/`.
+2. Place them in `<tmp>/.cursor/extensions/anthropic.claude-code-<version>-win32-x64/`
+   (and/or `<tmp>/.vscode/extensions/...` - discovery patches every editor it finds).
 3. Run with a redirected home so nothing real is touched:
    `$env:USERPROFILE='<tmp>'; ./apply.ps1`
+   (or point it at one dir: `./apply.ps1 -ExtensionsDir '<tmp>/.vscode/extensions'`)
 4. Verify: `node --check` on the patched `extension.js` and `webview/index.js`,
    confirm the guard markers landed, then re-run `apply.ps1` and confirm every
    patch reports `[skip]` (idempotency).

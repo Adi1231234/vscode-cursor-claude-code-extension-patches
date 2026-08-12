@@ -2,15 +2,27 @@
 # that every patch receives. The context carries the three file paths plus the
 # minified identifiers a few webview patches need (nonce, composer class names,
 # image-preview hash) - detected once here so each patch stays single-purpose.
+# Which directories to look in is Editors.ps1' business.
+
+# Newest wins, by version - not by name: sorted as text, "2.1.90" beats "2.1.227".
+function Get-ExtensionVersion {
+    param([string]$Name)
+
+    if ($Name -match '^anthropic\.claude-code-(\d+(\.\d+)*)') { [version]$matches[1] } else { [version]'0.0' }
+}
 
 function Find-ClaudeExtension {
-    param([string]$ExtensionsDir = "$env:USERPROFILE\.cursor\extensions")
+    param(
+        [string]$ExtensionsDir = (Join-Path $env:USERPROFILE '.cursor\extensions'),
+        [string]$Editor = (Get-EditorNameFromRoot $ExtensionsDir)
+    )
 
     $latest = Get-ChildItem $ExtensionsDir -Directory -Filter "anthropic.claude-code-*" -ErrorAction SilentlyContinue |
-        Sort-Object Name -Descending | Select-Object -First 1
+        Sort-Object { Get-ExtensionVersion $_.Name } -Descending | Select-Object -First 1
     if (-not $latest) { throw "Claude Code extension not found under $ExtensionsDir" }
 
     $ctx = @{
+        Editor             = $Editor
         Dir                = $latest.FullName
         Name               = $latest.Name
         Js                 = Join-Path $latest.FullName "extension.js"
@@ -54,4 +66,13 @@ function Find-ClaudeExtension {
     }
 
     return $ctx
+}
+
+# One $Ctx per editor that has the extension installed (Cursor and VS Code side by
+# side both get patched). An editor without it is reported and skipped, not fatal.
+function Find-ClaudeExtensions {
+    foreach ($e in Get-EditorExtensionRoots) {
+        try { Find-ClaudeExtension -ExtensionsDir $e.Root -Editor $e.Editor }
+        catch { Write-Info "$($e.Editor): no Claude Code extension under $($e.Root)" }
+    }
 }
