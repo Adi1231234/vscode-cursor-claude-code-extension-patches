@@ -108,3 +108,14 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    ```
    A plain `node --check` passes on the two-char `\n`; only this catches the
    real newline that breaks the served script.
+6. **Run it for real, in a throwaway editor** - a parse-clean bundle can still
+   fail to render. Both editors take an isolated profile, so nothing real is
+   touched:
+   `code --extensions-dir <tmp>/extensions --user-data-dir <tmp>/ud --new-window <folder>`
+   (`Cursor.exe` takes the same flags). Then open the panel and read
+   `<tmp>/ud/logs/**/exthost/Anthropic.claude-code/Claude VSCode.log`.
+   **VS Code does not re-verify a patched extension:** its own log says
+   `Extension signature verification result for anthropic.claude-code: Success`
+   with the patched bundle in place - verification covers the installed VSIX, not
+   the files afterwards. What *does* bite is **auto-update**: both editors replace
+   the folder on an extension update and the patches go with it (hence: re-run).
