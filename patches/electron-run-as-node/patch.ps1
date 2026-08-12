@@ -1,7 +1,8 @@
-# ELECTRON_RUN_AS_NODE leak fix. Cursor sets ELECTRON_RUN_AS_NODE=1 on its
-# extension host; the extension re-spreads process.env unfiltered into every env
-# it builds for the child CLI, leaking the flag into every subprocess the CLI
-# spawns. Strip it at each construction site. Each site is optional (some may not
+# ELECTRON_RUN_AS_NODE leak fix. The extension host runs with
+# ELECTRON_RUN_AS_NODE=1 (VS Code and Cursor alike - see README.md); the extension
+# re-spreads process.env unfiltered into every env it builds for the child CLI,
+# leaking the flag into every subprocess the CLI spawns.
+# Strip it at each construction site. Each site is optional (some may not
 # exist on a given version); the patch applies whatever it finds.
 # The authored replacement JS lives in js/*.js - `Anchor`/`Rx` only *locate* existing
 # bundle code (a search key, never authored runtime). 'Append' adds the fragment

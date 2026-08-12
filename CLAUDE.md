@@ -23,7 +23,7 @@ in place. Read this before changing anything so the structure stays clean.
 ## The `$Ctx` contract
 
 `Find-ClaudeExtension` returns a hashtable every patch receives:
-`Editor` (display name, e.g. `Cursor` / `VS Code`), `Dir`, `Name`,
+`Editor` (display name, e.g. `Cursor` / `VS Code`), `Dir`, `Name`, `Version`,
 `Js` (extension.js path), `WebJs` (webview/index.js path),
 `Css` (webview/index.css path), plus detected minified identifiers
 `Nonce`, `MessageInputClass`, `MentionMirrorClass`, `PvHash`.

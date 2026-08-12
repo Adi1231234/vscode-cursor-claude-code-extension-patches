@@ -44,9 +44,17 @@ $order = @(
     'reload-restore'
 )
 
+# The anchors track the current extension line. An install left far behind (easy to
+# miss on a second editor) still patches whatever matches, but say so up front -
+# a wall of [miss] otherwise reads like a broken patcher.
+$minTested = [version]'2.1.220'
+
 foreach ($Ctx in $installs) {
     Write-Head "Patching $($Ctx.Editor): $($Ctx.Name)"
     Write-Info "nonce=$($Ctx.Nonce)  messageInput=$($Ctx.MessageInputClass)  preview=$($Ctx.PvHash)"
+    if ($Ctx.Version -lt $minTested) {
+        Write-Miss "extension $($Ctx.Version) is older than the anchored $minTested - expect [miss] lines; update it in $($Ctx.Editor) and re-run"
+    }
 
     foreach ($name in $order) {
         $patchFile = Join-Path $here "patches\$name\patch.ps1"

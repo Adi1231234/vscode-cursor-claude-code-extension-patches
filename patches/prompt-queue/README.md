@@ -29,7 +29,7 @@ so it never duplicates.
 
 ## Persistence (`persist.js`)
 
-The queue survives a full Cursor restart, per session:
+The queue survives a full editor restart, per session:
 
 - **Storage:** `localStorage`, key `ccq:<sessionId>`. The app itself persists
   prefs in localStorage, which proves it is durable in this webview.
@@ -51,7 +51,7 @@ The queue survives a full Cursor restart, per session:
 - **Also persisted:** the panel's **collapsed/minimized** state (`c`), restored
   per session by `loadQueue`.
 - **Restore is always parked:** a restored non-empty queue forces `paused`, so
-  reopening Cursor never auto-fires messages - the user releases with play.
+  reopening the editor never auto-fires messages - the user releases with play.
 
 If the session id can't be read, persistence silently disables (the queue
 still works in memory) rather than risking a wrong-keyed write.
@@ -102,13 +102,13 @@ items are pending and skipped; plain items send in order only when not paused;
 ### Restart policy
 
 We are a client-side scheduler (like classic Outlook's Outbox, not Gmail's
-server side): a schedule only fires while Cursor is open. The full schedule
+server side): a schedule only fires while the editor is open. The full schedule
 (`at`, `start`, `mode`, `dur`) is in localStorage, so on reopen (`persist.js`
 `loadQueue`) each item is restored by type - a decision made deliberately for
 an AI agent, where auto-running a prompt you weren't watching is the real risk:
 
 - **At-time still in the future** -> stays active, keeps ticking, fires at its
-  time (if Cursor is open then).
+  time (if the editor is open then).
 - **At-time whose moment passed while closed** -> flagged `missed` (amber, held,
   "Missed · H:MM"); never auto-sent. Click to reschedule.
 - **Timer** (a relative countdown - its origin is lost across a restart) ->

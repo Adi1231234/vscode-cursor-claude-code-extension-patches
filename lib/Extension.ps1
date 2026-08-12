@@ -25,6 +25,7 @@ function Find-ClaudeExtension {
         Editor             = $Editor
         Dir                = $latest.FullName
         Name               = $latest.Name
+        Version            = Get-ExtensionVersion $latest.Name
         Js                 = Join-Path $latest.FullName "extension.js"
         WebJs              = Join-Path $latest.FullName "webview\index.js"
         Css                = Join-Path $latest.FullName "webview\index.css"
