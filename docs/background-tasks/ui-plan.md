@@ -4,96 +4,116 @@
 
 **A strip above the composer** (same anchor `prompt-queue` uses:
 `inp().closest('[class*="messageInputContainer_"]')`, inserted as a preceding
-sibling). Hidden when there are no tasks, so it costs nothing in the common case.
+sibling). Hidden when nothing is running, so it costs nothing in the common case.
 
-One row per task, each row: a status dot (running / done / failed / stopped), the
-task type glyph, the label, and a live right-hand detail.
+The row set comes straight from `background_tasks_changed.tasks`
+(`{task_id, task_type, description}`), enriched from `task_started` /
+`task_progress` / `task_updated`, and moved to a "finished" section by
+`task_notification`. Because the CLI evicts finished tasks from its registry after
+~30 s, the strip keeps its own history for the session.
+
+One row per task: a status dot (running / done / failed / stopped), a type glyph,
+the label, and a live right-hand detail.
 
 - `local_bash` -> label is the command, detail is the last output line.
 - `local_agent` -> label is `<subagent_type> · <description>`, detail is
-  `last_tool_name` (or the rolling `summary` from `task_progress`), plus tokens and
-  elapsed.
-- `local_workflow` -> label is the workflow name, detail is `workflow_progress`.
+  `last_tool_name` (or the rolling `summary`, if `agentProgressSummaries` is on),
+  plus tokens and elapsed.
+- `local_workflow` -> label is the workflow name, detail is the last
+  `workflow_progress` entry (`phaseTitle: label`).
 
-Row actions: **open log** (whole row is the click target), **stop**
-(`stopTask(task_id)`), and for a foreground task **send to background**
-(`backgroundTasks(tool_use_id)`).
+Row actions: **open log** (the whole row), **stop** (`stopTask(task_id)`), and for a
+foreground task **send to background** (`backgroundTasks(tool_use_id)`).
 
 **Click -> a log dialog.** Reuse the app's own modal look (`[class*="modalBackdrop"]`
-/ `modalContent` / `modalHeader` exist as CSS-module classes) so it does not read as
-bolted on. Content per task type:
+/ `modalContent` / `modalHeader` already exist as CSS-module classes) so it does not
+read as bolted on.
 
-- Bash: a `<pre>` tailing the `.output` file, auto-scrolled while pinned to the
-  bottom, with a "follow" toggle that turns off when the user scrolls up.
-- Subagent: a rendered feed - each entry is a tool call (name + one-line input) with
-  its result collapsed, and prose/thinking rendered as text when available. Built
-  from `agent-<id>.jsonl` (richest) and/or from `session.messages` filtered by
-  `sdkParentToolUseId === task.toolUseId`.
-- Header: description, agent type, model, tokens, tool count, elapsed, status;
-  footer: Stop, Copy, and "Open in editor".
+- Subagent: a rendered feed built from `session.messages` filtered by
+  `sdkParentToolUseId === task.toolUseId` - each entry a tool call (name + one-line
+  input) with its result collapsed, and prose/thinking as text once
+  `forwardSubagentText` is on. No file access at all.
+- Bash: a `<pre>` tailing the `.output` file over the host bridge, auto-scrolled
+  while pinned to the bottom, with a follow toggle that releases when the user
+  scrolls up.
+- Workflow: the `workflow_progress` array as a phase/agent tree.
+- Header: description, agent type, model, tokens, tool count, elapsed, status.
+  Footer: Stop, Copy, and **Open in editor** -> `store.openFile(outputFile)` for a
+  Bash task (free - no bridge, and the editor does its own live reloading), or
+  `store.openContent(...)` for a rendered subagent log.
 
 ## Hazards specific to this repo
 
-- **RTL.** The `rtl` patch sets `direction:rtl` on the whole panel. Keep the log
-  `<pre>` explicitly `direction:ltr; text-align:left` (the existing `rtl.css` rule
-  for `pre,code` already covers it - do not add a competing selector), and avoid
-  `position:absolute` + `inset-inline-end` on a full-width container.
-- **Zero added height in the message list.** If any part of this ever renders inside
-  the message list, it must not add height - see the scroll-pinning rule in
-  `CLAUDE.md`. The composer strip is outside the list, which is one more reason to
-  put it there.
+- **RTL.** The `rtl` patch sets `direction:rtl` on the whole panel. The existing
+  `pre,code` rule in `rtl.css` already forces the log block LTR - do not add a
+  competing selector. Avoid `position:absolute` + `inset-inline-end` on a full-width
+  container.
+- **Zero added height in the message list.** The composer strip sits outside the
+  list, which is one more reason to put it there; anything that ever renders inside
+  the list must cancel its own height (see `CLAUDE.md`).
 - **Template-literal escapes.** Everything injected into the webview lands inside a
   `` ` `` literal in `extension.js`: no backticks, no `${`, and no `\n`/`\t` escapes
-  anywhere (use `String.fromCharCode(10)`). Verify the *evaluated* form, not just
+  (use `String.fromCharCode(10)`). Verify the *evaluated* form, not just
   `node --check`.
-- **Never wrap `acquireVsCodeApi`** - use `getSession().connection.value` (see
-  [README.md](README.md)).
+- **No load-time `localStorage`** in injected webview JS (memory
+  `cursor-webview-gotchas`); attach the message listener at load, touch storage
+  lazily.
+- **Never wrap `acquireVsCodeApi`** - use `getSession().connection.value`.
 
 ## Suggested split into patches
 
 Each is independently shippable and useful on its own.
 
-1. **`subagent-text-stream`** - add `forwardSubagentText:!0` to the SDK options
-   literal in `extension.js` (anchor: `agentProgressSummaries:void 0`). One value,
-   in its own `.js` resource per the no-JS-in-PowerShell rule. Immediately makes
-   subagent prose available in the stream; useful even before any UI exists.
-2. **`task-registry`** - widen `handleTaskStarted`'s `task_type!=="local_agent"`
-   guard in `webview/index.js` so every task type lands in `subagentTasks`, and stop
-   wiping the map on `result` for tasks that are still running. This is the only
-   edit to the webview bundle's own logic; anchor on the shape
-   (`if(t.task_type!=="local_agent")return`) with the minified names captured.
-3. **`task-strip`** - the composer strip + dialog shell, driven purely by
-   `subagentTasks.subscribe(...)` and `messages.subscribe(...)`. No host changes:
-   subagent logs already work from `session.messages`. Ships a usable feature.
-4. **`task-log-bridge`** - the host-side watcher (`fs.watch` on the resolved
-   `tasks/` and `subagents/` dirs) plus the `ccbg` message pair, so Bash logs and
-   between-turn async-agent progress work too. Shared dir resolver goes in
-   `lib/js/ccSessionDirs.js`.
-5. **`task-actions`** - wire Stop / send-to-background to the existing
-   `stopTask` / `backgroundTasks` control requests.
+1. **`subagent-stream-flags`** - add `forwardSubagentText:!0` and
+   `agentProgressSummaries:!0` to the SDK options literal in `extension.js`.
+   Anchor: `agentProgressSummaries:void 0,promptSuggestions:void 0` (unique). Two
+   values, in their own `.js` resource per the no-JS-in-PowerShell rule. Useful
+   before any UI exists: subagent prose starts streaming and `task_progress` starts
+   carrying a live summary.
+2. **`task-strip`** - the composer strip + dialog shell, driven entirely by an
+   injected `window.addEventListener("message")` observer over the SDK stream plus
+   `messages.subscribe(...)`. No host changes, no edit to the webview bundle's own
+   logic. Covers subagents and workflows completely; a Bash row shows status but
+   its dialog offers only "Open in editor".
+3. **`task-log-bridge`** - the host-side `fs.watch` on the resolved `tasks/` dir and
+   the `__ccbg` message pair, so a Bash task's log tails inside the dialog. Shared
+   session-dir resolver goes in `lib/js/ccSessionDirs.js` beside `ccWtResolve.js`.
+4. **`task-actions`** - wire Stop / send-to-background to the existing `stopTask` /
+   `backgroundTasks` control requests (needs a host `case`, same site as 3).
 
-Order matters only in that 3 depends on 2, and 5 depends on the bridge from 4.
+Order matters only in that 3 and 4 build on 2's UI.
+
+### Verified anchors
+
+All unique in 2.1.240 unless noted:
+
+- `agentProgressSummaries:void 0,promptSuggestions:void 0` (extension.js)
+- `type:"from-extension",message:e` (extension.js, the host->webview envelope)
+- `case"exec":return this.execCommand(` (extension.js, marks the `processRequest`
+  switch)
+- `?.fromClient(` (extension.js, **3 sites** - two chat surfaces and the session
+  list; match with a regex capturing the minified names, do not hardcode)
+- `s.data.type==="from-extension"` (webview/index.js, the app's own listener)
+- `if(t.task_type!=="local_agent")return` (webview/index.js) - only needed if a
+  later patch decides to populate the app's own `subagentTasks` instead of keeping a
+  private registry.
 
 ## Open questions to settle during implementation
 
-- **Between-turn status.** `task_notification` for an async agent that finishes
-  while no turn is running is queued and only delivered on the next turn, so the
-  strip can show a finished agent as "running" for a while. The file watcher's
-  last-write time is a decent hint; the honest fix is to let the host derive status
-  from the `.output` tail / file eviction. Decide before shipping 4.
-- **Log volume.** Cap the tail the host sends (e.g. last 256 KB, and only for the
-  task whose dialog is open) - the `.output` files have a disk cap of their own but
-  can still be large.
-- **Does `require` work in the webview renderer?** Recorded as true for Cursor in
-  memory `cursor-webview-gotchas`, never re-measured, and irrelevant to the chosen
-  design - but if someone measures it, record the result there rather than acting
-  on it.
+- **Log volume.** Mirror the CLI's own caps: tail at most 8 MB, track a byte offset,
+  and only stream the task whose dialog is open.
+- **Hardlink fallback.** A subagent's `<taskId>.output` is normally a hardlink to its
+  `agent-*.jsonl`, but falls back to a one-time `copyFile`. Always read the jsonl
+  path; never trust `.output` for a subagent.
+- **Cross-session tasks.** `background_tasks_changed` is per session. A task started
+  in another panel/session will not appear. Decide whether that is acceptable
+  (it matches the CLI's own scope) before promising a global view.
 
 ## How to verify
 
 Follow the "Testing a change" recipe in `CLAUDE.md` (pristine VSIX in a throwaway
-`--extensions-dir` / `--user-data-dir`). Beyond the standard checks, the feature
-needs a live exercise: in the throwaway editor start a long backgrounded Bash and a
-`run_in_background` subagent, confirm both appear in the strip, open each dialog and
-watch it grow, then Stop one and confirm the row settles. Also confirm the strip is
-absent when nothing is running, and that the panel still renders under `rtl`.
+`--extensions-dir` / `--user-data-dir`). Beyond the standard checks, exercise it
+live: start a long backgrounded Bash and a `run_in_background` subagent, confirm both
+appear, open each dialog and watch it grow, let the turn end and confirm the rows
+keep updating, then Stop one and confirm the row settles. Also confirm the strip is
+absent when nothing runs, and that the panel still renders under `rtl`.
