@@ -32,10 +32,11 @@ So this is mostly a *plumbing + rendering* patch, not a reverse-engineering one.
 
 Two sources, used for what each is actually good at:
 
-| need | source | why |
-| --- | --- | --- |
-| which tasks exist, status, usage | webview stream events (`task_*`) | already parsed, zero cost |
-| live log content | the task's `.output` file / `agent-*.jsonl`, watched from the **extension host** | survives between turns |
+- **Which tasks exist, their status and usage** comes from the webview's stream
+  events (`task_started` / `task_progress` / `task_notification`). Already parsed,
+  zero cost.
+- **Live log content** comes from the task's `.output` file / `agent-*.jsonl`,
+  watched from the **extension host**. This is the part that survives between turns.
 
 **The stream goes dark between turns.** `readMessages()` only runs while a query is
 active, and the store wipes `subagentTasks` on `result`. An async agent launched
