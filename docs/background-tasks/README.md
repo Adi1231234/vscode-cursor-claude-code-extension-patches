@@ -94,6 +94,8 @@ Nothing in this design polls.
 
 ## Files
 
-- [data-sources.md](data-sources.md) - the measured event shapes, file paths, caps,
-  lifetimes and host capabilities.
+- [data-sources.md](data-sources.md) - the measured stream events, what already
+  reaches the webview, and the two unset init flags.
+- [files-and-host-api.md](files-and-host-api.md) - on-disk log paths, caps,
+  lifetimes, and the host RPCs already reachable from the webview.
 - [ui-plan.md](ui-plan.md) - the proposed UI and how it splits into patches.
