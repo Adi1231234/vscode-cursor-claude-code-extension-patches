@@ -148,6 +148,16 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 inspection (evaluate in the page, read the DOM, drive it from a CDP client), open a
 Chrome DevTools Protocol port:
 
+**Reach for CDP, not for desktop automation.** Anything you need from a running
+editor - what the panel rendered, which window owns which webview, the console, a
+command, a reload - goes through `tools/cdp/` or a direct CDP call. Do **not** drive
+the editor with screenshot / click / type MCPs (`adi-tools` and friends): they see
+pixels instead of the DOM, act on whatever window happens to be in front, need the
+window focused and visible, and leave no evidence anyone can re-check. CDP answers
+with the actual DOM, addresses a window by name, works on an occluded window, and
+every step is a script that can be re-run. Screenshots are for showing a human what
+something looks like - never as the way to find out what the panel is doing.
+
 - **VS Code: put it in `argv.json`** (`Preferences: Configure Runtime Arguments`,
   i.e. `~/.vscode/argv.json`). `main.js` allowlists `remote-debugging-port` next to
   `disable-hardware-acceleration`, and calls `appendSwitch` **only for a string
