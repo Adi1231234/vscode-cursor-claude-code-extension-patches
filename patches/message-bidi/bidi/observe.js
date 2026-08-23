@@ -13,11 +13,22 @@
     return out;
   }
 
+  /* Where one block reads relative to its message: "" to inherit, or the opposite
+     direction when the block carries only the other script - an English path or
+     quote inside a Hebrew answer, a Hebrew line inside an English one. A block
+     with no strong letter either way inherits too: a row of numbers must not
+     default to LTR (w3.org/TR/string-meta, "the default direction should not be
+     set to LTR"), and flipping it would also drag its list marker inline. */
+  function override(text, dir) {
+    if (holds(text, dir)) return "";
+    var other = dir === "rtl" ? "ltr" : "rtl";
+    return holds(text, other) ? other : "";
+  }
+
   /* One message: count its words, declare the direction on the message root, and
-     let every block inherit it. A block gets its own dir only when it holds no
-     letter of the message's script at all - an English quote or a path inside a
-     Hebrew answer - which is the one case the direction genuinely changes.
-     A message with no strong words at all is left alone entirely. */
+     let every block inherit it, overriding only the blocks override() singles out.
+     A message with no strongly directional word at all is left alone entirely, so
+     the app's own behaviour stands where there is nothing to go on. */
   function apply(root) {
     var blocks = leaves(root);
     var texts = [];
@@ -31,8 +42,9 @@
     var dir = counts.rtl / counts.total > RTL_SHARE ? "rtl" : "ltr";
     root.dir = dir;
     for (i = 0; i < blocks.length; i++) {
-      if (holds(texts[i], dir)) blocks[i].removeAttribute("dir");
-      else blocks[i].dir = dir === "rtl" ? "ltr" : "rtl";
+      var own = override(texts[i], dir);
+      if (own) blocks[i].dir = own;
+      else blocks[i].removeAttribute("dir");
     }
     root.querySelectorAll(LISTS).forEach(function (list) { markOddItems(list, dir); });
   }
@@ -45,7 +57,7 @@
      draws its marker inline instead - see message-bidi.css. */
   function markOddItems(list, dir) {
     for (var el = list.firstElementChild; el; el = el.nextElementSibling) {
-      el.classList.toggle("__ccBidiOdd", !holds(textOf(el), dir));
+      el.classList.toggle("__ccBidiOdd", !!override(textOf(el), dir));
     }
   }
 
