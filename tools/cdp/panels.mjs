@@ -72,6 +72,18 @@ export async function evalInPanel(target, expression) {
   return unwrap(r);
 }
 
+/* A window reload tears its panel down and builds a new one with a new id.
+   Wait for one to be serving again in the named window (null on timeout). */
+export async function waitForPanel(port, windowTitle, tries = 60, waitMs = 1000) {
+  for (let i = 0; i < tries; i++) {
+    const hit = (await claudePanels(port).catch(() => []))
+      .find((p) => p.window === windowTitle);
+    if (hit) return hit;
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  return null;
+}
+
 /* Only the webviews that are actually a Claude Code panel. */
 export async function claudePanels(port) {
   const found = [];

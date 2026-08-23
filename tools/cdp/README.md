@@ -10,6 +10,8 @@ the root `CLAUDE.md`. Then:
 ```
 node tools/cdp/cdp.mjs list
 node tools/cdp/cdp.mjs eval <window-substring> <script.js>
+node tools/cdp/cdp.mjs reload <window-substring>
+node tools/cdp/cdp.mjs command <window-substring> "<palette title>" [--dry]
 ```
 
 `list` prints one line per Claude panel: the window that owns it and its target id.
@@ -28,6 +30,45 @@ printed as JSON. A script that throws prints `{"__error": ...}` and exits 1.
   return { rows: rows.length, nav: rows[0] && rows[0].querySelectorAll('.__qNav button').length };
 })()
 ```
+
+## Reloading a window - and why a renderer reload is not enough
+
+`reload` runs the real `Developer: Reload Window` and then waits for the panel to
+come back. Use it after `apply.ps1` has rewritten a bundle under a running editor.
+
+**Patch the bundle under a running editor, reload only the renderer, and the panel
+comes back blank.** Reproduced 2/2 against a live 2.1.241 install: rewrite
+`webview/index.js`, `Page.reload` the window, and the panel is an empty document
+with `Uncaught SyntaxError: Unexpected token 'var'` blamed on `index.js` - *at the
+same line and column whatever the file now contains*, i.e. the browser is parsing
+something other than what is on disk. The control run matters: the identical
+`Page.reload` with the file **unchanged** brings the panel back healthy, and the
+blank one survives further renderer reloads until a real `Developer: Reload Window`
+clears it. So it is the changed-file-underneath that breaks, not the reload itself.
+(`Developer: Reload Webviews` is the lighter command to try first - `cdp.mjs
+command <window> "Developer: Reload Webviews"`.)
+
+**The renderer has no command API, so the palette is the way in.** There is no
+`require` and no service handle on the workbench window - only the sandbox
+preload's `window.vscode` (`ipcRenderer` restricted to `vscode:` channels,
+`process`, `context`, `webFrame`). The one reload channel it can reach is
+`vscode:reloadWindow`, and main handles it as `sender.reload()`: a plain renderer
+reload, i.e. exactly what `Page.reload` already does, and what Ctrl+R is wired to
+in the bootstrap. The command runs `INativeHostService.reload()` ->
+`CodeWindow.reload()`, which rebuilds the window configuration and re-loads it -
+reachable only the way a person reaches it. So `palette.mjs` types: CDP's Input
+domain delivers **trusted** key events to the renderer, so `Ctrl+Shift+P`, the
+title, and `Enter` go through the keybinding service exactly as a person's would.
+No OS-level automation, and the window does not need to be focused or visible.
+
+Two details that are not obvious:
+
+- **The shortcut is dropped while the window is still settling** - right after a
+  reload, most of all. `openPalette` re-sends it up to three times instead of
+  failing on the first miss.
+- **It refuses rather than guesses.** After typing the title it reads the list and
+  runs the first row only if that row starts with the title asked for; otherwise it
+  presses Escape and reports what it saw. `--dry` stops there deliberately.
 
 ## The two things that make this awkward without the helper
 
@@ -60,7 +101,10 @@ of using it:
 ## Layout
 
 - `client.mjs` - CDP transport (`targets`, `connect`, `evaluate`).
-- `panels.mjs` - window -> webview mapping and the panel execution context.
+- `panels.mjs` - window -> webview mapping, the panel execution context, and
+  `waitForPanel` (a reload builds a new panel with a new id).
+- `palette.mjs` - running a workbench command in a window by typing its Command
+  Palette over the Input domain.
 - `cdp.mjs` - the CLI.
 
 No dependencies: Node 18+ for `fetch`, Node 22 for the global `WebSocket`.

@@ -182,5 +182,15 @@ Chrome DevTools Protocol port:
   does group them, but silently mislabels every window stacked in the same place.
   What is exact: the window's own DOM still holds the `<iframe>` **element**, and
   its `src` carries the same `?id=<uuid>` as the webview target's url.
+- **After patching a bundle under a running editor, only a real `Developer: Reload
+  Window` picks it up.** A renderer-level reload (`Page.reload`, the
+  `vscode:reloadWindow` channel, Ctrl+R - all three are `webContents.reload()`)
+  brings the panel back **blank**, with a `SyntaxError` blamed on `index.js` at a
+  line/column that does not match the file on disk; it survives further renderer
+  reloads until the real command runs. The command reaches
+  `INativeHostService.reload()` -> `CodeWindow.reload()`, which rebuilds the window
+  configuration. The workbench renderer exposes no command API, so the only way in
+  is keystrokes: `node tools/cdp/cdp.mjs reload <window>` types the palette over
+  CDP's Input domain and waits for the panel to come back.
 - The port has no authentication and any local process can attach, so take the line
   back out when you are done.
