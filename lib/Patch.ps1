@@ -53,6 +53,10 @@ function Get-InjectedJs {
     Expand-JsTokens (Read-Text $Path) $Subs
 }
 
+# The shared webview store finder (used by prompt-queue + background-tasks). Both
+# inject it into their own <script>; the file's own guards make the second a no-op.
+function Get-CcStoreHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccStore.js')).Trim() }
+
 # The shared worktree-session resolver (used by worktree-title-dir + worktree-fork-diff).
 function Get-CcWtResolveHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccWtResolve.js')).Trim() }
 

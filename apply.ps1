@@ -33,6 +33,8 @@ $order = @(
     'zoom'
     'input-rtl'
     'prompt-queue'
+    'background-tasks'
+    'subagent-stream-flags'
     'copy-message'
     'message-bidi'
     'bypass-permissions'

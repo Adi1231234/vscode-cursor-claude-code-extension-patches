@@ -85,13 +85,11 @@ log on the left, and in LTR the mirror of that.
 
 ## Hazards specific to this repo
 
-- **RTL.** The `rtl` patch sets `direction:rtl` on the whole panel. The existing
-  `pre,code` rule in `rtl.css` already forces the log block LTR - do not add a
-  competing selector. Avoid `position:absolute` + `inset-inline-end` on a full-width
-  container.
+- **RTL.** Keep log blocks `direction: ltr` and give short labels
+  `unicode-bidi: plaintext`. Never `position:absolute` + `inset-inline-end` on a
+  full-width container.
 - **Zero added height in the message list.** The indicator lives in the composer
-  footer, outside the list, which is one more reason to put it there; anything that
-  ever renders inside the list must cancel its own height (see `CLAUDE.md`).
+  footer, outside the list - one more reason to put it there.
 - **Template-literal escapes.** Everything injected into the webview lands inside a
   `` ` `` literal in `extension.js`: no backticks, no `${`, and no `\n`/`\t` escapes
   (use `String.fromCharCode(10)`). Verify the *evaluated* form, not just
@@ -101,33 +99,36 @@ log on the left, and in LTR the mirror of that.
   lazily.
 - **Never wrap `acquireVsCodeApi`** - use `getSession().connection.value`.
 
-## Suggested split into patches
+## What shipped
 
-Each is independently shippable and useful on its own.
+Two patch folders, both applied and verified against a throwaway 2.1.240 install:
 
-1. **`subagent-stream-flags`** - add `forwardSubagentText:!0` and
-   `agentProgressSummaries:!0` to the SDK options literal in `extension.js`.
-   Anchor: `agentProgressSummaries:void 0,promptSuggestions:void 0` (unique). Two
-   values, in their own `.js` resource per the no-JS-in-PowerShell rule. Useful
-   before any UI exists: subagent prose starts streaming and `task_progress` starts
-   carrying a live summary.
-2. **`task-indicator`** - the animated footer control + the two-pane dialog, driven
-   entirely by an injected `window.addEventListener("message")` observer over the SDK
-   stream plus `messages.subscribe(...)`. No host changes, no edit to the webview
-   bundle's own logic. Covers subagents and workflows completely; a background
-   command lists and selects, but its log pane offers only "Open in editor" until
-   patch 3.
-3. **`task-log-bridge`** - the host-side reader and the `__ccbg` message pair. Three
-   jobs: `fs.watch` + offset tail on `tasks/<id>.output` so a command's log streams
-   into the dialog; the same tail on `subagents/**/agent-<id>.jsonl` for a subagent
-   whose messages are no longer in memory; and a one-shot listing of both
-   directories so the finished group can include tasks from before this panel
-   session. Shared session-dir resolver goes in `lib/js/ccSessionDirs.js` beside
-   `ccWtResolve.js`.
-4. **`task-actions`** - wire Stop / send-to-background to the existing `stopTask` /
-   `backgroundTasks` control requests (needs a host `case`, same site as 3).
+1. **`subagent-stream-flags`** - `forwardSubagentText:!0` and
+   `agentProgressSummaries:!0` in the SDK options literal in `extension.js`.
+   Anchored on `agentProgressSummaries:void 0,promptSuggestions:void 0`. Useful on
+   its own: subagent prose starts streaming and `task_progress` starts carrying a
+   live summary.
+2. **`background-tasks`** - everything else in one feature folder: the CSS, the
+   panel script (`tasks/*.js`), the extension-host log reader (`host/*.js`) and the
+   `__ccbg` hook spliced into each chat webview's message listener. The plan
+   originally split this into three; they collapsed into one because the log reader,
+   the history listing and the Stop action all live at the same host site and share
+   the same message channel.
 
-Order matters only in that 3 and 4 build on 2's UI.
+The shared store finder moved to `lib/js/ccStore.js` with a `Get-CcStoreHelper`
+in `lib/Patch.ps1`; `prompt-queue/queue/session.js` now delegates to it instead of
+carrying its own copy of the fiber walk.
+
+Deviations from the plan worth knowing:
+
+- The render coalescer is a `setTimeout`, not `requestAnimationFrame`: a hidden
+  panel never gets a frame, so rAF would stall the whole UI while the user is
+  looking at another view.
+- The dialog does not force a direction. It follows the document's, so it is LTR by
+  default and mirrors correctly if the document is RTL; labels carry
+  `unicode-bidi: plaintext` so a Hebrew description and a Latin path each read the
+  right way round.
+- Elapsed times need a 1 s clock; that is the only timer in the feature.
 
 The verified anchor list lives in
 [files-and-host-api.md](files-and-host-api.md).

@@ -1,7 +1,8 @@
 # Background tasks + subagents: a live UI (design note)
 
-**Status:** research done, not implemented. Measured against extension `2.1.240` /
-CLI `2.1.228` (win32-x64) on 2026-08-23.
+**Status:** implemented, as `patches/subagent-stream-flags/` and
+`patches/background-tasks/`. Measured against extension `2.1.240` / CLI `2.1.228`
+(win32-x64) on 2026-08-23.
 
 **Goal:** show in the panel which tasks are running in the background (backgrounded
 Bash, subagents, workflows), let the user click one, and watch its log stream live

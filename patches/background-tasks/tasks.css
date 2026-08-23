@@ -1,0 +1,120 @@
+/* BGTASKS */
+/* Background-tasks indicator + dialog. Everything is scoped to __bg* classes so it
+   cannot collide with the app's hashed CSS-module names. Logical properties only:
+   the dialog follows the document direction rather than forcing one. */
+
+.__bgInd {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: none; cursor: pointer; position: relative;
+  padding: 3px 7px; margin: 0 2px; border-radius: var(--corner-radius-medium, 6px);
+  color: var(--vscode-descriptionForeground, #999); opacity: .85;
+}
+.__bgInd:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,.16)); }
+.__bgCount { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.__bgSpin { animation: __bgRotate 1.1s linear infinite; color: var(--app-claude-orange, #d97757); }
+@keyframes __bgRotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .__bgSpin { animation: none; } }
+
+.__bgTip {
+  position: absolute; bottom: calc(100% + 6px); inset-inline-start: 0;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .12s;
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  color: var(--vscode-editorHoverWidget-foreground, #ccc);
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 4px; padding: 3px 7px; font-size: 11px; z-index: 40;
+}
+.__bgInd:hover .__bgTip { opacity: 1; }
+
+.__bgBackdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex;
+  align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .45);
+}
+.__bgModal {
+  display: flex; flex-direction: column;
+  width: min(92vw, 900px); height: min(78vh, 620px);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background, #1e1e1e));
+  color: var(--vscode-editor-foreground, #ccc);
+  border: 1px solid var(--vscode-editorWidget-border, #454545);
+  border-radius: var(--corner-radius-large, 8px); overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+}
+.__bgHead {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgTitle { font-weight: 600; font-size: 12px; flex: 1; }
+.__bgClose {
+  background: none; border: none; cursor: pointer; font-size: 13px; line-height: 1;
+  padding: 3px 6px; border-radius: 4px; color: var(--vscode-descriptionForeground, #999);
+}
+.__bgClose:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,.16)); }
+
+.__bgBody { display: flex; flex: 1; min-height: 0; }
+.__bgList {
+  width: 290px; flex: none; overflow-y: auto; padding: 6px;
+  border-inline-end: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgRow {
+  display: flex; align-items: flex-start; gap: 7px; cursor: pointer;
+  padding: 6px 7px; border-radius: 5px;
+}
+.__bgRow:hover { background: var(--vscode-list-hoverBackground, rgba(128,128,128,.12)); }
+.__bgRowSel, .__bgRowSel:hover {
+  background: var(--vscode-list-activeSelectionBackground, rgba(128,128,128,.28));
+  color: var(--vscode-list-activeSelectionForeground, inherit);
+}
+.__bgDot { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 5px; background: #888; }
+.__bgDot-running { background: var(--app-claude-orange, #d97757); animation: __bgPulse 1.4s ease-in-out infinite; }
+.__bgDot-done { background: var(--vscode-testing-iconPassed, #3fa66a); }
+.__bgDot-failed { background: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgDot-stopped { background: var(--vscode-descriptionForeground, #888); }
+@keyframes __bgPulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .__bgDot-running { animation: none; } }
+
+.__bgIcon { flex: none; display: flex; margin-top: 2px; opacity: .8; }
+.__bgRowMid { flex: 1; min-width: 0; }
+.__bgRowName { font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgRowDetail { font-size: 11px; opacity: .7; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgRowTime { font-size: 10px; opacity: .6; flex: none; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+.__bgSep {
+  display: flex; align-items: center; gap: 7px; margin: 8px 5px 4px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .06em; opacity: .55;
+}
+.__bgSep::after { content: ""; flex: 1; height: 1px; background: var(--vscode-editorWidget-border, #454545); }
+
+.__bgPane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.__bgPaneHead { padding: 9px 12px 7px; border-bottom: 1px solid var(--vscode-editorWidget-border, #454545); }
+.__bgPaneName { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgPaneMeta { font-size: 10.5px; opacity: .65; margin-top: 2px; }
+.__bgLog { flex: 1; overflow: auto; padding: 8px 10px; }
+.__bgPaneFoot {
+  display: flex; gap: 6px; padding: 7px 10px;
+  border-top: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgFootBtn {
+  background: none; cursor: pointer; font-size: 11px; padding: 3px 9px; border-radius: 4px;
+  color: inherit; border: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgFootBtn:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,.16)); }
+
+.__bgEmpty { padding: 14px 10px; font-size: 11.5px; opacity: .6; }
+.__bgSkip { font-size: 10.5px; opacity: .6; padding: 3px 0 6px; font-style: italic; }
+.__bgPre, .__bgEntryBody {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--vscode-editor-font-family, monospace); font-size: 11.5px; line-height: 1.45;
+  direction: ltr; text-align: left;
+}
+.__bgEntry { margin-bottom: 5px; font-size: 11.5px; line-height: 1.5; }
+.__bgTextEntry { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgThink { opacity: .6; font-style: italic; }
+.__bgToolEntry { border-inline-start: 2px solid var(--vscode-editorWidget-border, #454545); padding-inline-start: 8px; }
+.__bgToolOk { border-inline-start-color: var(--vscode-testing-iconPassed, #3fa66a); }
+.__bgToolErr { border-inline-start-color: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgEntryHead { display: flex; gap: 7px; cursor: pointer; align-items: baseline; }
+.__bgToolName { font-weight: 600; flex: none; }
+.__bgToolArg { opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; }
+.__bgEntryBody { display: none; margin-top: 3px; opacity: .85; max-height: 320px; overflow: auto; }
+.__bgResBody { border-top: 1px dashed var(--vscode-editorWidget-border, #454545); padding-top: 3px; opacity: 1; }
+.__bgOpen .__bgEntryBody { display: block; }
