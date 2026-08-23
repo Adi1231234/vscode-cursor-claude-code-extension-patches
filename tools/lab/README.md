@@ -54,6 +54,13 @@ extension" rather than like what it is.
   so the palette never opens and nothing keyboard-driven works, which is
   everything (see `tools/cdp/README.md`). The lab launches with
   `--disable-features=CalculateNativeWinOcclusion`.
+- **The editor's own first-run dialog.** A fresh profile puts a modal *"Welcome
+  to VS Code / Sign in to use GitHub Copilot"* over everything and parks focus
+  on its Sign In button, from where `Ctrl+Shift+P` does nothing. The gate is
+  `workbench.welcomePage.experimentalOnboarding`, which is what
+  `tryShowOnboarding` actually reads; the similarly named `onboarding.enabled`
+  is a different engine and leaves the dialog up. With it off, focus lands in
+  the panel by itself.
 - **Signed in, without your profile.** A redirected home means no credentials,
   and the panel cannot start a session. The lab copies
   `.claude/.credentials.json` and the account half of `.claude.json` -

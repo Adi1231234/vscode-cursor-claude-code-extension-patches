@@ -213,10 +213,11 @@ something looks like - never as the way to find out what the panel is doing.
   open - and neither raises anything. Windows occlusion marks a covered window
   `visibilityState: "hidden"` and Chromium then delivers it no input at all
   (`--disable-features=CalculateNativeWinOcclusion` at launch); and a fresh
-  profile parks focus on the welcome page's Sign In button, from where
-  `Ctrl+Shift+P` arrives, trusted, and does nothing (`palette.mjs` blurs to the
-  body first). A key event that the page's own listener sees is *not* proof the
-  keybinding fired.
+  profile opens a modal *"Sign in to use GitHub Copilot"* whose button holds
+  focus, from where `Ctrl+Shift+P` arrives, trusted, and does nothing (the lab
+  turns that dialog off with `workbench.welcomePage.experimentalOnboarding`, and
+  `palette.mjs` blurs to the body as a backstop). A key event that the page's own
+  listener sees is *not* proof the keybinding fired.
 - **A webview iframe is out-of-process, which breaks the two obvious ways to find
   it.** `Page.getFrameTree` on a *window* target does not list its webviews at all.
   Screen geometry (an OOPIF reports its top-level window's `screenX`/`screenY`)

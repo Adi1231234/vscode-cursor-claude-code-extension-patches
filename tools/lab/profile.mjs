@@ -24,6 +24,14 @@ import { join } from 'node:path';
 
 const EDITOR_SETTINGS = {
     'security.workspace.trust.enabled': false,
+    /* The editor's own first-run onboarding puts a modal "Welcome to VS Code /
+       Sign in to use GitHub Copilot" over a fresh profile and parks focus on
+       its Sign In button, from where Ctrl+Shift+P does nothing at all - so the
+       lab's panel and reload steps would hang on a dialog nobody asked for.
+       This is the setting `tryShowOnboarding` actually reads before showing it
+       (the similarly named `onboarding.enabled` gates a different engine and
+       leaves this dialog up); palette.mjs blurring first is only a backstop. */
+    'workbench.welcomePage.experimentalOnboarding': false,
     'window.restoreWindows': 'none',
     'update.mode': 'none',
     'extensions.autoUpdate': false,

@@ -76,10 +76,13 @@ export async function waitForPort(port, tries = 60, waitMs = 1000) {
    editor is a process tree, so matching on the path is what keeps a stray
    `Code.exe` of the user's own out of it. */
 export async function stop(lay) {
-    await powershell(
-        `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${quote(lay.dir)}*' }`
-        + ' | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {} }',
+    const out = await powershell(
+        `$p = @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${quote(lay.dir)}*' });`
+        + ' $p | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {} };'
+        + ' $p.Count',
+        true,
     );
+    return Number(out.trim()) || 0;
 }
 
 /* Who is actually listening on the port. A port that answers is NOT proof the
@@ -96,9 +99,14 @@ export async function portOwner(port) {
 
 const quote = (s) => s.replace(/'/g, "''");
 
+/* -EncodedCommand, not -Command: a script passed as an argument goes through
+   Windows command-line quoting on the way in, and any double quote inside it
+   comes out mangled - the command then runs and returns *nothing*, which reads
+   as "no such process" rather than as a bug. Base64 UTF-16LE has no such edge. */
 function powershell(script, capture = false) {
+    const encoded = Buffer.from(script, 'utf16le').toString('base64');
     return new Promise((resolve, reject) => {
-        const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true });
+        const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], { windowsHide: true });
         let out = '';
         if (capture) p.stdout.on('data', (d) => { out += d; });
         p.on('error', reject);

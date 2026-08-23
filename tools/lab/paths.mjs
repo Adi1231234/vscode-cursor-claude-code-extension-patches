@@ -15,8 +15,12 @@ export const CACHE = join(ROOT, 'cache');
 export const DEFAULT_PORT = 9555;
 export const REPO = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-export function layout(version) {
-    const dir = join(ROOT, version);
+/* A lab is identified by version *and* port, and gets a directory per pair.
+   Two labs of the same version otherwise share one user-data dir, where the
+   second launch joins the first instance instead of starting its own - which
+   also makes "that port is taken, pass --port" the wrong advice. */
+export function layout(version, port) {
+    const dir = join(ROOT, `${version}-p${port}`);
     return {
         version,
         dir,
