@@ -104,5 +104,40 @@ threaded into the `initialize` control request.
 - `agentProgressSummaries:!0` -> `oht()` becomes true, which turns on the rolling
   natural-language `summary` in `task_progress` (and subagent summarization).
 
+## 6. What survives, and what a panel reload destroys
+
+**Within one panel session, history is free.** Every task event is accumulated by
+the consumer, so a finished task simply changes state in its own store; the CLI
+evicting it after ~30 s is irrelevant, its subagent messages are still in
+`session.messages`, and its `.output` file is still on disk.
+
+**A panel reload kills the running tasks.** The chat surfaces set
+`clientInitImpliesFreshClient = true`, so a webview `init` closes every channel,
+which calls `query.return()` and ends the CLI subprocess. Anything running in the
+background dies with it. So "history across a reload" only ever means already-dead
+tasks.
+
+**What a reload does replay**, through the normal transcript load:
+
+- `Agent` tool_use blocks (`description`, `subagent_type`, `prompt`) and their
+  tool_results (`Async agent launched successfully … agentId: aXXXX`).
+- Bash tool_results (`Command running in background with ID: <id>. Output is being
+  written to: <path>`).
+
+Enough to rebuild the list: name, icon, task id and log path.
+
+**What a reload does not replay:**
+
+- The final status. `<task-notification>` is persisted only as
+  `{type:"attachment", attachment:{type:"queued_command", commandMode:"task-notification"}}`,
+  and the extension's transcript mapping (`B5t`) accepts only `user` / `assistant` /
+  `system`, so every attachment is dropped.
+- The subagent's own steps. `B5t` also drops `isSidechain`, and those messages were
+  never in the parent `.jsonl` to begin with - they live in
+  `subagents/agent-<id>.jsonl`, which the extension never reads.
+
+Both are recoverable from disk through the same host reader that serves Bash logs:
+the agent jsonl for the transcript, the `.output` file for a command.
+
 On-disk logs, host RPCs and what the transcript records live in
 [files-and-host-api.md](files-and-host-api.md).

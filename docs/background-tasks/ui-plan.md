@@ -38,6 +38,13 @@ running task is selected on open.
 - everything else (`remote_agent`, `monitor_*`, `mcp_task`, ...) -> a generic icon
   and the description, so an unknown type still renders
 
+The list holds finished tasks too, dimmed, below the running ones: within one panel
+session that is free, since the store already has them. Across a reload only
+already-dead tasks are in question - a reload kills the CLI process and every
+running task with it - and their rows can be rebuilt from the replayed transcript
+while their logs come from disk via the host reader. See
+[data-sources.md](data-sources.md) §6.
+
 **Trailing pane: that task's live log.** It follows the selection and keeps
 streaming while the dialog is open, auto-scrolled while pinned to the bottom with a
 follow toggle that releases when the user scrolls up.
@@ -125,6 +132,10 @@ All unique in 2.1.240 unless noted:
 - **Cross-session tasks.** `background_tasks_changed` is per session. A task started
   in another panel/session will not appear. Decide whether that is acceptable
   (it matches the CLI's own scope) before promising a global view.
+- **How far back history should go.** Free: this panel session. Cheap, once the host
+  reader exists: earlier tasks of the same conversation, rebuilt from the transcript
+  and read off disk. Decide whether the extra rows are worth it, and whether a
+  finished row whose log file has since been cleaned should still be listed.
 
 ## How to verify
 
