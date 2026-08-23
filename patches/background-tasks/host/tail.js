@@ -8,8 +8,15 @@
   var openTasks = Object.create(null);   /* taskId -> {file, dir, offset, wv} */
   var watchers = Object.create(null);    /* dir -> {watcher, timer, refs} */
 
-  function post(wv, msg) {
-    try { wv.postMessage(msg); } catch (e) {}
+  /* A disposed webview reports the failure through the returned promise rather
+     than by throwing, so a watcher would otherwise keep tailing into nothing. */
+  function post(wv, msg, taskId) {
+    var r;
+    try { r = wv.postMessage(msg); } catch (e) { if (taskId) closeTask(taskId); return; }
+    if (r && typeof r.then === "function") {
+      r.then(function (ok) { if (ok === false && taskId) closeTask(taskId); },
+             function () { if (taskId) closeTask(taskId); });
+    }
   }
 
   /* Never hand back a split multi-byte character: leave its bytes for next time. */
@@ -55,7 +62,7 @@
     t.seen = true;
     if (r.text === "" && r.next === t.offset) return;
     t.offset = r.next;
-    post(t.wv, { type: "__ccbg", op: "delta", taskId: taskId, text: r.text, skipped: r.skipped, size: r.size });
+    post(t.wv, { type: "__ccbg", op: "delta", taskId: taskId, text: r.text, skipped: r.skipped, size: r.size }, taskId);
   }
 
   function pumpDir(dir) {
@@ -94,7 +101,7 @@
     var offset = fromStart ? 0 : Math.max(0, size - INITIAL_TAIL);
     openTasks[taskId] = { file: file, dir: dir, offset: offset, wv: wv, seen: size > 0 };
     retainDir(dir);
-    post(wv, { type: "__ccbg", op: "reset", taskId: taskId });
+    post(wv, { type: "__ccbg", op: "reset", taskId: taskId }, taskId);
     pump(taskId);
   }
 

@@ -7,7 +7,7 @@
 
   var paneEl = null, paneHead = null, paneBody = null, paneFoot = null;
   var paneFor = null, paneMode = "", drawn = 0, follow = true;
-  var lineTail = "", textLen = 0, bodyPre = null, toolEls = null;
+  var lineTail = "", textLen = 0, bodyPre = null, toolEls = null, wfDrawn = null;
 
   function buildPane() {
     paneEl = el("div", "__bgPane");
@@ -25,10 +25,11 @@
 
   function resetPane() {
     paneFor = null; paneMode = ""; drawn = 0; follow = true;
-    lineTail = ""; textLen = 0; bodyPre = null; toolEls = Object.create(null);
+    lineTail = ""; textLen = 0; bodyPre = null; toolEls = Object.create(null); wfDrawn = null;
   }
 
   function modeFor(t) {
+    if (t.workflowProgress && t.workflowProgress.length) return "workflow";
     if (t.log.length > 0) return "live";
     if (t.logPath) return t.logKind === "agent" ? "jsonl" : "text";
     return "none";
@@ -52,6 +53,8 @@
     if (paneMode === "live") {
       for (; drawn < t.log.length; drawn++) paneBody.appendChild(entryEl(t.log[drawn]));
       stick();
+    } else if (paneMode === "workflow") {
+      drawWorkflow(t);
     }
   }
 
@@ -69,6 +72,12 @@
 
   function drawFoot(t) {
     clear(paneFoot);
+    if (isRunning(t) && !t.backgrounded && t.toolUseId) {
+      var bg = btn("__bgFootBtn", "Let this task run in the background");
+      bg.textContent = "Run in background";
+      bg.addEventListener("click", function () { sendToBackground(t); });
+      paneFoot.appendChild(bg);
+    }
     if (isRunning(t)) {
       var stop = btn("__bgFootBtn", "Stop task");
       stop.textContent = "Stop";

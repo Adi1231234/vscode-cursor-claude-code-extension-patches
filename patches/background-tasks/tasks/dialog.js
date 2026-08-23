@@ -27,7 +27,6 @@
     back.addEventListener("mousedown", function (ev) { if (ev.target === back) closeDialog(); });
     document.body.appendChild(back);
     document.addEventListener("keydown", onKey, true);
-    askHistory();
     renderDialog();
   }
 
@@ -39,6 +38,7 @@
     back = null;
     listEl = null;
     listSig = null;
+    forgetHistoryRequest();
     resetPane();
   }
 
@@ -97,6 +97,9 @@
     var sig = signature(snap);
     if (sig === listSig) return;
     listSig = sig;
+    /* Rebuilt roughly once a second (the elapsed times tick), so the scroll
+       position has to be carried over or a long list keeps jumping to the top. */
+    var keepScroll = listEl.scrollTop;
     clear(listEl);
     if (!snap.running.length && !snap.finished.length) {
       listEl.appendChild(el("div", "__bgEmpty", "No background tasks in this conversation."));
@@ -109,10 +112,12 @@
       listEl.appendChild(sep);
       for (var j = 0; j < snap.finished.length; j++) listEl.appendChild(row(snap.finished[j]));
     }
+    listEl.scrollTop = keepScroll;
   }
 
   function renderDialog() {
     if (!back) return;
+    askHistory();
     renderList();
     renderPane(sel ? TASKS[sel] : null);
   }

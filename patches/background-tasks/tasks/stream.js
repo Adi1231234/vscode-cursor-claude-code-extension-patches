@@ -53,6 +53,7 @@
       var u = TASKS[m.task_id];
       if (!u || !m.patch) return;
       if (m.patch.description) u.description = m.patch.description;
+      if (m.patch.is_backgrounded !== undefined) u.backgrounded = m.patch.is_backgrounded === true;
       if (m.patch.status && m.patch.status !== "running" && m.patch.status !== "pending") finish(u, m.patch.status);
       return changed();
     }
@@ -73,6 +74,7 @@
         var b = task(e.task_id);
         b.type = e.task_type || b.type;
         b.description = b.description || e.description || "";
+        b.backgrounded = true;
         b.seenLive = true;
       }
       return changed();
@@ -106,8 +108,12 @@
     for (var i = 0; i < content.length; i++) {
       var entry = blockEntry(content[i]);
       if (!entry) continue;
-      if (t) pushLog(t, entry);
-      else { (PENDING[parent] = PENDING[parent] || []).push(entry); }
+      if (t) { pushLog(t, entry); continue; }
+      /* Held until the matching task_started names this tool_use id. A nested
+         subagent's parent id never arrives, so the buffer is bounded. */
+      var held = PENDING[parent] = PENDING[parent] || [];
+      held.push(entry);
+      if (held.length > MAX_LOG) held.splice(0, held.length - MAX_LOG);
     }
     if (t) changed();
   }

@@ -40,7 +40,7 @@ function Invoke-Patch {
     # same file; its own guards make the second copy a no-op).
     $order = @(
         'config-dom', '@ccStore', 'store', 'stream', 'bridge', 'entry',
-        'logpane', 'dialog', 'indicator', 'init'
+        'logpane', 'workflow', 'dialog', 'indicator', 'init'
     )
     $script = ($order | ForEach-Object {
         if ($_ -eq '@ccStore') { "`n" + (Get-CcStoreHelper) + "`n" }

@@ -119,6 +119,13 @@ The shared store finder moved to `lib/js/ccStore.js` with a `Get-CcStoreHelper`
 in `lib/Patch.ps1`; `prompt-queue/queue/session.js` now delegates to it instead of
 carrying its own copy of the fiber walk.
 
+Two things the first pass missed and an audit added: the workflow pane (a
+`local_workflow` has no message log, only `workflow_progress`) and the
+send-to-background action, whose host op existed with nothing calling it. The audit
+also made the host's directory listing authoritative - a finished row it does not
+mention has lost its file and loses its row - rather than waiting for the user to
+click it and get a `gone`.
+
 Deviations from the plan worth knowing:
 
 - The render coalescer is a `setTimeout`, not `requestAnimationFrame`: a hidden
@@ -140,9 +147,9 @@ The verified anchor list lives in
 - **Hardlink fallback.** A subagent's `<taskId>.output` is normally a hardlink to its
   `agent-*.jsonl`, but falls back to a one-time `copyFile`. Always read the jsonl
   path; never trust `.output` for a subagent.
-- **Cross-session tasks.** `background_tasks_changed` is per session. A task started
-  in another panel/session will not appear. Decide whether that is acceptable
-  (it matches the CLI's own scope) before promising a global view.
+- **Cross-session tasks.** `background_tasks_changed` is per session, so a task
+  started in another panel does not appear. That matches the CLI's own scope and is
+  left as is.
 - **Status of an older async agent.** For a task recovered from disk the final
   status is often unknowable: `<task-notification>` is not replayed, and an async
   agent's tool_result only says `async_launched`. Show such rows as "finished"

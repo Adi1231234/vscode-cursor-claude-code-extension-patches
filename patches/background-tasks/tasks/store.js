@@ -14,7 +14,8 @@
   function newTask(id) {
     return {
       id: id, type: typeOfId(id), description: "", subagentType: "", workflowName: "",
-      toolUseId: "", status: "running", startedAt: Date.now(), endedAt: 0,
+      toolUseId: "", status: "running", backgrounded: false,
+      startedAt: Date.now(), endedAt: 0,
       tokens: 0, toolUses: 0, lastTool: "", summary: "",
       logPath: "", logKind: "", log: [], seenLive: false, onDisk: false
     };
@@ -83,11 +84,23 @@
   }
 
   /* A finished row exists only while its log does: a live subagent keeps its
-     in-memory log, everything else needs the file the host reported. */
+     in-memory log, everything else needs a file. */
   function hasLog(t) {
     if (isRunning(t)) return true;
     if (t.log.length > 0) return true;
-    return t.onDisk === true;
+    return !!t.logPath;
+  }
+
+  /* The host's directory listing is the authority on what is still on disk. A
+     finished row with no in-memory log that the listing did not mention has lost
+     its file (%TEMP% is cleaned eventually), so it loses its row too. */
+  function pruneAgainst(listed) {
+    for (var i = 0; i < ORDER.length; i++) {
+      var t = TASKS[ORDER[i]];
+      if (!t || isRunning(t) || t.log.length > 0) continue;
+      if (!listed[t.id]) { t.logPath = ""; t.onDisk = false; }
+    }
+    prune();
   }
 
   function prune() {

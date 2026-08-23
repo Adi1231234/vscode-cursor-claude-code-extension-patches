@@ -24,10 +24,16 @@
     return (st && st.claudeChannelId) || "";
   }
 
+  /* The session id is learned from the stream, so the dialog can open before it is
+     known; ask again on the next pass rather than losing the history for good. */
+  var historyAsked = false;
+
   function askHistory() {
-    if (!SID) return;
-    hostSend({ op: "list", sid: SID, hintDir: HINT_DIR });
+    if (historyAsked || !SID) return;
+    historyAsked = hostSend({ op: "list", sid: SID, hintDir: HINT_DIR });
   }
+
+  function forgetHistoryRequest() { historyAsked = false; }
 
   function openLog(t) {
     if (!t.logPath) return false;
@@ -44,13 +50,21 @@
     hostSend({ op: "stop", channelId: channelId(), taskId: t.id });
   }
 
+  /* Ctrl+B semantics for one task: let the turn continue without waiting for it. */
+  function sendToBackground(t) {
+    if (!t.toolUseId) return;
+    hostSend({ op: "background", channelId: channelId(), toolUseId: t.toolUseId });
+  }
+
   /* Host -> panel. "reset" starts a fresh pane, "delta" appends, "gone" means the
      file was removed underneath us and the row goes with it. */
   function onHostMessage(m) {
     if (m.op === "list" && Array.isArray(m.items)) {
+      var listed = Object.create(null);
       for (var i = 0; i < m.items.length; i++) {
         var it = m.items[i];
         if (!it || !it.taskId) continue;
+        listed[it.taskId] = true;
         var t = task(it.taskId);
         t.onDisk = true;
         if (!t.logPath || it.kind === "agent") noteLogPath(t, it.path, it.kind);
@@ -61,7 +75,7 @@
           t.startedAt = Math.min(t.startedAt, t.endedAt);
         }
       }
-      prune();
+      pruneAgainst(listed);
       return changed();
     }
     if (!m.taskId) return;

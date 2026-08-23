@@ -50,9 +50,15 @@ keeping its selection and its log. A finished row exists only while its log does
 subagent seen this session keeps its in-memory entries, anything else needs the file
 the host reported, and a vanished file drops the row.
 
-The log pane has three sources behind one view - a live subagent's entries straight
-off the stream, an older subagent's transcript jsonl, and any other task's `.output`
-text. The last two are tailed by the host.
+The log pane has four sources behind one view: a live subagent's entries straight
+off the stream, an older subagent's transcript jsonl, a workflow's `workflow_progress`
+array as a phase / agent tree, and any other task's `.output` text. The jsonl and the
+text are tailed by the host; the other two need no file at all.
+
+Per-task actions in the pane footer, safest first: **Run in background** (only while
+a task is still in the foreground - Ctrl+B semantics for that one task), **Stop**,
+**Copy**, and **Open in editor**. The first two go through `backgroundTasks` and
+`stopTask`, the control requests `extension.js` already defines and never called.
 
 Pair with `subagent-stream-flags`: without it a subagent's prose and thinking are
 never forwarded, so the feed shows tool calls only.
@@ -61,7 +67,8 @@ never forwarded, so the feed shows tool calls only.
 
 - `tasks.css` - indicator + dialog styles, all `__bg*` scoped
 - `tasks/*.js` - the panel script, concatenated in the explicit order in `patch.ps1`
-  (`config-dom` opens the `<script>` and the IIFE, `init` closes both)
+  (`config-dom` opens the `<script>` and the IIFE, `init` closes both);
+  `workflow.js` is the phase / agent tree, split out to keep `logpane.js` small
 - `host/dirs.js` `host/tail.js` `host/handle.js` - the host runtime, in that order
 - `host/hook.js` - the one-line guard spliced into the webview message listener
 
