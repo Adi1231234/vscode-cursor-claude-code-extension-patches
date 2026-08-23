@@ -135,3 +135,37 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    with the patched bundle in place - verification covers the installed VSIX, not
    the files afterwards. What *does* bite is **auto-update**: both editors replace
    the folder on an extension update and the patches go with it (hence: re-run).
+
+## Attaching a real debugger to the webview (CDP)
+
+`Developer: Open Webview Developer Tools` is enough for a quick look. For scripted
+inspection (evaluate in the page, read the DOM, drive it from a CDP client), open a
+Chrome DevTools Protocol port:
+
+- **VS Code: put it in `argv.json`** (`Preferences: Configure Runtime Arguments`,
+  i.e. `~/.vscode/argv.json`). `main.js` allowlists `remote-debugging-port` next to
+  `disable-hardware-acceleration`, and calls `appendSwitch` **only for a string
+  value**: `"remote-debugging-port": "9333"` opens the port, unquoted `9333` is
+  silently ignored. This is the only way to get the port on the *normal* profile,
+  with no `--user-data-dir` and no flags to remember.
+- **It is read once, when the main process starts.** The editor is single-instance,
+  so closing one window and reopening it just rejoins the process that is already
+  running and nothing changes. The port appears only after every window is closed
+  and the editor starts cold.
+- **Cursor does not support this** - its argv.json allowlist has only the four base
+  switches. There, pass `--remote-debugging-port=<n>` on the command line, and only
+  with no instance already running: a second launch hands its args to the running
+  instance and exits, so its port answers CDP for about a second and then dies. A
+  single probe sees that as success.
+- `http://127.0.0.1:<n>/json/list` then lists one `page` per window (titled by
+  `window.title`) plus one `iframe` per webview, tagged
+  `extensionId=Anthropic.claude-code`. That iframe is the webview *shell*
+  (`vscode-webview://.../index.html`, one `<script>`, empty body) - the panel's own
+  DOM is one frame deeper.
+- **Port open but zero targets = a pending editor update**, not a CDP problem. While
+  the `vscode-updating` mutex is held (`new_Code.exe` + `updating_version` in the
+  install dir), a new instance waits 30s and dies with `Code is currently being
+  updated`. Chromium has already bound the port by then, so `/json/version` answers
+  while no renderer exists and `Target.getTargets` returns `[]`.
+- The port has no authentication and any local process can attach, so take the line
+  back out when you are done.
