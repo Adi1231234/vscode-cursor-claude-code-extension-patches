@@ -39,8 +39,8 @@ function Invoke-Patch {
     # '@ccStore' is the shared store finder from lib/js (prompt-queue injects the
     # same file; its own guards make the second copy a no-op).
     $order = @(
-        'config-dom', '@ccStore', 'store', 'stream', 'bridge', 'entry',
-        'logpane', 'workflow', 'dialog', 'indicator', 'init'
+        'config-dom', '@ccStore', 'store', 'shells', 'stream', 'bridge', 'entry',
+        'logpane', 'tail', 'workflow', 'dialog', 'indicator', 'init'
     )
     $script = ($order | ForEach-Object {
         if ($_ -eq '@ccStore') { "`n" + (Get-CcStoreHelper) + "`n" }

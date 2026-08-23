@@ -6,7 +6,7 @@
      scroll position survives every update. */
 
   var paneEl = null, paneHead = null, paneBody = null, paneFoot = null;
-  var paneFor = null, paneMode = "", drawn = 0, follow = true;
+  var paneFor = null, paneMode = "", drawn = 0, follow = true, tailing = null;
   var lineTail = "", textLen = 0, bodyPre = null, toolEls = null, wfDrawn = null;
 
   function buildPane() {
@@ -24,8 +24,22 @@
   }
 
   function resetPane() {
+    stopTailing();
     paneFor = null; paneMode = ""; drawn = 0; follow = true;
     lineTail = ""; textLen = 0; bodyPre = null; toolEls = Object.create(null); wfDrawn = null;
+  }
+
+  /* One host tail at a time, tracked by the id it belongs to rather than by the
+     selection, so a mode change in place opens and closes it just as a click does. */
+  function stopTailing() {
+    if (tailing) { closeLog(tailing); tailing = null; }
+  }
+
+  function wantTail(t, mode) {
+    var want = (mode === "text" || mode === "jsonl") ? t.id : null;
+    if (tailing === want) return;
+    stopTailing();
+    if (want && openLog(t)) tailing = want;
   }
 
   function modeFor(t) {
@@ -40,18 +54,22 @@
     if (!t) { resetPane(); clear(paneBody); clear(paneHead); clear(paneFoot); return; }
     var mode = modeFor(t);
     if (paneFor !== t.id || paneMode !== mode) {
-      var switching = paneFor !== t.id;
       resetPane();
       paneFor = t.id; paneMode = mode;
       clear(paneBody);
-      if (mode === "text" || mode === "jsonl") { if (switching) openLog(t); }
+      wantTail(t, mode);
       if (mode === "text") { bodyPre = el("pre", "__bgPre"); paneBody.appendChild(bodyPre); }
       if (mode === "none") paneBody.appendChild(el("div", "__bgEmpty", "No log for this task."));
     }
     drawHead(t);
     drawFoot(t);
     if (paneMode === "live") {
-      for (; drawn < t.log.length; drawn++) paneBody.appendChild(entryEl(t.log[drawn]));
+      /* pushLog trims the oldest entries once the log passes its cap, so the count
+         drawn so far is compared against the total ever pushed, not the array. */
+      var from = Math.max(0, drawn - (t.logDropped || 0));
+      for (var i = from; i < t.log.length; i++) paneBody.appendChild(entryEl(t.log[i]));
+      drawn = (t.logDropped || 0) + t.log.length;
+      trimFeed();
       stick();
     } else if (paneMode === "workflow") {
       drawWorkflow(t);
@@ -102,39 +120,8 @@
     if (follow) paneBody.scrollTop = paneBody.scrollHeight;
   }
 
-  /* Host -> pane. Text arrives as byte-range deltas, so a jsonl line can be split
-     across two of them; the tail is carried over. */
-  function setPaneText(taskId, text, reset, skipped) {
-    if (taskId !== paneFor || !paneBody) return;
-    if (reset) {
-      clear(paneBody); lineTail = ""; textLen = 0; drawn = 0; toolEls = Object.create(null);
-      if (paneMode === "text") { bodyPre = el("pre", "__bgPre"); paneBody.appendChild(bodyPre); }
-      return;
-    }
-    if (!text) return;
-    if (skipped) paneBody.appendChild(el("div", "__bgSkip", Math.round(skipped / 1024) + " KB of earlier output omitted"));
-    if (paneMode === "text") {
-      if (!bodyPre) { bodyPre = el("pre", "__bgPre"); paneBody.appendChild(bodyPre); }
-      textLen += text.length;
-      bodyPre.appendChild(document.createTextNode(text));
-      if (textLen > MAX_TEXT) { bodyPre.textContent = bodyPre.textContent.slice(-MAX_TEXT); textLen = MAX_TEXT; }
-    } else if (paneMode === "jsonl") {
-      lineTail += text;
-      var lines = lineTail.split(NL);
-      lineTail = lines.pop();
-      for (var i = 0; i < lines.length; i++) drawJsonl(lines[i]);
-    }
-    stick();
-  }
-
-  function drawJsonl(line) {
-    if (!line || line.charAt(0) !== "{") return;
-    var o;
-    try { o = JSON.parse(line); } catch (e) { return; }
-    var content = o && o.message && o.message.content;
-    if (!Array.isArray(content)) return;
-    for (var i = 0; i < content.length; i++) {
-      var entry = blockEntry(content[i]);
-      if (entry) paneBody.appendChild(entryEl(entry));
-    }
+  /* The feed is append-only, so without this a task that runs for hours leaves a
+     node per entry behind. Same cap the store keeps. */
+  function trimFeed() {
+    while (paneBody.childElementCount > MAX_LOG) paneBody.removeChild(paneBody.firstElementChild);
   }

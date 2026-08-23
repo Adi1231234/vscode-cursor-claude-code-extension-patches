@@ -9,11 +9,12 @@
 
   function ensureIndicator() {
     var n = runningCount();
+    var done = snapshot().finished.length;
     var e = inp();
     var form = e && e.closest ? e.closest("form") : null;
     if (!form) return;
     var existing = form.querySelector(".__bgInd");
-    if (!n) {
+    if (!n && !done) {
       if (existing) existing.remove();
       indEl = null;
       return;
@@ -36,10 +37,13 @@
     var target = form.querySelector(".__qAdd") || send;
     if (target.previousElementSibling !== b) target.parentNode.insertBefore(b, target);
 
+    /* Animated with a count while something runs; a quiet glyph afterwards, so the
+       finished list stays reachable without a permanent fixture in the footer. */
+    b.className = n ? "__bgInd" : "__bgInd __bgIdle";
     var count = b.querySelector(".__bgCount");
-    if (count) count.textContent = String(n);
+    if (count) count.textContent = n ? String(n) : "";
     var tip = b.querySelector(".__bgTip");
-    if (tip) tip.textContent = tipText(n);
+    if (tip) tip.textContent = n ? tipText(n) : (done === 1 ? "1 finished task" : done + " finished tasks");
   }
 
   function tipText(n) {

@@ -33,6 +33,7 @@
     }
     if (entry.k === "result") {
       var host = entry.forId ? toolEls[entry.forId] : null;
+      if (host && !host.isConnected) { delete toolEls[entry.forId]; host = null; }
       if (host) {
         host.classList.add(entry.err ? "__bgToolErr" : "__bgToolOk");
         foldBody(host, entry.text || "(no output)", "__bgResBody");

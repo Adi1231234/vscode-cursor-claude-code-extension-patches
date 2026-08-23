@@ -17,7 +17,7 @@
       toolUseId: "", status: "running", backgrounded: false,
       startedAt: Date.now(), endedAt: 0,
       tokens: 0, toolUses: 0, lastTool: "", summary: "",
-      logPath: "", logKind: "", log: [], seenLive: false, onDisk: false
+      logPath: "", logKind: "", log: [], logDropped: 0, seenLive: false, onDisk: false
     };
   }
 
@@ -130,5 +130,9 @@
 
   function pushLog(t, entry) {
     t.log.push(entry);
-    if (t.log.length > MAX_LOG) t.log.splice(0, t.log.length - MAX_LOG);
+    if (t.log.length > MAX_LOG) {
+      var drop = t.log.length - MAX_LOG;
+      t.log.splice(0, drop);
+      t.logDropped += drop;   /* the pane counts total pushes, not array indices */
+    }
   }

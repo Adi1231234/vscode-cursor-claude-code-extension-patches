@@ -50,6 +50,11 @@ keeping its selection and its log. A finished row exists only while its log does
 subagent seen this session keeps its in-memory entries, anything else needs the file
 the host reported, and a vanished file drops the row.
 
+The indicator is animated with a running count while anything runs, and stays as a
+quiet static glyph afterwards. It has to: the dialog is the only way to reach the
+finished list, so a button that disappeared with the last task would take the
+history with it. It is absent entirely until the first task of the session.
+
 The log pane has four sources behind one view: a live subagent's entries straight
 off the stream, an older subagent's transcript jsonl, a workflow's `workflow_progress`
 array as a phase / agent tree, and any other task's `.output` text. The jsonl and the

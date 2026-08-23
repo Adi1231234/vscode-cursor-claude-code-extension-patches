@@ -32,7 +32,6 @@
 
   function closeDialog() {
     if (!back) return;
-    if (sel) closeLog(sel);
     document.removeEventListener("keydown", onKey, true);
     back.remove();
     back = null;
@@ -46,9 +45,11 @@
     if (ev.key === "Escape" && back) { ev.preventDefault(); ev.stopPropagation(); closeDialog(); }
   }
 
+  /* resetPane closes whatever tail is actually open; closing by selection instead
+     would send a close for a task that was never tailed - and the host keys tails by
+     task id, so that can cut off another panel watching the same one. */
   function selectTask(id) {
     if (sel === id) return;
-    if (sel) closeLog(sel);
     sel = id;
     resetPane();
     renderDialog();
