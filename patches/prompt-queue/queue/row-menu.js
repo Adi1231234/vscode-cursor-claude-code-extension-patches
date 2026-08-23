@@ -14,25 +14,46 @@
 
   function closeRowMenu() { if (_menuClose) _menuClose(); }
 
-  /* Why "Send now" cannot run right now - "" when it can. */
+  /* Why "Send now" cannot run right now - "" when it can. Kept short: it is
+     shown in place of the item's label, and the menu is sized to fit it so the
+     swap moves nothing. */
   function sendBlocked(it) {
-    if (it.off) return "Skipped - enable this item before sending it";
-    if (isBusy()) return "Claude is mid-turn - it sends on its own when the turn ends";
-    if (flushing) return "Another message is being sent";
+    if (it.off) return "Skipped - enable it first";
+    if (isBusy()) return "Claude is busy right now";
+    if (flushing) return "Another send in progress";
     return "";
   }
 
-  function menuItem(icon, label, cls, disabledWhy, fn) {
-    var b = btn("__qMenuItem" + (cls ? " " + cls : ""), disabledWhy || "");
+  /* blocked() is re-run on click, not only while building: the turn state can
+     flip while the menu sits open, and sendNow would then return silently -
+     the user would see a live item do nothing at all. Either way the reason
+     takes the label's place, so it is never hidden in a tooltip. */
+  function menuItem(icon, label, cls, blocked, fn) {
+    var b = btn("__qMenuItem" + (cls ? " " + cls : ""));
     b.setAttribute("role", "menuitem");
     var ic = el("span", "__qMenuIcon");
     ic.innerHTML = icon;
-    var tx = el("span");
+    var tx = el("span", "__qMenuLabel");
     tx.textContent = label;
     b.appendChild(ic);
     b.appendChild(tx);
-    if (disabledWhy) b.disabled = true;
-    else b.addEventListener("click", function (ev) { ev.stopPropagation(); closeRowMenu(); fn(); });
+
+    function refuse(why) {
+      b.disabled = true;
+      b.title = why;
+      tx.textContent = why;
+      b.classList.add("__qMenuRefused");
+    }
+
+    var why = blocked && blocked();
+    if (why) refuse(why);
+    b.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      var now = blocked && blocked();
+      if (now) { refuse(now); return; }
+      closeRowMenu();
+      fn();
+    });
     return b;
   }
 
@@ -53,9 +74,9 @@
     var menu = el("div", "__qMenu");
     menu.setAttribute("role", "menu");
     menu.tabIndex = -1;
-    menu.appendChild(menuItem(IC_SEND, "Send now", "", sendBlocked(it), function () { sendNow(it); }));
-    menu.appendChild(menuItem(IC_COPY, "Duplicate", "", "", function () { duplicateItem(it); }));
-    menu.appendChild(menuItem(IC_TRASH, "Delete", "__qMenuDanger", "", function () { removeItem(it); }));
+    menu.appendChild(menuItem(IC_SEND, "Send now", "", function () { return sendBlocked(it); }, function () { sendNow(it); }));
+    menu.appendChild(menuItem(IC_COPY, "Duplicate", "", null, function () { duplicateItem(it); }));
+    menu.appendChild(menuItem(IC_TRASH, "Delete", "__qMenuDanger", null, function () { removeItem(it); }));
 
     function close() {
       /* Only hand focus back if it is still ours - a rebuild (render) drops the
