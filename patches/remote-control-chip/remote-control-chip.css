@@ -16,11 +16,19 @@
 
    Colour: .footerButton is `--app-secondary-foreground`, which is the row's
    *label* colour. Every icon in the row - the "+", the "/", the permission
-   glyph - is drawn at the full `--app-primary-foreground`, so the chip is too;
-   at secondary it reads as a disabled sibling. */
+   glyph - is drawn at the full `--app-primary-foreground`, so that is the base
+   here too; at secondary it reads as a disabled sibling. The three states then
+   tint it with the app's own status tokens, never a literal colour, so they
+   follow the editor theme. */
 .cc-rc-chip.cc-rc-chip {
     padding: 0;
     color: var(--app-primary-foreground);
+}
+
+/* Connected is the state worth reading at a glance, so it gets the app's
+   success green - the same token its own success text uses. */
+.cc-rc-chip[data-rc-state="connected"] {
+    color: var(--app-success-foreground);
 }
 
 .cc-rc-chip[data-rc-state="connecting"] {
