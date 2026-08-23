@@ -1,5 +1,3 @@
-  var SEND_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>';
-
   function buildRow(it, i) {
     var row = el("div", "__qRow" + (it.off ? " __qOff" : ""));
     var check = el("span", "__qCheck" + (it.off ? "" : " __qOn"));
@@ -41,20 +39,13 @@
       ev.stopPropagation();
       if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); text.blur(); }
     });
-    var sendBtn = btn("__qSend", "Send now - skip the queue, schedule and hold");
-    sendBtn.innerHTML = SEND_ICON;
-    sendBtn.addEventListener("click", function (ev) { ev.stopPropagation(); sendNow(it); });
-    var del = btn("__qDel", "Remove from queue");
-    del.textContent = "\u2715";
-    del.addEventListener("click", function () { removeAt(i); });
     row.appendChild(buildNav(i));
+    row.appendChild(buildRowMenu(it));
     row.appendChild(check);
     row.appendChild(num);
     row.appendChild(text);
     if (it.files && it.files.length) row.appendChild(buildThumbs(it.files));
     row.appendChild(buildClock(it));
-    row.appendChild(sendBtn);
-    row.appendChild(del);
     return row;
   }
 
@@ -69,6 +60,7 @@
     /* A rebuild destroys any focused position input, so clear the edit flag -
        otherwise an external re-render could leave it stuck true and freeze flushing. */
     editing = false;
+    closeRowMenu();   /* the popup is body-mounted: a rebuild would orphan it */
     saveQueue();
     var e = inp();
     if (!e) return;

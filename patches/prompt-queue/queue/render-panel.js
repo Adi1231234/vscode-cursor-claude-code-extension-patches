@@ -32,24 +32,23 @@
     return head;
   }
 
+  function navBtn(cls, title, glyph, disabled, fn) {
+    var b = btn(cls, title);
+    b.textContent = glyph;
+    b.disabled = disabled;
+    b.addEventListener("click", function (e) { e.stopPropagation(); fn(); });
+    return b;
+  }
+
+  /* All four controls are always rendered and merely disabled at the ends, so
+     every row is the same height - the to-top button used to be omitted on the
+     first row, which made that one row shorter than the rest. */
   function buildNav(i) {
-    var nav = el("span", "__qNav");
-    if (i > 0) {
-      var top = btn("__qTop", "Move to top");
-      top.textContent = "\u2912";
-      top.addEventListener("click", function (e) { e.stopPropagation(); moveToFirst(i); });
-      nav.appendChild(top);
-    }
-    var up = btn("__qUp", "Move up");
-    up.textContent = "\u25B2";
-    up.disabled = (i === 0);
-    up.addEventListener("click", function (e) { e.stopPropagation(); swapItems(i, i - 1); });
-    var down = btn("__qDown", "Move down");
-    down.textContent = "\u25BC";
-    down.disabled = (i === Q.length - 1);
-    down.addEventListener("click", function (e) { e.stopPropagation(); swapItems(i, i + 1); });
-    nav.appendChild(up);
-    nav.appendChild(down);
+    var nav = el("span", "__qNav"), first = (i === 0), last = (i === Q.length - 1);
+    nav.appendChild(navBtn("__qTop", "Move to top", "\u2912", first, function () { moveToEnd(i, false); }));
+    nav.appendChild(navBtn("__qUp", "Move up", "\u25B2", first, function () { swapItems(i, i - 1); }));
+    nav.appendChild(navBtn("__qDown", "Move down", "\u25BC", last, function () { swapItems(i, i + 1); }));
+    nav.appendChild(navBtn("__qBottom", "Move to bottom", "\u2913", last, function () { moveToEnd(i, true); }));
     return nav;
   }
 
