@@ -10,7 +10,7 @@
       `extensions.json` in the extensions dir, and a hand-made folder beside it
       is not enough. `--install-extension` writes both. */
 
-import { cp, mkdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rename, writeFile } from 'node:fs/promises';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { runCli } from './editor.mjs';
@@ -20,13 +20,19 @@ const BUNDLES = ['extension.js', 'webview/index.js', 'webview/index.css'];
 const url = (v) =>
     `https://open-vsx.org/api/Anthropic/claude-code/win32-x64/${v}/file/Anthropic.claude-code-${v}@win32-x64.vsix`;
 
+/* Downloaded to a .part and renamed only when it is whole. An interrupted
+   download that leaves a truncated file under the real name is worse than no
+   cache at all: every later run then fails inside the installer, on a zip
+   error that says nothing about where the bad file came from. */
 export async function ensureVsix(lay, log) {
     if (existsSync(lay.vsix)) return log(`vsix cached (${lay.version})`);
     await mkdir(join(lay.vsix, '..'), { recursive: true });
     log(`downloading ${lay.version} from OpenVSX (~110MB, once per version)`);
     const r = await fetch(url(lay.version));
-    if (!r.ok) throw new Error(`OpenVSX said ${r.status} for ${lay.version}`);
-    await writeFile(lay.vsix, Buffer.from(await r.arrayBuffer()));
+    if (!r.ok) throw new Error(`OpenVSX said ${r.status} for ${lay.version} - is that a real version?`);
+    const part = `${lay.vsix}.part`;
+    await writeFile(part, Buffer.from(await r.arrayBuffer()));
+    await rename(part, lay.vsix);
     log('vsix downloaded');
 }
 

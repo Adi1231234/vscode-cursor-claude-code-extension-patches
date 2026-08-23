@@ -14,10 +14,17 @@ node tools/lab/lab.mjs down [--purge]   # stop it (--purge also deletes the prof
 `up` prints the port, the window and the panel target id. The edit-and-look loop
 is `repatch` + `eval`; the editor stays up between them.
 
-Flags: `--version 2.1.241` (default: the newest version installed on this
-machine), `--port N` (default 9555).
+Run it from the repo root as written, or from anywhere with the full path to
+`lab.mjs` - it finds the repo from its own location. The script you hand `eval`
+is resolved against *your* working directory, so a relative path is fine.
 
-Everything lives in `%TEMP%\cc-lab\<version>\`. Your own editor, profile,
+Flags: `--version 2.1.241` (default: the newest version installed on this
+machine), `--port N` (default 9555), `--code <path to Code.exe>` (default: the
+usual install locations). `--help` prints all of it. Needs Windows, VS Code and
+Node 22+.
+
+Everything lives in `%TEMP%\cc-lab\<version>-p<port>\` - a lab is identified by
+both, so `--port 9556` is a second, independent lab. Your own editor, profile,
 extensions and `argv.json` are never touched. The VSIX cache is kept outside the
 per-version folder, so `--purge` costs you a re-patch, not a 110MB download.
 

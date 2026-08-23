@@ -6,7 +6,7 @@
    `probe.js`, not `9555`. Naive filtering of everything that does not start
    with `--` gets that wrong, silently, and reads the port as a script. */
 
-const VALUED = new Set(['version', 'port']);
+const VALUED = new Set(['version', 'port', 'code']);
 
 export function parse(argv) {
     const flags = {};
@@ -30,6 +30,7 @@ const HELP = `tools/lab - a patched Claude Code bundle, running in a real editor
 
   --version <x.y.z>   which extension version to test (default: the newest one installed here)
   --port <n>          CDP port for this lab (default 9555; use another for a second lab)
+  --code <path>       Code.exe to use, when it is not in one of the usual places
 
 The loop is: edit a patch, "repatch", "eval". The editor stays up in between,
 and none of it touches your own editor, profile or argv.json.

@@ -23,8 +23,13 @@ in place. Read this before changing anything so the structure stays clean.
   - `README.md` - what it does + the proven root cause.
   - optional resources: `*.css`, `queue/*.js`, `cleanup.js`.
 - **`tools/`** - developer tooling, not shipped to users and never touched by
-  `apply.ps1`. `tools/cdp/` drives the Claude panel of a running editor over a CDP
-  port (see the CDP section below).
+  `apply.ps1`.
+  - `tools/lab/` - **the way to check a patch for real.** `node tools/lab/lab.mjs up`
+    builds a throwaway editor running the patched bundle, with the panel open and a
+    debugger attached; then `repatch` + `eval` are the edit-and-look loop. Read its
+    README before doing any of that by hand.
+  - `tools/cdp/` - drives the Claude panel of a *running* editor over a CDP port
+    (see the CDP section below). The lab is built on it.
 
 ## The `$Ctx` contract
 

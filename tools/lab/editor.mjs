@@ -15,14 +15,24 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+/* An install in a place none of the usual candidates cover (Insiders, portable,
+   a custom directory) is what `--code` is for; lab.mjs sets it once from the
+   flag, so install/launch/stop all use the same binary. */
+let override = null;
+export function useCodeExe(path) {
+    if (!existsSync(path)) throw new Error(`--code ${path} does not exist`);
+    override = path;
+}
+
 export function codeExe() {
+    if (override) return override;
     const candidates = [
         join(process.env.LOCALAPPDATA || '', 'Programs', 'Microsoft VS Code', 'Code.exe'),
         join(process.env.ProgramFiles || '', 'Microsoft VS Code', 'Code.exe'),
         join(homedir(), 'AppData', 'Local', 'Programs', 'Microsoft VS Code', 'Code.exe'),
     ];
     const hit = candidates.find((p) => p && existsSync(p));
-    if (!hit) throw new Error('Code.exe not found - pass --code <path to Code.exe>');
+    if (!hit) throw new Error(`Code.exe not found in ${candidates.join(', ')} - pass --code <path to Code.exe>`);
     return hit;
 }
 

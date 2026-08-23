@@ -12,7 +12,7 @@ import { evalInPanel } from '../cdp/panels.mjs';
 import { runCommand } from '../cdp/palette.mjs';
 import { targets } from '../cdp/client.mjs';
 import { DEFAULT_PORT, detectVersion, layout } from './paths.mjs';
-import { launch, portOwner, stop, waitForPort } from './editor.mjs';
+import { launch, portOwner, stop, useCodeExe, waitForPort } from './editor.mjs';
 import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
@@ -27,7 +27,8 @@ function fail(message) {
 }
 
 const { cmd, args, flags } = parse(process.argv.slice(2));
-if (!cmd || flags.help) usage(cmd ? 0 : 1);
+/* Asking for help succeeds; being given nothing to do is a usage error. */
+if (!cmd || flags.help) usage(flags.help ? 0 : 1);
 /* The CDP client is built on the global WebSocket, which is Node 22. Say so
    here rather than letting it surface as "WebSocket is not defined". */
 if (typeof WebSocket === 'undefined') fail(`needs Node 22+ for its CDP client, this is ${process.version}`);
@@ -35,6 +36,7 @@ if (typeof WebSocket === 'undefined') fail(`needs Node 22+ for its CDP client, t
 const version = flags.version || detectVersion();
 if (!version) fail('no claude-code install found to take a version from - pass --version 2.1.241');
 const port = Number(flags.port || DEFAULT_PORT);
+try { if (flags.code) useCodeExe(flags.code); } catch (e) { fail(e.message); }
 const lay = layout(version, port);
 
 /* A port that answers is not proof this lab is up - another worktree's lab may
