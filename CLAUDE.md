@@ -68,6 +68,19 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
   1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
   2. **No backslash escapes that the template literal evaluates inside strings** - `\n`, `\t`, `\r`, `\b`, `\f` become a real newline/char *before the browser sees them*, turning `join("\n")` into a broken multi-line string literal - the whole injected `<script>` then fails to parse and **nothing runs** (no error you can see). `✓`-style escapes that yield a normal glyph are fine (they're used for icons). For a real newline use `String.fromCharCode(10)`. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+- **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
+  sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
+  viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
+  width: `window.innerWidth`, `document.documentElement.clientWidth`,
+  `visualViewport.width` and `vw`/`vh` all keep reporting the **unzoomed** viewport,
+  while `document.body.clientWidth` and every `getBoundingClientRect()` come back
+  at exactly `1/zoom` of it. So any code that subtracts one from the other, or caps
+  a size with `100vw` and positions it from a rect, is off by the zoom factor - and
+  a `position: fixed` box just gets clipped by the viewport, with no ellipsis and no
+  scrollbar. That is `patches/history-dialog-clip` (read its README); the app has 7
+  more `100vw`, 4 `100vh` and 5 JS viewport reads that are exposed the same way.
+  Measure the viewport as `document.body.getBoundingClientRect().width` when the
+  number will meet a rect.
 - **Injected UI copies the app's design line - measured, never chosen.** Anything
   we add to the panel has to be indistinguishable from what the app draws itself.
   Find the app's own element that plays the same role and take its values off the
