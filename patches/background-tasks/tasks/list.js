@@ -11,10 +11,11 @@
     r.setAttribute("role", "option");
     r.setAttribute("aria-selected", t.id === sel ? "true" : "false");
 
-    var dot = el("span", "__bgDot __bgDot-" + statusWord(t));
-    dot.setAttribute("aria-hidden", "true");
+    /* One glyph carries both facts: the task type, with its status as a badge on
+       the corner. Two separate columns made every row read as noise. */
     var icon = el("span", "__bgIcon");
     icon.innerHTML = iconFor(t.type);
+    icon.appendChild(el("span", "__bgDot __bgDot-" + statusWord(t)));
     icon.setAttribute("aria-hidden", "true");
 
     var mid = el("div", "__bgRowMid");
@@ -28,7 +29,6 @@
        that matter, and a screen reader gets it from the row label. */
     if (!isRunning(t) && statusWord(t) !== "done") side.appendChild(el("span", "__bgRowFlag __bgRowFlag-" + statusWord(t), statusWord(t)));
 
-    r.appendChild(dot);
     r.appendChild(icon);
     r.appendChild(mid);
     r.appendChild(side);

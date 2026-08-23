@@ -1,131 +1,105 @@
 /* BGTASKSLOG */
-/* The detail pane: header, view toolbar, the scrolling feed and the task actions,
-   plus the scrollbar treatment for every scroll container in the dialog. Split from
-   tasks.css only to keep each file small; both are appended to the same sheet. */
+/* The detail pane: header with the live hairline, view toolbar, feed, actions.
+
+   The signature element is that hairline. A background task is work happening while
+   you are not watching, so the one piece of motion in the dialog is an indeterminate
+   sweep under the task's name - the workbench's own vocabulary for "still going" -
+   and everything else stays still. */
 
 .__bgPane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .__bgPaneHead {
+  position: relative;
   padding: var(--app-spacing-large, 12px) var(--app-spacing-large, 12px) var(--app-spacing-medium, 8px);
 }
-.__bgPaneTop { display: flex; align-items: center; gap: var(--app-spacing-medium, 8px); }
-.__bgPaneName { font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; unicode-bidi: plaintext; }
-.__bgPaneMeta { font-size: 10.5px; opacity: .6; margin-top: 2px; font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }
-.__bgPaneSummary { font-size: 11px; opacity: .8; margin-top: 5px; unicode-bidi: plaintext; }
-/* A live task gets a pulse next to its name, so "is this still going" is answered
-   without reading the metadata line. */
-.__bgLive {
-  width: 6px; height: 6px; flex: none; border-radius: 50%;
-  background: var(--app-claude-orange, #d97757); animation: __bgPulse 1.6s ease-in-out infinite;
+.__bgPaneTop { display: flex; align-items: baseline; gap: 7px; }
+.__bgPaneName {
+  font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em;
+  overflow-wrap: anywhere; unicode-bidi: plaintext;
 }
-@media (prefers-reduced-motion: reduce) { .__bgLive { animation: none; } }
+.__bgPaneMeta {
+  font-size: 10.5px; color: var(--app-secondary-foreground, #999); margin-top: 3px;
+  font-variant-numeric: tabular-nums; unicode-bidi: plaintext;
+}
+.__bgPaneSummary { font-size: 11.5px; opacity: .85; margin-top: 7px; line-height: 1.5; unicode-bidi: plaintext; }
+.__bgLive {
+  width: 6px; height: 6px; flex: none; border-radius: 50%; align-self: center;
+  background: var(--bg-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-accent) 22%, transparent);
+}
+/* Signature: an indeterminate sweep, only while the task is actually running. */
+.__bgProgress {
+  position: absolute; inset-inline: 0; bottom: 0; height: 1px; overflow: hidden;
+  background: var(--bg-line-soft);
+}
+.__bgProgress::after {
+  content: ""; position: absolute; inset-block: 0; width: 38%;
+  background: linear-gradient(90deg, transparent, var(--app-progressbar-background, var(--bg-accent)), transparent);
+  animation: __bgSweep 1.9s cubic-bezier(.5,0,.5,1) infinite;
+}
+@keyframes __bgSweep { from { transform: translateX(-100%); } to { transform: translateX(360%); } }
 
 .__bgTools {
   display: flex; align-items: center; gap: var(--app-spacing-small, 4px);
-  padding: 0 var(--app-spacing-large, 12px) var(--app-spacing-medium, 8px);
+  padding: var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
 }
 .__bgFind {
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--app-spacing-small, 4px);
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
   background: var(--app-input-background, rgba(128,128,128,.12));
-  border: 1px solid var(--app-input-border, #7f7f7f66);
-  border-radius: var(--corner-radius-medium, 6px); padding: 0 var(--app-spacing-medium, 8px);
+  border: 1px solid var(--bg-line-soft);
+  border-radius: var(--bg-r-card); padding: 0 var(--app-spacing-medium, 8px);
+  transition: border-color .12s ease-out;
 }
+.__bgFind:hover { border-color: var(--bg-line); }
 .__bgFind:focus-within { border-color: var(--app-input-active-border, var(--vscode-focusBorder, #007fd4)); }
 .__bgFindInput {
   flex: 1; min-width: 0; background: none; border: none; outline: none;
-  color: var(--app-input-foreground, inherit); font: inherit; font-size: 11.5px; padding: 4px 0;
+  color: var(--app-input-foreground, inherit); font: inherit; font-size: 11.5px; padding: 5px 0;
 }
-.__bgFindInput::placeholder { color: var(--app-input-placeholder-foreground, inherit); opacity: .6; }
-.__bgFindCount { font-size: 10px; opacity: .6; font-variant-numeric: tabular-nums; flex: none; unicode-bidi: plaintext; }
+.__bgFindInput::placeholder { color: var(--app-input-placeholder-foreground, inherit); opacity: .55; }
+.__bgFindCount {
+  font-size: 10px; color: var(--app-secondary-foreground, #999);
+  font-variant-numeric: tabular-nums; flex: none; unicode-bidi: plaintext;
+}
 
 .__bgLogWrap { position: relative; flex: 1; min-height: 0; display: flex; }
 .__bgLog {
-  flex: 1; overflow: auto; padding: 0 var(--app-spacing-large, 12px) var(--app-spacing-medium, 8px);
+  flex: 1; overflow: auto; overscroll-behavior: contain;
+  padding: 2px var(--app-spacing-large, 12px) var(--app-spacing-large, 12px);
 }
 .__bgLog:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: -2px; }
-.__bgNoMatch { opacity: .7; }
 .__bgJump {
-  position: absolute; inset-block-end: var(--app-spacing-large, 12px); inset-inline-end: var(--app-spacing-large, 12px);
-  padding: 3px 10px; font-size: 11px; cursor: pointer;
-  border-radius: 999px; border: 1px solid var(--app-widget-border, #454545);
+  position: absolute; inset-block-end: 14px; inset-inline-end: 16px;
+  padding: 4px 11px; font: inherit; font-size: 11px; cursor: pointer;
+  border-radius: 999px; border: 1px solid var(--bg-line);
   background: var(--app-menu-background, #252526); color: var(--app-menu-foreground, inherit);
-  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px -6px rgba(0,0,0,.5);
+  animation: __bgRise .14s ease-out;
+  transition: background-color .12s ease-out;
 }
-.__bgJump:hover { background: var(--app-ghost-button-hover-background, rgba(128,128,128,.16)); }
+.__bgJump:hover { background: var(--bg-raise-2); }
+.__bgJump:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
 
 .__bgPaneFoot {
-  display: flex; align-items: center; gap: var(--app-spacing-small, 4px);
+  display: flex; align-items: center; gap: 6px;
   padding: var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
-  border-top: 1px solid var(--app-widget-border, #454545);
+  border-top: 1px solid var(--bg-line-soft);
 }
-.__bgFootMain { display: flex; gap: var(--app-spacing-small, 4px); flex: 1; min-width: 0; }
+.__bgFootMain { display: flex; gap: 6px; flex: 1; min-width: 0; }
 .__bgFootSide { display: flex; gap: 2px; flex: none; }
 .__bgBtn {
-  background: none; cursor: pointer; font: inherit; font-size: 11px; padding: 3px 10px;
-  border-radius: var(--corner-radius-medium, 6px); color: inherit;
-  border: 1px solid var(--app-widget-border, #454545);
+  background: none; cursor: pointer; font: inherit; font-size: 11.5px; padding: 4px 11px;
+  border-radius: var(--bg-r-card); color: inherit; border: 1px solid var(--bg-line);
+  transition: background-color .12s ease-out, border-color .12s ease-out;
 }
-.__bgBtn:hover { background: var(--app-ghost-button-hover-background, rgba(128,128,128,.16)); }
+.__bgBtn:hover { background: var(--bg-raise-2); border-color: var(--bg-line); }
+.__bgBtn:active { background: var(--bg-line-soft); }
 .__bgBtn:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
-/* Stop ends someone's work: it reads as destructive rather than as a peer of Copy. */
-.__bgBtnDanger { color: var(--vscode-testing-iconFailed, #d1524a); border-color: currentColor; opacity: .85; }
-.__bgBtnDanger:hover { opacity: 1; background: color-mix(in srgb, var(--vscode-testing-iconFailed, #d1524a) 14%, transparent); }
+/* Stop ends someone's work, so it never reads as a peer of Copy. */
+.__bgBtnDanger { color: var(--vscode-testing-iconFailed, #d1524a); border-color: color-mix(in srgb, var(--vscode-testing-iconFailed, #d1524a) 45%, transparent); }
+.__bgBtnDanger:hover { background: color-mix(in srgb, var(--vscode-testing-iconFailed, #d1524a) 14%, transparent); border-color: currentColor; }
 
-.__bgEmpty { padding: var(--app-spacing-xlarge, 16px) var(--app-spacing-medium, 8px); max-width: 46ch; }
-.__bgEmptyTitle { font-size: 12px; opacity: .85; }
-.__bgEmptyBody { font-size: 11px; opacity: .55; margin-top: 4px; line-height: 1.5; }
-.__bgSkip { font-size: 10.5px; opacity: .55; padding: 4px 0; font-style: italic; }
-
-.__bgPre, .__bgEntryBody {
-  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
-  font-family: var(--app-monospace-font-family, monospace);
-  font-size: var(--app-monospace-font-size-small, 11px); line-height: 1.5;
-  direction: ltr; text-align: left;
-}
-.__bgNoWrap .__bgPre, .__bgNoWrap .__bgEntryBody { white-space: pre; overflow-wrap: normal; }
-.__bgFiltered { display: none; }
-
-.__bgEntry { display: flex; gap: var(--app-spacing-medium, 8px); font-size: 11.5px; line-height: 1.5; padding: 1px 0; }
-.__bgAt {
-  flex: none; width: 8ch; text-align: end; font-family: var(--app-monospace-font-family, monospace);
-  font-size: 10px; opacity: .35; padding-top: 2px; font-variant-numeric: tabular-nums;
-  overflow: hidden; white-space: nowrap;
-}
-.__bgTextEntry { align-items: flex-start; }
-.__bgTextBody { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
-.__bgThink .__bgTextBody { opacity: .55; font-style: italic; }
-
-.__bgToolEntry { display: block; margin-inline-start: 0; padding-inline-start: 0; }
-/* A tool call is timestamp, caret, name, argument - all code-ish and all Latin, so
-   the row itself stays LTR even when the panel is mirrored. */
-.__bgEntryHead {
-  direction: ltr; text-align: left;
-  display: flex; gap: var(--app-spacing-small, 4px); cursor: pointer; align-items: baseline;
-  border-radius: var(--corner-radius-small, 4px); padding: 1px 3px; margin-inline-start: -3px;
-}
-.__bgEntryHead:hover { background: var(--app-list-hover-background, rgba(128,128,128,.1)); }
-.__bgEntryHead:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: -1px; }
-.__bgCaret { flex: none; opacity: .4; transition: transform .12s; display: inline-block; }
-.__bgOpen > .__bgEntryHead .__bgCaret { transform: rotate(90deg); }
-.__bgToolName { font-weight: 600; flex: none; }
-/* Success is the norm, so it gets no colour - only the caret firms up to show a
-   result arrived. Colour is reserved for the case worth spotting. */
-.__bgToolOk > .__bgEntryHead .__bgCaret { opacity: .75; }
-.__bgToolErr > .__bgEntryHead .__bgCaret { opacity: 1; color: var(--vscode-testing-iconFailed, #d1524a); }
-.__bgToolErr > .__bgEntryHead .__bgToolName { color: var(--vscode-testing-iconFailed, #d1524a); }
-.__bgToolArg {
-  opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-family: var(--app-monospace-font-family, monospace); font-size: 10.5px; unicode-bidi: plaintext;
-}
-.__bgEntryBody {
-  display: none; margin: 3px 0 5px calc(8ch + var(--app-spacing-small, 4px));
-  padding: 5px 8px; max-height: 320px; overflow: auto;
-  background: var(--app-tool-background, rgba(128,128,128,.07));
-  border-radius: var(--corner-radius-small, 4px);
-}
-.__bgResBody { border-inline-start: 2px solid var(--app-widget-border, #454545); }
-.__bgOpen .__bgEntryBody { display: block; }
-
-.__bgWf { display: block; }
-.__bgWf .__bgEntryHead { cursor: default; }
-.__bgWf-phase { font-weight: 600; margin-top: 6px; }
-.__bgWf-log { opacity: .65; }
+/* ---------- States ---------- */
+.__bgEmpty { padding: var(--app-spacing-xlarge, 16px) 6px; max-width: 44ch; }
+.__bgEmptyTitle { font-size: 12.5px; }
+.__bgEmptyBody { font-size: 11.5px; color: var(--app-secondary-foreground, #999); margin-top: 5px; line-height: 1.55; }
+.__bgSkip { font-size: 10.5px; color: var(--app-secondary-foreground, #999); padding: 5px 0; font-style: italic; }

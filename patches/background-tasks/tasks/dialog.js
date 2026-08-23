@@ -19,7 +19,7 @@
   function openDialog() {
     if (back) return;
     lastFocus = document.activeElement;
-    back = el("div", "__bgBackdrop");
+    back = el("div", "__bgBackdrop __bgRoot");
     modalEl = el("div", "__bgModal");
     modalEl.setAttribute("role", "dialog");
     modalEl.setAttribute("aria-modal", "true");

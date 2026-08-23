@@ -24,7 +24,7 @@
 
     var b = existing;
     if (!b) {
-      b = btn("__bgInd", "Background tasks");
+      b = btn("__bgInd __bgRoot", "Background tasks");
       b.innerHTML = SPINNER + '<span class="__bgCount"></span><span class="__bgTip" aria-hidden="true"></span>';
       b.addEventListener("click", function (ev) {
         ev.preventDefault();
@@ -39,7 +39,7 @@
 
     /* Animated with a count while something runs; a quiet glyph afterwards, so the
        finished list stays reachable without a permanent fixture in the footer. */
-    b.className = n ? "__bgInd" : "__bgInd __bgIdle";
+    b.className = "__bgInd __bgRoot" + (n ? "" : " __bgIdle");
     var count = b.querySelector(".__bgCount");
     if (count) count.textContent = n ? String(n) : "";
     var tip = b.querySelector(".__bgTip");

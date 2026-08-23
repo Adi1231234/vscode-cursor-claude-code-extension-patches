@@ -1,0 +1,58 @@
+/* BGTASKSSHELL */
+/* The dialog shell: backdrop, modal, header and the two-pane body (including the
+   stacked layout the narrow panel falls back to). */
+
+/* ---------- Shell ---------- */
+.__bgBackdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex;
+  align-items: center; justify-content: center; padding: var(--app-spacing-large, 12px);
+  background: rgba(0, 0, 0, .48); backdrop-filter: blur(2px);
+  animation: __bgFade .12s ease-out;
+}
+.__bgModal {
+  display: flex; flex-direction: column; width: 100%; max-width: 940px;
+  height: min(80vh, 660px);
+  background: var(--app-primary-background, #1e1e1e); color: var(--app-primary-foreground, #ccc);
+  border: 1px solid var(--bg-line);
+  border-radius: var(--bg-r-shell); overflow: hidden;
+  /* Two layers: a tight contact shadow and a wide ambient one. */
+  box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 48px -12px rgba(0,0,0,.6);
+  animation: __bgRise .16s cubic-bezier(.16,1,.3,1);
+}
+@keyframes __bgFade { from { opacity: 0; } }
+@keyframes __bgRise { from { opacity: 0; transform: translateY(6px) scale(.99); } }
+
+.__bgHead {
+  display: flex; align-items: flex-start; gap: var(--app-spacing-medium, 8px);
+  padding: var(--app-spacing-large, 12px) var(--app-spacing-large, 12px) var(--app-spacing-medium, 8px);
+  border-bottom: 1px solid var(--bg-line-soft);
+}
+.__bgHeadMain { flex: 1; min-width: 0; }
+.__bgTitle { font-weight: 600; font-size: 13px; line-height: 1.3; letter-spacing: -.01em; }
+.__bgHeadSub {
+  font-size: 11px; opacity: .6; margin-top: 2px;
+  font-variant-numeric: tabular-nums; unicode-bidi: plaintext;
+}
+
+.__bgBody { display: flex; flex: 1; min-height: 0; }
+/* The list is the recessed rail; the detail pane is the raised reading surface. */
+.__bgList {
+  width: 304px; flex: none; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
+}
+.__bgList:focus-visible { outline: none; }
+.__bgList:focus-visible .__bgRowSel { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: -1px; }
+.__bgSplit {
+  flex: none; width: 1px; cursor: col-resize; background: var(--bg-line-soft);
+  transition: background-color .12s ease-out;
+}
+.__bgSplit:hover { background: var(--bg-accent); }
+.__bgPane { background: var(--bg-raise-1); }
+
+/* Below NARROW the panes stack: the list is the whole dialog until a task is
+   picked, then the detail takes over and a back button returns. */
+.__bgStacked .__bgList { width: auto; flex: 1; }
+.__bgStacked .__bgSplit { display: none; }
+.__bgStacked .__bgPane { display: none; background: none; }
+.__bgStacked.__bgShowDetail .__bgList { display: none; }
+.__bgStacked.__bgShowDetail .__bgPane { display: flex; flex: 1; }

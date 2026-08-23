@@ -13,6 +13,9 @@ function Invoke-Patch {
 
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'tasks.css') '/* BGTASKS */' 'indicator + dialog CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'log.css') '/* BGTASKSLOG */' 'log pane CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'shell.css') '/* BGTASKSSHELL */' 'dialog shell CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'rows.css') '/* BGTASKSROWS */' 'task list CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'feed.css') '/* BGTASKSFEED */' 'log feed CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'scroll.css') '/* BGTASKSSCROLL */' 'scrollbar CSS'
 
     # ---------------- extension.js (host reader + message hook) ----------------

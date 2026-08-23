@@ -33,6 +33,7 @@
   function syncFollow() {
     if (!followBtn) return;
     followBtn.classList.toggle("__bgOn", follow);
+    followBtn.setAttribute("aria-pressed", follow ? "true" : "false");
     var live = paneFor && TASKS[paneFor] && isRunning(TASKS[paneFor]);
     jumpBtn.classList.toggle("__bgHidden", follow || !live);
   }
@@ -40,6 +41,7 @@
   function syncWrap() {
     if (!wrapBtn) return;
     wrapBtn.classList.toggle("__bgOn", wrap);
+    wrapBtn.setAttribute("aria-pressed", wrap ? "true" : "false");
     paneBody.classList.toggle("__bgNoWrap", !wrap);
   }
 

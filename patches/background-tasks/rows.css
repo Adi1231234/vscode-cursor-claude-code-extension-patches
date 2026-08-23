@@ -1,0 +1,74 @@
+/* BGTASKSROWS */
+/* The task list: sticky group headers and the rows themselves. */
+
+/* ---------- Groups and rows ---------- */
+/* Sticky, so scrolling a long list never loses which group you are in. */
+.__bgGroup {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; gap: 6px;
+  padding: var(--app-spacing-large, 12px) 6px 4px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--app-secondary-foreground, #999); opacity: .8;
+  background: var(--app-primary-background, #1e1e1e);
+}
+.__bgGroupCount {
+  font-size: 10px; letter-spacing: 0; padding: 0 5px; border-radius: 999px;
+  background: var(--bg-raise-2); font-variant-numeric: tabular-nums;
+}
+
+.__bgRow {
+  position: relative; display: flex; align-items: flex-start; gap: 9px;
+  cursor: pointer; padding: 7px 8px 7px 9px; margin-bottom: 2px;
+  border-radius: var(--bg-r-card);
+  transition: background-color .1s ease-out;
+}
+/* The accent rail is a pseudo-element so it can sit inside the rounded corner
+   instead of squaring off the row's leading edge. */
+.__bgRow::before {
+  content: ""; position: absolute; inset-block: 6px; inset-inline-start: 0;
+  width: 2px; border-radius: 2px; background: transparent;
+}
+.__bgRow:hover { background: var(--bg-raise-1); }
+.__bgRowSel, .__bgRowSel:hover { background: var(--bg-raise-2); }
+.__bgRowSel::before { background: var(--bg-accent); }
+.__bgRowDone .__bgRowName { color: var(--app-secondary-foreground, #999); }
+
+/* One glyph slot: the task type, with its status as a badge on the corner. Two
+   separate columns of dots and icons made every row read as noise. */
+.__bgIcon { position: relative; flex: none; display: flex; margin-top: 1px; opacity: .8; }
+.__bgDot {
+  position: absolute; inset-inline-end: -3px; bottom: -2px;
+  width: 7px; height: 7px; border-radius: 50%; background: #888;
+  box-shadow: 0 0 0 2px var(--app-primary-background, #1e1e1e);
+}
+.__bgRowSel .__bgDot { box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-foreground, #ccc) 7%, var(--app-primary-background, #1e1e1e)); }
+/* A halo carries the "live" reading; the pulse only breathes it. Dipping the dot
+   itself far down just turns the accent muddy at this size. */
+.__bgDot-running { background: var(--bg-accent); animation: __bgPulse 1.8s ease-in-out infinite; }
+.__bgDot-done { background: var(--vscode-testing-iconPassed, #3fa66a); }
+.__bgDot-failed { background: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgDot-stopped { background: var(--app-secondary-foreground, #888); }
+@keyframes __bgPulse {
+  0%,100% { box-shadow: 0 0 0 2px var(--app-primary-background, #1e1e1e), 0 0 0 2px color-mix(in srgb, var(--bg-accent) 55%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--app-primary-background, #1e1e1e), 0 0 0 5px color-mix(in srgb, var(--bg-accent) 0%, transparent); }
+}
+
+.__bgRowMid { flex: 1; min-width: 0; }
+.__bgRowName { font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgRowDetail {
+  font-size: 11px; color: var(--app-secondary-foreground, #999); margin-top: 2px;
+  unicode-bidi: plaintext; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.__bgRowSide { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.__bgRowTime {
+  font-size: 10px; color: var(--app-secondary-foreground, #999); opacity: .8;
+  font-variant-numeric: tabular-nums; margin-top: 3px;
+}
+.__bgRowFlag { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; }
+.__bgRowFlag-failed { color: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgRowFlag-stopped { color: var(--app-secondary-foreground, #999); }
+
+@media (prefers-reduced-motion: reduce) {
+  .__bgSpin, .__bgDot-running { animation: none; }
+  .__bgBackdrop, .__bgModal { animation: none; }
+}

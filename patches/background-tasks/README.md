@@ -74,14 +74,35 @@ actions.
   **Stop** (styled as destructive, and never the first button under the cursor),
   then **Copy** and **Open in editor** as icon buttons.
 
-**Accessibility and theming.** `role="dialog"` with `aria-modal`, a focus trap and
-focus restored on close; the list is a `listbox` of `option`s driven by
-up/down/Home/End with Enter to open; every icon button carries an `aria-label` and
+## The look
+
+**Depth comes from surfaces, not shadows** - shadows barely read on a dark theme.
+Each layer is a translucent tint of the *theme's own foreground* over the theme's own
+background (`color-mix`), which means the elevation is still correct on a light
+theme, where a white overlay would do nothing. The modal itself does carry a shadow,
+in two layers: a tight contact shadow and a wide ambient one.
+
+**Radii nest** (shell 8, card 6, chip 4), borders are semi-transparent so edges stay
+crisp over whatever is behind them, and hover / active / focus each raise contrast
+rather than merely tinting.
+
+**One glyph per row.** The task type is the icon and its status is a badge on the
+icon's corner. Two separate columns of dots and icons made every row read as noise.
+
+**The signature is the live hairline.** A background task is work happening while
+you are not watching, so the one piece of motion in the dialog is an indeterminate
+sweep under a running task's name - the workbench's own vocabulary for "still going".
+The accent colour is spent only on that and on the running badge; even a pressed
+toolbar toggle stays neutral, so nothing competes with it. Every animation is
+transform/opacity, under 200 ms, and off under `prefers-reduced-motion`.
+
+**Accessibility.** `role="dialog"` with `aria-modal`, a focus trap and focus restored
+on close; the list is a `listbox` of `option`s driven by up/down/Home/End with Enter
+to open; toggles report `aria-pressed`; every icon button carries an `aria-label` and
 the app's own tooltip rather than a native `title`; status is never colour alone (a
-failed task says so in words); `prefers-reduced-motion` stops every animation. All
-colour comes from the app's `--app-*` tokens, so the dialog follows the editor
-theme - including the scrollbars, which otherwise render as the platform's bright
-slab with stepper arrows.
+failed task says so in words). Scroll containers set `overscroll-behavior: contain`
+and are styled off the same variables Monaco uses for its own sliders, so they do not
+fall back to the platform's bright slab with stepper arrows.
 
 **RTL.** Layout is logical-property only, so the panes mirror under the `rtl` patch.
 Latin phrases and tool-call rows are pinned so bidi cannot reorder them, and code
@@ -89,8 +110,10 @@ blocks stay LTR.
 
 ## Layout
 
-- `tasks.css` / `log.css` / `scroll.css` - shell + list, detail pane, and the
-  scrollbar treatment; all `__bg*` scoped, each with its own guard
+- `tasks.css` (tokens + indicator + shared primitives), `shell.css`, `rows.css`,
+  `log.css`, `feed.css`, `scroll.css` - all `__bg*` scoped, each with its own guard.
+  The design tokens live on `.__bgRoot`, which both the dialog and the composer
+  indicator carry
 - `tasks/*.js` - the panel script, concatenated in the explicit order in `patch.ps1`
   (`config-dom` opens the `<script>` and the IIFE, `init` closes both);
   `workflow.js` is the phase / agent tree, split out to keep `logpane.js` small

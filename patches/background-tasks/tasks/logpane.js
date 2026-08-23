@@ -107,6 +107,11 @@
     if (t.toolUses) bits.push(t.toolUses + (t.toolUses === 1 ? " tool call" : " tool calls"));
     paneHead.appendChild(el("div", "__bgPaneMeta", bits.join(" \u00b7 ")));
     if (t.summary && isRunning(t)) paneHead.appendChild(el("div", "__bgPaneSummary", oneLine(t.summary, 160)));
+    if (isRunning(t)) {
+      var bar = el("div", "__bgProgress");
+      bar.setAttribute("aria-hidden", "true");
+      paneHead.appendChild(bar);
+    }
   }
 
   function stick() {
