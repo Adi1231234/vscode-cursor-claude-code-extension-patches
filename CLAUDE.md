@@ -14,7 +14,10 @@ in place. Read this before changing anything so the structure stays clean.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
   - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
-  - `js/ccWtResolve.js` - the one copy of the `__ccWtResolve` runtime helper.
+  - `js/` - shared runtime JS, one copy each: `ccWtResolve.js` (the
+    `__ccWtResolve` transcript-dir resolver, pulled in with
+    `Add-CcWtResolveHelper`) and `ccCopyText.js` (`window.__ccCopyText`, pulled
+    into a patch's fragment list with `Get-LibJsPath`).
 - **`patches/<name>/`** - one folder per feature or bug fix. Contains:
   - `patch.ps1` - defines a single `function Invoke-Patch { param($Ctx) ... }`.
   - `README.md` - what it does + the proven root cause.
@@ -42,6 +45,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Add-CcWtResolveHelper $js` - prepend the shared worktree resolver once (returns new text). Use this for anything that must resolve a `<sid>.jsonl` across worktree project dirs; never paste the helper inline.
+   - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
 
 ## Non-negotiable conventions
 

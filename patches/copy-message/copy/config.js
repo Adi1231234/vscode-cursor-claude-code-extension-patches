@@ -20,23 +20,3 @@
   function textOf(m) {
     return ((m.querySelector(USERMSG) || m).innerText || "").trim();
   }
-
-  /* clipboard.writeText is available in the webview; keep the execCommand path
-     as a fallback for when the document is not focused / permission is denied. */
-  function copyText(t) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(t).catch(function () { return legacyCopy(t); });
-    }
-    return legacyCopy(t);
-  }
-
-  function legacyCopy(t) {
-    var ta = document.createElement("textarea");
-    ta.value = t;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand("copy"); } finally { document.body.removeChild(ta); }
-    return Promise.resolve();
-  }

@@ -1,0 +1,12 @@
+/* INLINECODE */
+/* Inline code chips in the transcript are copyable with a double-click; fenced
+   blocks are not (they have the app's own copy button), so they keep the plain
+   text cursor. Generic attribute matches only - no minified hashes here. */
+[class*="messagesContainer_"] code{cursor:copy}
+[class*="messagesContainer_"] pre code{cursor:auto}
+[class*="messagesContainer_"] code.__ccCodeOk{outline:1.5px solid var(--app-claude-orange,#d97757);outline-offset:1px;border-radius:3px}
+/* Body-mounted, so it never adds height inside the message list. */
+.__ccCodeToast{position:fixed;z-index:2147483000;pointer-events:none;padding:3px 8px;font-size:11px;line-height:1.4;letter-spacing:.02em;white-space:nowrap;direction:ltr;color:var(--app-claude-ivory,#fff);background:var(--app-claude-orange,#d97757);border-radius:var(--corner-radius-small,4px);box-shadow:0 2px 8px rgba(0,0,0,.35);animation:__ccCodeToastIn .12s ease-out}
+.__ccCodeToast.__ccCodeToastOut{opacity:0;transition:opacity .25s ease}
+@keyframes __ccCodeToastIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.__ccCodeToast{animation:none}}
