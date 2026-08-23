@@ -18,16 +18,23 @@
     ccLog("queue", "stop pressed - queue parked", "n=" + Q.length);
   }
 
-  /* Idempotent, and re-runs per tick because the session object is replaced
-     when the active conversation changes. */
+  /* Idempotent (marked on the object, like the FileReader hook), and re-run per
+     tick because the session object is replaced when the conversation changes.
+     Wrapped in its own try/catch: this is an optional decoration on someone
+     else's object, and a throw here would otherwise skip the rest of the tick -
+     the add button and the flush loop - on this tick and every one after it. */
   function hookStopPause() {
-    var s = getSession();
-    if (!s || s.__qStopHook || typeof s.interrupt !== "function") return;
-    var orig = s.interrupt;
-    s.interrupt = function () {
-      try { pauseOnStop(); } catch (e) {}
-      return orig.apply(this, arguments);
-    };
-    s.__qStopHook = 1;
-    ccLog("queue", "stop hook installed");
+    try {
+      var s = getSession();
+      if (!s || s.__qStopHook || typeof s.interrupt !== "function") return;
+      var orig = s.interrupt;
+      s.interrupt = function () {
+        try { pauseOnStop(); } catch (e) {}
+        return orig.apply(this, arguments);   /* the app's call is never altered */
+      };
+      s.__qStopHook = 1;
+      ccLog("queue", "stop hook installed");
+    } catch (e) {
+      ccLog("queue", "stop hook FAILED", e && e.message);
+    }
   }

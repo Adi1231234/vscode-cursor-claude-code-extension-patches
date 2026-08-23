@@ -38,7 +38,10 @@ other pause; one click releases it.
 
 The hook is on the **session's own `interrupt()`**, decorated per session
 (`hookStopPause`, re-run each tick because the object is replaced when the
-active conversation changes; guarded by `__qStopHook` so it decorates once).
+active conversation changes; guarded by `__qStopHook` so it decorates once,
+and isolated in its own try/catch - it decorates someone else's object, and a
+throw there would otherwise take the rest of the tick down with it, on that
+tick and every one after).
 That is the single funnel every stop path goes through - the composer's stop
 button (`onClick` -> `session.interrupt()`), a plain Escape (the app's
 body-level handler), and `restartClaude`. It runs **synchronously with the
