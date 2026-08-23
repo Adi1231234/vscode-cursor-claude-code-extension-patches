@@ -56,6 +56,13 @@ commands). A reload kills the CLI process and every task that was running, so
 nothing in the running group ever needs to survive one. See
 [data-sources.md](data-sources.md) §6.
 
+**A finished row exists only while its log does.** A subagent seen this session is
+always listed, because its messages are still in `session.messages`; everything else
+is listed only if the host's directory listing actually found its file. `%TEMP%` is
+cleaned by the OS eventually, so a task whose `.output` is gone is dropped from the
+list rather than shown as an empty row. If a file disappears while the dialog is
+open the watcher reports the unlink and the row goes with it.
+
 **Trailing pane: that task's live log.** It follows the selection and keeps
 streaming while the dialog is open, auto-scrolled while pinned to the bottom with a
 follow toggle that releases when the user scrolls up.
@@ -140,5 +147,3 @@ The verified anchor list lives in
   agent's tool_result only says `async_launched`. Show such rows as "finished"
   without a success or failure mark rather than guessing; a sync agent's tool_result
   and a command's exit-code line in its `.output` do carry the outcome.
-- **Rows whose log file is gone.** `%TEMP%` is cleaned by the OS eventually. Decide
-  whether to list a finished task whose `.output` no longer exists, or drop it.
