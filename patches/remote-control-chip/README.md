@@ -34,13 +34,28 @@ every state change - no observer, no polling.
 
 ### It has to look like a footer button, not a badge
 
-The chip wears the app's own `footerButton` plus `footerButtonPrimary`
-(connected) / `footerButtonInactive` (connecting), so its colour and hover come
-from the same place as every other button in the row. Only the error tint and
-the connecting pulse are ours. The icon is drawn to the bundle's own footer-icon
-metrics - an 11-unit glyph in a 20-unit box with 1.0-unit strokes, measured off
-the `/` command-menu icon. A heavier or larger glyph reads as foreign, which is
-exactly what the first version got wrong.
+The chip wears the app's own `footerButton` and nothing else. Three things had
+to be right before it stopped reading as something stuck onto the row, and all
+three were measured off the live footer rather than guessed:
+
+- **Size.** Every glyph in the row is ~10-11 units inside the 20-unit box, with
+  1.0-unit strokes: `+` is 10x10, the `/` command menu is 11x11, the permission
+  glyph is 10x10.7. The chip's is 9.3x10. The first version was 13 units with
+  1.2-unit walls and 1.4-unit arcs, which is only ~20% bigger on paper and
+  unmistakably foreign on screen.
+- **The 8px of dead space.** `.inputFooterV2 .footerButton` carries
+  `padding: 0 8px 0 0` for the gap between an icon and its text label. With no
+  label that is pure padding: it made the button 34px wide where its neighbours
+  are 26, opened a 10px hole before the next button where every other gap is
+  2px, and put the icon off-centre inside the 26px hover square. `.cc-rc-chip`
+  zeroes it - with the class doubled, because that app rule is (0,2,0) and a
+  single class would silently lose.
+- **Colour.** `.footerButton` is `--app-secondary-foreground`, but that is the
+  row's *label* colour; every icon in it is drawn at the full
+  `--app-primary-foreground`. At secondary the chip reads as a disabled sibling.
+
+Only the connecting pulse and the error tint deviate, and both live in the
+stylesheet.
 
 ### Hover tooltip, not `title`
 
@@ -84,12 +99,16 @@ Verified against 2.1.227 and 2.1.241 (one match each, in both bundles).
   --check` clean on `webview/index.js` and `extension.js`, second run reports
   `[skip]`.
 - Browser harness over the patched `webview/index.css`: all four states, LTR and
-  RTL, tooltip and dialog, and the icon side by side with the bundle's own `/`
-  at 6x to match weight and size.
-- **In a live panel** (`tools/cdp/cdp.mjs eval`, real bundle after a real
+  RTL, tooltip and dialog, and candidate icons dropped into a strip of the
+  bundle's real `+` / `/` / bolt / arrow at 26px and at 6x, to pick the one that
+  does not stand out.
+- **In a live panel** (`tools/cdp/cdp.mjs`, real bundle after a real
   `Developer: Reload Window`, with Remote Control genuinely `connected`):
-  the banner is gone (the input wrapper holds only the `FORM`), the chip renders
-  with `footerButton + footerButtonPrimary`, no `title` attribute, its `svg` box
-  is `26×26` exactly like its neighbours, footer height unchanged at `36.576px`
-  so the composer does not move, and clicking opens the dialog with this
-  session's real `claude.ai/code` URL and focus on **Close**.
+  the banner is gone (the input wrapper holds only the `FORM`); the chip is
+  `26x26` with `padding: 0` and `rgb(204,204,204)`, byte-for-byte the box and
+  colour of the `/` beside it; its glyph bbox is `9.29 x 10` against the `/`'s
+  `11 x 11` and the `+`'s `10 x 10`; the gap to the next button is the row's own
+  2px; there is no `title` attribute and the tooltip's `::after` carries the
+  text; footer height is unchanged at `36.576px` so the composer does not move;
+  and clicking opens the dialog with this session's real `claude.ai/code` URL
+  and focus on **Close**. Nothing was left behind in the DOM.

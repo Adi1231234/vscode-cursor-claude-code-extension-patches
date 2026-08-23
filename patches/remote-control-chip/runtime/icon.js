@@ -1,6 +1,8 @@
-/* A phone with signal waves, drawn to the app's own footer-icon metrics:
-   an 11-unit glyph in a 20-unit box with 1.0-unit strokes, the same as the
-   bundle's "/" command-menu icon. Anything heavier reads as a foreign icon. */
+/* A phone with one signal arc, drawn to the metrics the bundle's own footer
+   icons use: a ~10-unit glyph centred in the 20-unit box with 1.0-unit strokes
+   (the "/" command-menu icon is 11x11, the "+" is 10x10, the permission bolt is
+   8x10). Anything bigger crowds the 26px hover square and reads as a foreign
+   badge rather than one of the row's buttons. */
 function __ccRcIcon(h) {
     return h("svg", {
         width: "20",
@@ -15,17 +17,17 @@ function __ccRcIcon(h) {
                 "fill-rule": "evenodd",
                 "clip-rule": "evenodd",
                 fill: "currentColor",
-                d: "M5 4.5h4A1.5 1.5 0 0 1 10.5 6v8A1.5 1.5 0 0 1 9 15.5H5A1.5 1.5 0 0 1 3.5 14V6A1.5 1.5 0 0 1 5 4.5Z" +
-                    "M5 5.5a.5.5 0 0 0-.5.5v8c0 .276.224.5.5.5h4a.5.5 0 0 0 .5-.5V6a.5.5 0 0 0-.5-.5H5Z" +
-                    "M5.9 6.8h2.2a.5.5 0 0 1 0 1H5.9a.5.5 0 0 1 0-1Z"
+                d: "M6.5 5h4A1.4 1.4 0 0 1 11.9 6.4v7.2A1.4 1.4 0 0 1 10.5 15h-4A1.4 1.4 0 0 1 5.1 13.6V6.4A1.4 1.4 0 0 1 6.5 5Z" +
+                    "M6.5 6a.4.4 0 0 0-.4.4v7.2c0 .22.18.4.4.4h4a.4.4 0 0 0 .4-.4V6.4a.4.4 0 0 0-.4-.4h-4Z" +
+                    "M7.5 7h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1Z"
             }, "body"),
             h("path", {
                 stroke: "currentColor",
                 "stroke-width": "1",
                 "stroke-linecap": "round",
                 fill: "none",
-                d: "M12.2 7.7a3.2 3.2 0 0 1 0 4.6M13.9 6.6a5 5 0 0 1 0 6.8"
-            }, "waves")
+                d: "M13.6 7.9a3.2 3.2 0 0 1 0 4.2"
+            }, "wave")
         ]
     });
 }
