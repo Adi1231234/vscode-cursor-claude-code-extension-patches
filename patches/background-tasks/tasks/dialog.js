@@ -1,124 +1,102 @@
 
-  /* ---------- Dialog shell and task list ----------
-     Two panes in normal flow, so the list lands on the leading side under both the
-     rtl patch and plain LTR. Running rows on top, a separator, then finished ones. */
+  /* ---------- Dialog shell ----------
+     A list-detail dialog. Side by side when there is room; below NARROW - which
+     the panel very often is, being a sidebar - the two panes stack and the list
+     hands over to the detail view with a back button, the standard small-screen
+     form of this pattern. */
 
   var back = null;      /* backdrop element, null when closed */
+  var modalEl = null;
+  var bodyEl = null;
   var listEl = null;
+  var headSub = null;
   var sel = null;       /* selected task id */
+  var stacked = false;
+  var showDetail = false;   /* stacked mode only: list or detail */
+  var lastFocus = null;
+  var sizeObs = null;
 
   function openDialog() {
     if (back) return;
+    lastFocus = document.activeElement;
     back = el("div", "__bgBackdrop");
-    var modal = el("div", "__bgModal");
-    var head = el("div", "__bgHead");
-    head.appendChild(el("span", "__bgTitle", "Background tasks"));
-    var close = btn("__bgClose", "Close");
-    close.textContent = "✕";
-    close.addEventListener("click", closeDialog);
-    head.appendChild(close);
-    var body = el("div", "__bgBody");
+    modalEl = el("div", "__bgModal");
+    modalEl.setAttribute("role", "dialog");
+    modalEl.setAttribute("aria-modal", "true");
+    modalEl.setAttribute("aria-label", "Background tasks");
+    modalEl.appendChild(buildHead());
+    bodyEl = el("div", "__bgBody");
     listEl = el("div", "__bgList");
-    body.appendChild(listEl);
-    body.appendChild(buildPane());
-    modal.appendChild(head);
-    modal.appendChild(body);
-    back.appendChild(modal);
+    listEl.setAttribute("role", "listbox");
+    listEl.setAttribute("aria-label", "Tasks");
+    listEl.tabIndex = 0;
+    listEl.addEventListener("keydown", onListKey);
+    bodyEl.appendChild(listEl);
+    bodyEl.appendChild(buildSplitter());
+    bodyEl.appendChild(buildPane());
+    modalEl.appendChild(bodyEl);
+    back.appendChild(modalEl);
     back.addEventListener("mousedown", function (ev) { if (ev.target === back) closeDialog(); });
     document.body.appendChild(back);
     document.addEventListener("keydown", onKey, true);
+    observeWidth();
     renderDialog();
+    listEl.focus();
+  }
+
+  function buildHead() {
+    var head = el("div", "__bgHead");
+    var main = el("div", "__bgHeadMain");
+    main.appendChild(el("div", "__bgTitle", "Background tasks"));
+    headSub = el("div", "__bgHeadSub");
+    main.appendChild(headSub);
+    var close = iconBtn("__bgClose", "Close", ICON_CLOSE);
+    close.addEventListener("click", closeDialog);
+    head.appendChild(main);
+    head.appendChild(close);
+    return head;
   }
 
   function closeDialog() {
     if (!back) return;
     document.removeEventListener("keydown", onKey, true);
+    if (sizeObs) { sizeObs.disconnect(); sizeObs = null; }
     back.remove();
-    back = null;
-    listEl = null;
-    listSig = null;
+    back = null; modalEl = null; bodyEl = null; listEl = null; headSub = null;
+    listSig = null; showDetail = false;
     forgetHistoryRequest();
     resetPane();
+    try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) {}
   }
 
-  function onKey(ev) {
-    if (ev.key === "Escape" && back) { ev.preventDefault(); ev.stopPropagation(); closeDialog(); }
-  }
-
-  /* resetPane closes whatever tail is actually open; closing by selection instead
-     would send a close for a task that was never tailed - and the host keys tails by
-     task id, so that can cut off another panel watching the same one. */
-  function selectTask(id) {
-    if (sel === id) return;
-    sel = id;
-    resetPane();
-    renderDialog();
-  }
-
-  function row(t) {
-    var r = el("div", "__bgRow" + (t.id === sel ? " __bgRowSel" : ""));
-    var dot = el("span", "__bgDot __bgDot-" + statusWord(t));
-    var icon = el("span", "__bgIcon");
-    icon.innerHTML = iconFor(t.type);
-    var mid = el("div", "__bgRowMid");
-    mid.appendChild(el("div", "__bgRowName", oneLine(label(t), 80)));
-    var d = detail(t);
-    if (d) mid.appendChild(el("div", "__bgRowDetail", d));
-    var time = el("span", "__bgRowTime", duration(t));
-    r.appendChild(dot);
-    r.appendChild(icon);
-    r.appendChild(mid);
-    r.appendChild(time);
-    r.addEventListener("click", function () { selectTask(t.id); });
-    return r;
-  }
-
-  /* Rebuilt only when something a row shows actually changed - the observer that
-     drives this fires on every DOM mutation the app makes while streaming. */
-  var listSig = null;
-
-  function signature(snap) {
-    var parts = [sel || ""];
-    var all = snap.running.concat(snap.finished);
-    for (var i = 0; i < all.length; i++) {
-      var t = all[i];
-      parts.push(t.id + "|" + statusWord(t) + "|" + label(t) + "|" + detail(t) + "|" + duration(t));
+  /* Stacking follows the dialog's own width, not the viewport's: the panel is a
+     sidebar whose width the user drags around. */
+  function observeWidth() {
+    var apply = function (w) {
+      var next = w > 0 && w < NARROW;
+      if (next === stacked) return;
+      stacked = next;
+      if (!stacked) showDetail = false;
+      syncLayout();
+      renderDialog();
+    };
+    if (window.ResizeObserver) {
+      sizeObs = new ResizeObserver(function (es) { apply(es[0].contentRect.width); });
+      sizeObs.observe(modalEl);
     }
-    return parts.join(";;");
+    stacked = !stacked;                                  /* force the first apply */
+    apply(modalEl.getBoundingClientRect().width || window.innerWidth);
+    syncLayout();
   }
 
-  function renderList() {
-    if (!listEl) return;
-    var snap = snapshot();
-    if (sel && !TASKS[sel]) { sel = null; resetPane(); }
-    if (!sel) {
-      var first = snap.running[0] || snap.finished[0];
-      if (first) { sel = first.id; resetPane(); }
-    }
-    var sig = signature(snap);
-    if (sig === listSig) return;
-    listSig = sig;
-    /* Rebuilt roughly once a second (the elapsed times tick), so the scroll
-       position has to be carried over or a long list keeps jumping to the top. */
-    var keepScroll = listEl.scrollTop;
-    clear(listEl);
-    if (!snap.running.length && !snap.finished.length) {
-      listEl.appendChild(el("div", "__bgEmpty", "No background tasks in this conversation."));
-      return;
-    }
-    for (var i = 0; i < snap.running.length; i++) listEl.appendChild(row(snap.running[i]));
-    if (snap.finished.length) {
-      var sep = el("div", "__bgSep");
-      sep.appendChild(el("span", "__bgSepLabel", snap.finished.length === 1 ? "1 finished" : snap.finished.length + " finished"));
-      listEl.appendChild(sep);
-      for (var j = 0; j < snap.finished.length; j++) listEl.appendChild(row(snap.finished[j]));
-    }
-    listEl.scrollTop = keepScroll;
+  function syncLayout() {
+    if (!bodyEl) return;
+    bodyEl.className = "__bgBody" + (stacked ? " __bgStacked" : "") + (stacked && showDetail ? " __bgShowDetail" : "");
+    setBackVisible(stacked);
   }
 
-  function renderDialog() {
-    if (!back) return;
-    askHistory();
-    renderList();
-    renderPane(sel ? TASKS[sel] : null);
-  }
+  /* Only a keyboard hand-off moves focus into the pane; a click already put the
+     caret where the user is looking, and stealing it draws a focus ring over the
+     whole log for no reason. */
+  function goDetail(withFocus) { if (stacked) { showDetail = true; syncLayout(); if (withFocus) focusPane(); } }
+  function goList() { showDetail = false; syncLayout(); if (listEl) listEl.focus(); }

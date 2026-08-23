@@ -1,0 +1,35 @@
+/* BGTASKSSCROLL */
+/* The platform scrollbar is a bright slab with stepper arrows in a dark theme.
+   Reuse the variables Monaco styles its own sliders with. Deliberately only the
+   ::-webkit- pseudo-elements: setting scrollbar-color as well would make Chromium
+   ignore these and fall back to the native bar. */
+.__bgList::-webkit-scrollbar,
+.__bgLog::-webkit-scrollbar,
+.__bgEntryBody::-webkit-scrollbar { width: 10px; height: 10px; }
+.__bgList::-webkit-scrollbar-track,
+.__bgLog::-webkit-scrollbar-track,
+.__bgEntryBody::-webkit-scrollbar-track { background: transparent; }
+.__bgList::-webkit-scrollbar-thumb,
+.__bgLog::-webkit-scrollbar-thumb,
+.__bgEntryBody::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, .4));
+  border: 2px solid transparent; background-clip: padding-box; border-radius: 5px;
+}
+.__bgList::-webkit-scrollbar-thumb:hover,
+.__bgLog::-webkit-scrollbar-thumb:hover,
+.__bgEntryBody::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, .7));
+  background-clip: padding-box;
+}
+.__bgList::-webkit-scrollbar-thumb:active,
+.__bgLog::-webkit-scrollbar-thumb:active,
+.__bgEntryBody::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground, rgba(191, 191, 191, .4));
+  background-clip: padding-box;
+}
+.__bgList::-webkit-scrollbar-button,
+.__bgLog::-webkit-scrollbar-button,
+.__bgEntryBody::-webkit-scrollbar-button { display: none; }
+.__bgList::-webkit-scrollbar-corner,
+.__bgLog::-webkit-scrollbar-corner,
+.__bgEntryBody::-webkit-scrollbar-corner { background: transparent; }

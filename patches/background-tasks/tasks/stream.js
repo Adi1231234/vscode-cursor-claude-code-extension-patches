@@ -67,10 +67,11 @@
 
   function blockEntry(c) {
     if (!c || !c.type) return null;
-    if (c.type === "tool_use") return { k: "tool", id: c.id, name: c.name, input: c.input };
-    if (c.type === "tool_result") return { k: "result", forId: c.tool_use_id, text: resultText(c), err: c.is_error === true };
-    if (c.type === "text" && c.text) return { k: "text", text: c.text };
-    if (c.type === "thinking" && c.thinking) return { k: "thinking", text: c.thinking };
+    var at = Date.now();   /* the feed shows a clock gutter; jsonl replaces it */
+    if (c.type === "tool_use") return { k: "tool", id: c.id, name: c.name, input: c.input, at: at };
+    if (c.type === "tool_result") return { k: "result", forId: c.tool_use_id, text: resultText(c), err: c.is_error === true, at: at };
+    if (c.type === "text" && c.text) return { k: "text", text: c.text, at: at };
+    if (c.type === "thinking" && c.thinking) return { k: "thinking", text: c.thinking, at: at };
     return null;
   }
 

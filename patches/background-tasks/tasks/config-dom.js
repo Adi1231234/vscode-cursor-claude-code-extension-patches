@@ -1,6 +1,6 @@
 <script nonce="${__NONCE__}">/* BGTASKS */(function () {
   /* Background tasks: an animated indicator in the composer footer, and a
-     two-pane dialog (task list / live log) behind it.
+     list-detail dialog (tasks / live log) behind it.
 
      Everything is observed, never polled: the whole SDK stream arrives on the
      window "message" event, and log files are tailed by the extension host over
@@ -16,6 +16,7 @@
   var BS = String.fromCharCode(92);   /* a literal backslash cannot be typed here */
   var MAX_LOG = 600;            /* live log entries kept per task */
   var MAX_TEXT = 400000;        /* characters kept in a text log pane */
+  var NARROW = 560;             /* below this the two panes stack (see README) */
 
   /* ---------- DOM utilities ---------- */
   function qs(sel, root) { return (root || document).querySelector(sel); }
@@ -34,6 +35,15 @@
     return b;
   }
 
+  /* A square icon button with the app's own tooltip treatment, never a native
+     title attribute - that renders the delayed, unstyled OS tooltip. */
+  function iconBtn(cls, label, svg) {
+    var b = btn("__bgIcoBtn " + cls, label);
+    b.innerHTML = svg;
+    b.appendChild(el("span", "__bgTip", label));
+    return b;
+  }
+
   function inp() { return qs('[aria-label="Message input"][contenteditable]'); }
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
@@ -44,6 +54,12 @@
     var m = Math.floor(s / 60);
     if (m < 60) return m + "m " + (s % 60) + "s";
     return Math.floor(m / 60) + "h " + (m % 60) + "m";
+  }
+
+  function clock(ms) {
+    var d = new Date(ms);
+    var p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
   }
 
   function oneLine(s, max) {
@@ -62,10 +78,18 @@
 
   function typeOfId(id) { return PREFIX[String(id).charAt(0)] || "task"; }
 
-  var ICON_AGENT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1.4"></circle><path d="M9 13v1.5"></path><path d="M15 13v1.5"></path></svg>';
-  var ICON_SHELL = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 9l3 3-3 3"></path><path d="M13 15h4"></path></svg>';
-  var ICON_FLOW = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="6" rx="1.5"></rect><rect x="14" y="15" width="7" height="6" rx="1.5"></rect><path d="M6.5 9v6a3 3 0 0 0 3 3H14"></path></svg>';
-  var ICON_DOT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 2.5"></path></svg>';
+  var SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">';
+  var ICON_AGENT = SVG + '<rect x="4" y="8" width="16" height="12" rx="3"></rect><path d="M12 8V4"></path><circle cx="12" cy="3" r="1.4"></circle><path d="M9 13v1.5"></path><path d="M15 13v1.5"></path></svg>';
+  var ICON_SHELL = SVG + '<rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 9l3 3-3 3"></path><path d="M13 15h4"></path></svg>';
+  var ICON_FLOW = SVG + '<rect x="3" y="3" width="7" height="6" rx="1.5"></rect><rect x="14" y="15" width="7" height="6" rx="1.5"></rect><path d="M6.5 9v6a3 3 0 0 0 3 3H14"></path></svg>';
+  var ICON_DOT = SVG + '<circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 2.5"></path></svg>';
+  var ICON_BACK = SVG + '<path d="M15 19l-7-7 7-7"></path></svg>';
+  var ICON_CLOSE = SVG + '<path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>';
+  var ICON_WRAP = SVG + '<path d="M4 6h16"></path><path d="M4 12h12a3 3 0 0 1 0 6h-3"></path><path d="M15 15l-2 3 2 3"></path><path d="M4 18h4"></path></svg>';
+  var ICON_FOLLOW = SVG + '<path d="M12 4v12"></path><path d="M7 12l5 5 5-5"></path><path d="M5 20h14"></path></svg>';
+  var ICON_COPY = SVG + '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>';
+  var ICON_OPEN = SVG + '<path d="M14 4h6v6"></path><path d="M20 4l-8 8"></path><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"></path></svg>';
+  var SPINNER = '<svg class="__bgSpin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity="0.25"></circle><path d="M21 12a9 9 0 0 0-9-9"></path></svg>';
 
   function iconFor(type) {
     if (type === "local_agent" || type === "remote_agent" || type === "in_process_teammate") return ICON_AGENT;
@@ -73,5 +97,3 @@
     if (type === "local_workflow") return ICON_FLOW;
     return ICON_DOT;
   }
-
-  var SPINNER = '<svg class="__bgSpin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity="0.25"></circle><path d="M21 12a9 9 0 0 0-9-9"></path></svg>';

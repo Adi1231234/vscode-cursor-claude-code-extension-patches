@@ -1,24 +1,31 @@
 
-  /* ---------- Live log pane ----------
-     Three sources behind one view: a subagent still in memory (entries straight off
-     the stream), a subagent recovered from disk (its transcript jsonl, tailed by the
-     host) and any other task (its .output text, also tailed). Append-only, so the
-     scroll position survives every update. */
+  /* ---------- Detail pane ----------
+     Header, a view toolbar (filter / wrap / follow), the feed itself, and the task
+     actions at the bottom. Four sources behind one view: a subagent still in memory,
+     an older subagent's transcript jsonl, a workflow's progress array, and any other
+     task's .output text. Append-only, so the scroll position survives updates. */
 
   var paneEl = null, paneHead = null, paneBody = null, paneFoot = null;
-  var paneFor = null, paneMode = "", drawn = 0, follow = true, tailing = null;
+  var backBtn = null, wrapBtn = null, followBtn = null, jumpBtn = null;
+  var paneFor = null, paneMode = "", drawn = 0, follow = true, tailing = null, wrap = true;
   var lineTail = "", textLen = 0, bodyPre = null, toolEls = null, wfDrawn = null;
 
   function buildPane() {
     paneEl = el("div", "__bgPane");
     paneHead = el("div", "__bgPaneHead");
-    paneBody = el("div", "__bgLog");
-    paneFoot = el("div", "__bgPaneFoot");
-    paneBody.addEventListener("scroll", function () {
-      follow = paneBody.scrollHeight - paneBody.scrollTop - paneBody.clientHeight < 24;
-    });
     paneEl.appendChild(paneHead);
-    paneEl.appendChild(paneBody);
+    paneEl.appendChild(buildTools());
+    paneBody = el("div", "__bgLog");
+    paneBody.tabIndex = 0;
+    paneBody.addEventListener("scroll", onPaneScroll);
+    var wrapper = el("div", "__bgLogWrap");
+    wrapper.appendChild(paneBody);
+    jumpBtn = btn("__bgJump", "Jump to the latest output");
+    jumpBtn.textContent = "Jump to latest";
+    jumpBtn.addEventListener("click", function () { follow = true; stick(); syncFollow(); });
+    wrapper.appendChild(jumpBtn);
+    paneEl.appendChild(wrapper);
+    paneFoot = el("div", "__bgPaneFoot");
     paneEl.appendChild(paneFoot);
     return paneEl;
   }
@@ -27,6 +34,7 @@
     stopTailing();
     paneFor = null; paneMode = ""; drawn = 0; follow = true;
     lineTail = ""; textLen = 0; bodyPre = null; toolEls = Object.create(null); wfDrawn = null;
+    resetFilter();
   }
 
   /* One host tail at a time, tracked by the id it belongs to rather than by the
@@ -51,7 +59,11 @@
 
   function renderPane(t) {
     if (!paneEl) return;
-    if (!t) { resetPane(); clear(paneBody); clear(paneHead); clear(paneFoot); return; }
+    if (!t) {
+      resetPane(); clear(paneBody); clear(paneHead); clear(paneFoot);
+      paneBody.appendChild(emptyState("No task selected", "Pick one from the list to read its log."));
+      return;
+    }
     var mode = modeFor(t);
     if (paneFor !== t.id || paneMode !== mode) {
       resetPane();
@@ -59,7 +71,11 @@
       clear(paneBody);
       wantTail(t, mode);
       if (mode === "text") { bodyPre = el("pre", "__bgPre"); paneBody.appendChild(bodyPre); }
-      if (mode === "none") paneBody.appendChild(el("div", "__bgEmpty", "No log for this task."));
+      if (mode === "none") {
+        paneBody.appendChild(emptyState(isRunning(t) ? "Waiting for output" : "No log kept for this task",
+          isRunning(t) ? "Nothing has been written yet; it will appear here as it arrives." : ""));
+      }
+      syncWrap();
     }
     drawHead(t);
     drawFoot(t);
@@ -68,52 +84,29 @@
          drawn so far is compared against the total ever pushed, not the array. */
       var from = Math.max(0, drawn - (t.logDropped || 0));
       for (var i = from; i < t.log.length; i++) paneBody.appendChild(entryEl(t.log[i]));
-      drawn = (t.logDropped || 0) + t.log.length;
-      trimFeed();
+      if (from < t.log.length) { drawn = (t.logDropped || 0) + t.log.length; trimFeed(); refilter(); }
       stick();
     } else if (paneMode === "workflow") {
       drawWorkflow(t);
     }
+    syncFollow();
   }
 
   function drawHead(t) {
     clear(paneHead);
-    var name = el("div", "__bgPaneName", oneLine(label(t), 110));
-    var meta = el("div", "__bgPaneMeta");
-    var bits = [typeWord(t), statusWord(t), duration(t)];
-    if (t.tokens) bits.push(t.tokens + " tokens");
-    if (t.toolUses) bits.push(t.toolUses + (t.toolUses === 1 ? " tool call" : " tool calls"));
-    meta.textContent = bits.join(" · ");
-    paneHead.appendChild(name);
-    paneHead.appendChild(meta);
-  }
-
-  function drawFoot(t) {
-    clear(paneFoot);
-    if (isRunning(t) && !t.backgrounded && t.toolUseId) {
-      var bg = btn("__bgFootBtn", "Let this task run in the background");
-      bg.textContent = "Run in background";
-      bg.addEventListener("click", function () { sendToBackground(t); });
-      paneFoot.appendChild(bg);
-    }
+    var top = el("div", "__bgPaneTop");
     if (isRunning(t)) {
-      var stop = btn("__bgFootBtn", "Stop task");
-      stop.textContent = "Stop";
-      stop.addEventListener("click", function () { stopTask(t); });
-      paneFoot.appendChild(stop);
+      var live = el("span", "__bgLive");
+      live.setAttribute("aria-hidden", "true");
+      top.appendChild(live);
     }
-    var copy = btn("__bgFootBtn", "Copy log");
-    copy.textContent = "Copy";
-    copy.addEventListener("click", function () {
-      try { navigator.clipboard.writeText(paneBody.innerText || ""); } catch (e) {}
-    });
-    paneFoot.appendChild(copy);
-    if (t.logPath) {
-      var open = btn("__bgFootBtn", "Open log in editor");
-      open.textContent = "Open in editor";
-      open.addEventListener("click", function () { revealLog(t); });
-      paneFoot.appendChild(open);
-    }
+    top.appendChild(el("span", "__bgPaneName", oneLine(label(t), 120)));
+    paneHead.appendChild(top);
+    var bits = [typeWord(t), statusWord(t), duration(t)];
+    if (t.tokens) bits.push(t.tokens.toLocaleString() + " tokens");
+    if (t.toolUses) bits.push(t.toolUses + (t.toolUses === 1 ? " tool call" : " tool calls"));
+    paneHead.appendChild(el("div", "__bgPaneMeta", bits.join(" \u00b7 ")));
+    if (t.summary && isRunning(t)) paneHead.appendChild(el("div", "__bgPaneSummary", oneLine(t.summary, 160)));
   }
 
   function stick() {

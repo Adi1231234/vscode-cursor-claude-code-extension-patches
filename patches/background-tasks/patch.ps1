@@ -13,6 +13,7 @@ function Invoke-Patch {
 
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'tasks.css') '/* BGTASKS */' 'indicator + dialog CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'log.css') '/* BGTASKSLOG */' 'log pane CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'scroll.css') '/* BGTASKSSCROLL */' 'scrollbar CSS'
 
     # ---------------- extension.js (host reader + message hook) ----------------
     $js = Read-Text $Ctx.Js
@@ -41,7 +42,8 @@ function Invoke-Patch {
     # same file; its own guards make the second copy a no-op).
     $order = @(
         'config-dom', '@ccStore', 'store', 'shells', 'stream', 'bridge', 'entry',
-        'logpane', 'tail', 'workflow', 'dialog', 'indicator', 'init'
+        'logpane', 'toolbar', 'footer', 'tail', 'workflow', 'dialog', 'keys',
+        'list', 'indicator', 'init'
     )
     $script = ($order | ForEach-Object {
         if ($_ -eq '@ccStore') { "`n" + (Get-CcStoreHelper) + "`n" }

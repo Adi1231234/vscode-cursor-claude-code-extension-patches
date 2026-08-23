@@ -1,23 +1,31 @@
 
   /* ---------- One log entry ----------
-     A tool call collapses to its name plus a one-line argument; its result is
-     folded into the same block when it arrives, so the feed stays scannable. */
+     A tool call collapses to its name plus a one-line argument, with a timestamp
+     gutter so the feed reads like a log rather than a transcript. Its result folds
+     into the same block when it arrives, and the outcome shows on the block's
+     leading edge - with a caret that changes too, so it is never colour alone. */
 
   var SUMMARY_KEYS = ["command", "file_path", "pattern", "query", "url", "description", "prompt", "path"];
 
   function inputSummary(input) {
     if (input === undefined || input === null) return "";
-    if (typeof input !== "object") return oneLine(input, 110);
+    if (typeof input !== "object") return oneLine(input, 140);
     for (var i = 0; i < SUMMARY_KEYS.length; i++) {
       var v = input[SUMMARY_KEYS[i]];
-      if (typeof v === "string" && v) return oneLine(v, 110);
+      if (typeof v === "string" && v) return oneLine(v, 140);
     }
-    try { return oneLine(JSON.stringify(input), 110); } catch (e) { return ""; }
+    try { return oneLine(JSON.stringify(input), 140); } catch (e) { return ""; }
   }
 
   function pretty(v) {
     if (typeof v === "string") return v;
     try { return JSON.stringify(v, null, 2); } catch (e) { return String(v); }
+  }
+
+  function stampEl(entry) {
+    var s = el("span", "__bgAt", entry.at ? clock(entry.at) : "");
+    s.setAttribute("aria-hidden", "true");
+    return s;
   }
 
   function foldBody(host, text, cls) {
@@ -29,7 +37,10 @@
 
   function entryEl(entry) {
     if (entry.k === "text" || entry.k === "thinking") {
-      return el("div", "__bgEntry __bgTextEntry" + (entry.k === "thinking" ? " __bgThink" : ""), entry.text);
+      var t = el("div", "__bgEntry __bgTextEntry" + (entry.k === "thinking" ? " __bgThink" : ""));
+      t.appendChild(stampEl(entry));
+      t.appendChild(el("span", "__bgTextBody", entry.text));
+      return t;
     }
     if (entry.k === "result") {
       var host = entry.forId ? toolEls[entry.forId] : null;
@@ -39,26 +50,34 @@
         foldBody(host, entry.text || "(no output)", "__bgResBody");
         return document.createComment("folded");
       }
-      var stray = el("div", "__bgEntry __bgToolEntry");
-      stray.appendChild(el("div", "__bgEntryHead", entry.err ? "result (error)" : "result"));
+      var stray = toolBox(entry.err ? "result (error)" : "result", "", entry);
       foldBody(stray, entry.text || "");
-      wireFold(stray);
       return stray;
     }
-    var box = el("div", "__bgEntry __bgToolEntry");
-    var head = el("div", "__bgEntryHead");
-    head.appendChild(el("span", "__bgToolName", entry.name || "tool"));
-    var arg = inputSummary(entry.input);
-    if (arg) head.appendChild(el("span", "__bgToolArg", arg));
-    box.appendChild(head);
+    var box = toolBox(entry.name || "tool", inputSummary(entry.input), entry);
     foldBody(box, pretty(entry.input));
-    wireFold(box);
     if (entry.id) toolEls[entry.id] = box;
     return box;
   }
 
-  function wireFold(box) {
-    var head = box.querySelector(".__bgEntryHead");
-    if (!head) return;
-    head.addEventListener("click", function () { box.classList.toggle("__bgOpen"); });
+  function toolBox(name, arg, entry) {
+    var box = el("div", "__bgEntry __bgToolEntry");
+    var head = el("div", "__bgEntryHead");
+    head.setAttribute("role", "button");
+    head.tabIndex = 0;
+    head.setAttribute("aria-expanded", "false");
+    head.appendChild(stampEl(entry));
+    head.appendChild(el("span", "__bgCaret", "\u203a"));
+    head.appendChild(el("span", "__bgToolName", name));
+    if (arg) head.appendChild(el("span", "__bgToolArg", arg));
+    box.appendChild(head);
+    var toggle = function () {
+      var open = box.classList.toggle("__bgOpen");
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    head.addEventListener("click", toggle);
+    head.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggle(); }
+    });
+    return box;
   }

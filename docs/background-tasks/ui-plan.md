@@ -128,11 +128,18 @@ click it and get a `gone`.
 
 Deviations from the plan worth knowing:
 
+- **The dialog adapts instead of always splitting.** The plan assumed side-by-side.
+  The panel is very often a narrow sidebar, where that is unusable, so a
+  ResizeObserver on the dialog stacks the panes below 560px - list, then detail with
+  a back button. This is the standard small-screen form of list-detail and it was
+  the single biggest usability problem in the first cut.
+- **The pane got a view toolbar.** Filter (with a `shown/total` count), wrap, and a
+  follow toggle that a scroll can also release, plus a "Jump to latest" affordance
+  while a live task is scrolled away from its end.
 - The render coalescer is a `setTimeout`, not `requestAnimationFrame`: a hidden
   panel never gets a frame, so rAF would stall the whole UI while the user is
   looking at another view.
-- The dialog does not force a direction. It follows the document's, so it is LTR by
-  default and mirrors correctly if the document is RTL; labels carry
+- The dialog does not force a direction. It follows the document's, and labels carry
   `unicode-bidi: plaintext` so a Hebrew description and a Latin path each read the
   right way round.
 - Elapsed times need a 1 s clock; that is the only timer in the feature.

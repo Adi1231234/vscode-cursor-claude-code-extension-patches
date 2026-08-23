@@ -42,38 +42,55 @@ survey. In short:
   render coalescer is a `setTimeout` rather than `requestAnimationFrame` because a
   hidden panel never gets a frame.
 
-## What the two panes show
+## The dialog
 
-The list is running tasks (oldest first, so nothing jumps), a separator, then
-finished ones newest-first. A task that finishes moves across the separator live,
-keeping its selection and its log. A finished row exists only while its log does: a
-subagent seen this session keeps its in-memory entries, anything else needs the file
-the host reported, and a vanished file drops the row.
+**List-detail, and it adapts.** The panel is very often a narrow sidebar, so a fixed
+side-by-side split would be unusable there. A ResizeObserver on the dialog itself -
+not the viewport - stacks the two panes below 560px: the list is the whole dialog
+until a task is picked, the detail takes over, and a back button (and Escape)
+returns. Above that width they sit side by side with a draggable splitter.
 
-The indicator is animated with a running count while anything runs, and stays as a
-quiet static glyph afterwards. It has to: the dialog is the only way to reach the
-finished list, so a button that disappeared with the last task would take the
-history with it. It is absent entirely until the first task of the session.
+**The list** is two labelled groups with counts, Running then Finished, rather than
+one flat run of rows. A row carries three levels of weight - name, live detail,
+duration - and the selected one takes an accent on its leading edge. A task that
+finishes moves across live, keeping its selection and its log. A finished row exists
+only while its log does: a subagent seen this session keeps its in-memory entries,
+anything else needs the file the host reported, and a vanished file drops the row.
 
-The log pane has four sources behind one view: a live subagent's entries straight
-off the stream, an older subagent's transcript jsonl, a workflow's `workflow_progress`
-array as a phase / agent tree, and any other task's `.output` text. The jsonl and the
-text are tailed by the host; the other two need no file at all.
+**The detail pane** has a header (name, live pulse, type / status / tokens / tool
+calls, and the rolling summary while it runs), a view toolbar, the feed, and the task
+actions.
 
-Per-task actions in the pane footer, safest first: **Run in background** (only while
-a task is still in the foreground - Ctrl+B semantics for that one task), **Stop**,
-**Copy**, and **Open in editor**. The first two go through `backgroundTasks` and
-`stopTask`, the control requests `extension.js` already defines and never called.
+- *Toolbar*: a filter that narrows the feed (or the text log, line by line) and
+  reports `shown/total`; a wrap toggle; and a follow toggle. Follow is also released
+  by scrolling up, and while a live task is scrolled away from its end a
+  "Jump to latest" affordance appears.
+- *Feed*: four sources behind one view - a subagent still in memory, an older
+  subagent's transcript jsonl, a workflow's `workflow_progress` as a phase tree, and
+  any other task's `.output` text. Entries carry a timestamp gutter; a tool call
+  collapses to its name plus one line of argument and folds its result in when it
+  arrives.
+- *Actions*: **Run in background** (only while a task is still in the foreground),
+  **Stop** (styled as destructive, and never the first button under the cursor),
+  then **Copy** and **Open in editor** as icon buttons.
 
-Pair with `subagent-stream-flags`: without it a subagent's prose and thinking are
-never forwarded, so the feed shows tool calls only.
+**Accessibility and theming.** `role="dialog"` with `aria-modal`, a focus trap and
+focus restored on close; the list is a `listbox` of `option`s driven by
+up/down/Home/End with Enter to open; every icon button carries an `aria-label` and
+the app's own tooltip rather than a native `title`; status is never colour alone (a
+failed task says so in words); `prefers-reduced-motion` stops every animation. All
+colour comes from the app's `--app-*` tokens, so the dialog follows the editor
+theme - including the scrollbars, which otherwise render as the platform's bright
+slab with stepper arrows.
+
+**RTL.** Layout is logical-property only, so the panes mirror under the `rtl` patch.
+Latin phrases and tool-call rows are pinned so bidi cannot reorder them, and code
+blocks stay LTR.
 
 ## Layout
 
-- `tasks.css` / `log.css` - indicator + dialog styles and log-pane styles, all
-  `__bg*` scoped, each with its own guard. Scroll containers are styled through
-  the `--vscode-scrollbarSlider-*` variables Monaco uses, so they match the
-  editor instead of showing the platform's own bar
+- `tasks.css` / `log.css` / `scroll.css` - shell + list, detail pane, and the
+  scrollbar treatment; all `__bg*` scoped, each with its own guard
 - `tasks/*.js` - the panel script, concatenated in the explicit order in `patch.ps1`
   (`config-dom` opens the `<script>` and the IIFE, `init` closes both);
   `workflow.js` is the phase / agent tree, split out to keep `logpane.js` small
