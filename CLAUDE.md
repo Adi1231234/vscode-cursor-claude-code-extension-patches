@@ -22,6 +22,9 @@ in place. Read this before changing anything so the structure stays clean.
   - `patch.ps1` - defines a single `function Invoke-Patch { param($Ctx) ... }`.
   - `README.md` - what it does + the proven root cause.
   - optional resources: `*.css`, `queue/*.js`, `cleanup.js`.
+- **`tools/`** - developer tooling, not shipped to users and never touched by
+  `apply.ps1`. `tools/cdp/` drives the Claude panel of a running editor over a CDP
+  port (see the CDP section below).
 
 ## The `$Ctx` contract
 
@@ -167,5 +170,17 @@ Chrome DevTools Protocol port:
   install dir), a new instance waits 30s and dies with `Code is currently being
   updated`. Chromium has already bound the port by then, so `/json/version` answers
   while no renderer exists and `Target.getTargets` returns `[]`.
+- **Do not hand-roll a client - use `tools/cdp/`** (`cdp.mjs list` / `cdp.mjs eval
+  <window> <script.js>`, no dependencies). It runs a script *inside the panel* of a
+  named window, so `document` is the panel's document and `new MouseEvent(...)` is
+  built in the right realm. Its README carries the rules for driving a live editor
+  safely (`Alt+Enter` parks the queue so nothing is sent, put the DOM back, do not
+  clobber the clipboard).
+- **A webview iframe is out-of-process, which breaks the two obvious ways to find
+  it.** `Page.getFrameTree` on a *window* target does not list its webviews at all.
+  Screen geometry (an OOPIF reports its top-level window's `screenX`/`screenY`)
+  does group them, but silently mislabels every window stacked in the same place.
+  What is exact: the window's own DOM still holds the `<iframe>` **element**, and
+  its `src` carries the same `?id=<uuid>` as the webview target's url.
 - The port has no authentication and any local process can attach, so take the line
   back out when you are done.
