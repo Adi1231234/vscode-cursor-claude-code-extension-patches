@@ -67,6 +67,38 @@ Everything is in-memory + on-demand; it never touches `localStorage` at load and
 never wraps `acquireVsCodeApi` (both break the webview - see the root CLAUDE.md).
 This is how the persistence bug above was finally diagnosed inside the real webview.
 
+## Row actions menu (`row-menu.js`)
+
+A row carries a lot of controls, so the per-row **send** and **delete**
+buttons were folded into one kebab (three dots) sitting beside the reorder
+arrows at the leading edge. It opens a small popup with three items:
+
+- **Send now** - jump the queue order, the schedule and the paused hold
+  (`sendNow`). Disabled, with the reason in its tooltip, when the item is
+  skipped, when Claude is mid-turn, or while another send is in flight -
+  the old inline button silently did nothing in those states.
+- **Duplicate** - `duplicateItem` clones the item *with everything around it*
+  (schedule `mode`/`at`/`start`/`dur`, the `missed`/`rearm` restart flags, the
+  skipped state, attachments) and inserts it directly below the original. An
+  at-time copy keeps the same wall-clock moment; a timer copy keeps the same
+  remaining countdown, so the copy reads identically to its source.
+- **Delete** - `removeItem`.
+
+The **clock cell is deliberately not in this menu**: a schedule stays visible
+and one click away in the row itself, exactly as before.
+
+Two things the popup has to get right:
+
+- It is **body-mounted and `position:fixed`** - the queue body scrolls
+  (`overflow-y:auto`) and would clip an in-flow menu. `placeMenu` anchors it
+  under the button and flips it up / pulls it in at the viewport edges.
+- Because it lives outside the panel, `render()` calls `closeRowMenu()` -
+  a rebuild would otherwise orphan it. It also closes on outside mousedown,
+  `Escape`, scroll (capture, so the queue body counts) and resize.
+
+Menu actions are **identity-based** (`Q.indexOf(it)`), not index-based: an
+item above can flush between opening the menu and clicking an entry.
+
 ## Scheduling (`schedule-lib.js`, `schedule-clock.js`, `schedule-modal.js`)
 
 Every row has a clock button. Clicking it opens a modal with three choices:
