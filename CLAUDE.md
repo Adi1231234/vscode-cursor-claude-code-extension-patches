@@ -68,6 +68,21 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
   1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
   2. **No backslash escapes that the template literal evaluates inside strings** - `\n`, `\t`, `\r`, `\b`, `\f` become a real newline/char *before the browser sees them*, turning `join("\n")` into a broken multi-line string literal - the whole injected `<script>` then fails to parse and **nothing runs** (no error you can see). `✓`-style escapes that yield a normal glyph are fine (they're used for icons). For a real newline use `String.fromCharCode(10)`. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+- **Injected UI copies the app's design line - measured, never chosen.** Anything
+  we add to the panel has to be indistinguishable from what the app draws itself.
+  Find the app's own element that plays the same role and take its values off the
+  **live DOM**, not off the source: `getComputedStyle` on the real siblings and
+  `svg.getBBox()` on their glyphs settle size, colour and spacing in one call and
+  catch rules a source read misses. Use the app's custom properties (`--app-*`),
+  never a literal colour - a hex breaks on the next theme. When the app disagrees
+  with itself, copy **the family that appears more than once** (the bundle ships
+  five dialog modules; the outlier had a hardcoded scrim and no spacing tokens).
+  Copy the *interaction* too: its confirm dialogs are a numbered option list
+  driven by Escape / digits / arrows / Enter, not a Cancel+Confirm button row.
+  And mind specificity when overriding an app rule - `.inputFooterV2 .footerButton`
+  is (0,2,0) and beats a single class of ours whatever the order; double our own
+  class instead of reaching for `!important` or hardcoding a hashed name.
+  `patches/remote-control-chip/` is the worked example.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not
