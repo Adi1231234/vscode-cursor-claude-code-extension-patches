@@ -1,0 +1,80 @@
+/* RCDIALOG */
+/* The chip's confirm dialog. Every value here is the app's own dialog
+   (overlay / dialog / title / actions / cancel / confirm) re-expressed against
+   the same design tokens, rather than borrowing its hashed class names - one
+   less minified identifier to track across extension versions. */
+.cc-rc-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #00000080;
+}
+
+.cc-rc-dialog {
+    min-width: min(400px, calc(100vw - 32px));
+    max-width: 90vw;
+    padding: 20px;
+    background-color: var(--app-primary-background);
+    border: 1px solid var(--app-primary-border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px #0003;
+}
+
+.cc-rc-dialog-title {
+    margin: 0 0 12px;
+    color: var(--app-primary-foreground);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.cc-rc-dialog-body {
+    margin: 0 0 12px;
+    color: var(--app-secondary-foreground);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.cc-rc-dialog-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.cc-rc-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.cc-rc-cancel,
+.cc-rc-confirm {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.cc-rc-cancel {
+    background: transparent;
+    color: var(--app-primary-foreground);
+}
+
+.cc-rc-cancel:hover {
+    background-color: var(--app-secondary-button-hover-background, #4e4e4e);
+}
+
+.cc-rc-confirm {
+    background-color: var(--app-button-background, #0e639c);
+    color: var(--app-button-foreground, #fff);
+}
+
+.cc-rc-confirm:hover {
+    background-color: var(--app-button-hoverBackground, #1177bb);
+}
