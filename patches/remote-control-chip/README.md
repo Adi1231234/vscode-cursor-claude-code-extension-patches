@@ -54,8 +54,14 @@ three were measured off the live footer rather than guessed:
   row's *label* colour; every icon in it is drawn at the full
   `--app-primary-foreground`. At secondary the chip reads as a disabled sibling.
 
-Only the connecting pulse and the error tint deviate, and both live in the
-stylesheet.
+The one thing that does deviate is the colour, and only by state - the app's own
+status tokens, never a literal, so they follow the editor theme:
+
+- **connected** - `--app-success-foreground` (green). This is the state worth
+  reading without hovering: the row is grey, so a green glyph in it says
+  "connected" at a glance.
+- **connecting** - the row's normal colour, pulsing.
+- **error** - `--app-error-foreground`, with the message in the tooltip.
 
 ### Hover tooltip, not `title`
 

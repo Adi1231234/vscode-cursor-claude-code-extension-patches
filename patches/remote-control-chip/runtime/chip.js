@@ -3,10 +3,10 @@
    session - the session store (remoteControlState + toggleRemoteControl)
    css     - the input-footer CSS-module map; the chip wears the app's own
              footerButton and nothing else, so it is the same size, colour and
-             hover as the "+" and "/" beside it. Connected gets no emphasis on
-             purpose: the chip only exists while Remote Control is on, so its
-             presence is the signal. The connecting pulse and the error tint
-             are the only deviations, and both live in the stylesheet. */
+             hover as the "+" and "/" beside it. Only the colour differs, and
+             only by state - green connected, pulsing while connecting, red on
+             error - which is `data-rc-state` plus three rules in the
+             stylesheet, never a class the app does not have. */
 function __ccRcChip(h, session, css) {
     var state = session.remoteControlState.value;
     if (!state || state.status === "disconnected") return null;
