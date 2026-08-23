@@ -1,0 +1,22 @@
+/* RCCHIP */
+/* Remote Control status chip - the small icon in the input footer row that
+   replaces the full-width "Remote Control is active" banner. It reuses the
+   app's own .footerButton for layout/hover, so only the state colour lives
+   here. Icon-only: .footerButton already sizes svg to 1em. */
+.cc-rc-chip {
+    color: var(--app-claude-clay-button-orange, var(--app-primary-foreground));
+}
+
+.cc-rc-chip[data-rc-state="connecting"] {
+    color: var(--app-secondary-foreground);
+    animation: cc-rc-pulse 1.4s ease-in-out infinite;
+}
+
+.cc-rc-chip[data-rc-state="error"] {
+    color: var(--app-error-foreground);
+}
+
+@keyframes cc-rc-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}

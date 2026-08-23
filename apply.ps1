@@ -44,6 +44,7 @@ $order = @(
     'worktree-fork-diff'
     'cwd-drive-case'
     'reload-restore'
+    'remote-control-chip'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to
