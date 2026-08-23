@@ -1,8 +1,14 @@
 /* RCDIALOG */
-/* The chip's confirm dialog. Every value here is the app's own dialog
-   (overlay / dialog / title / actions / cancel / confirm) re-expressed against
-   the same design tokens, rather than borrowing its hashed class names - one
-   less minified identifier to track across extension versions. */
+/* The chip's dialog, in the app's own confirm-dialog style.
+
+   The bundle ships five dialog CSS modules in three families. The one to copy
+   is the family used twice for *confirmations* (the "Different repository" and
+   the worktree-changes dialogs): a 380px box on a `--app-modal-background`
+   scrim, `--app-spacing-*` / `--corner-radius-*` throughout, a title, a
+   description with an inline pill, and a numbered option list - not a row of
+   Cancel/Confirm buttons. Every value below is that family's, re-expressed
+   against the same tokens instead of borrowing its hashed class names, so
+   nothing here has to track a minified identifier across versions. */
 .cc-rc-overlay {
     position: fixed;
     inset: 0;
@@ -10,71 +16,90 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #00000080;
+    background: var(--app-modal-background);
 }
 
 .cc-rc-dialog {
-    min-width: min(400px, calc(100vw - 32px));
-    max-width: 90vw;
-    padding: 20px;
-    background-color: var(--app-primary-background);
-    border: 1px solid var(--app-primary-border-color);
-    border-radius: 4px;
-    box-shadow: 0 4px 8px #0003;
+    width: 380px;
+    max-width: 90%;
+    padding: var(--app-spacing-xlarge);
+    background: var(--app-primary-background);
+    border: 1px solid var(--app-widget-border);
+    border-radius: var(--corner-radius-small);
+    user-select: text;
 }
 
-.cc-rc-dialog-title {
-    margin: 0 0 12px;
+.cc-rc-title {
+    margin: 0 0 var(--app-spacing-xlarge);
     color: var(--app-primary-foreground);
-    font-size: 16px;
+    font-size: 1em;
     font-weight: 600;
+    line-height: 1.4;
 }
 
-.cc-rc-dialog-body {
-    margin: 0 0 12px;
+.cc-rc-desc {
+    margin: 0 0 var(--app-spacing-xlarge);
     color: var(--app-secondary-foreground);
-    font-size: 13px;
+    font-size: var(--app-monospace-font-size);
     line-height: 1.5;
 }
 
-.cc-rc-dialog-link {
-    display: inline-block;
-    margin-bottom: 20px;
-    font-size: 13px;
-    word-break: break-all;
+.cc-rc-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 7px;
+    background: var(--app-input-background);
+    color: var(--app-primary-foreground);
+    border-radius: 10px;
+    vertical-align: middle;
+    font-family: var(--app-monospace-font-family);
+    font-size: var(--app-monospace-font-size);
+    line-height: 1.5;
 }
 
-.cc-rc-dialog-actions {
+.cc-rc-options {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+    flex-direction: column;
+    gap: var(--app-spacing-medium);
 }
 
-.cc-rc-cancel,
-.cc-rc-confirm {
-    padding: 6px 14px;
+.cc-rc-option {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 6px var(--app-spacing-medium);
+    background: 0 0;
     border: none;
-    border-radius: 2px;
-    outline: none;
+    border-radius: var(--corner-radius-small);
+    color: var(--app-primary-foreground);
     cursor: pointer;
     font-family: inherit;
-    font-size: 13px;
+    font-size: var(--app-monospace-font-size);
+    text-align: left;
+    text-decoration: none;
 }
 
-.cc-rc-cancel {
-    background: transparent;
-    color: var(--app-primary-foreground);
+.cc-rc-option:hover {
+    background: var(--app-list-hover-background);
 }
 
-.cc-rc-cancel:hover {
-    background-color: var(--app-secondary-button-hover-background, #4e4e4e);
+.cc-rc-option-selected {
+    background: var(--app-list-hover-background);
+    font-weight: 700;
 }
 
-.cc-rc-confirm {
-    background-color: var(--app-button-background, #0e639c);
-    color: var(--app-button-foreground, #fff);
+.cc-rc-option-primary.cc-rc-option-selected,
+.cc-rc-option-primary.cc-rc-option-selected:hover {
+    background: var(--app-list-active-background);
+    color: var(--app-list-active-foreground);
+    font-weight: 700;
 }
 
-.cc-rc-confirm:hover {
-    background-color: var(--app-button-hoverBackground, #1177bb);
+.cc-rc-option-key {
+    padding-right: var(--app-spacing-small);
+    opacity: 0.6;
+}
+
+.cc-rc-option-label {
+    flex: 1;
 }

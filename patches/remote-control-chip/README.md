@@ -70,19 +70,34 @@ colours, `.85em`, 0.3s delay, wraps, `inset-inline-end` so it mirrors under
 RTL). The native `title` attribute is deliberately not set: it is slow,
 unstyled, and cannot wrap.
 
-### Click opens a dialog
+### Click opens a dialog, in the app's own dialog style
 
 A one-glyph status icon must never silently drop a connection, so clicking opens
-a confirm dialog: what Remote Control is, the `claude.ai/code` link for this
-session, and **Close** / **Disconnect**. Escape and a click on the backdrop
-close it; the confirm calls `session.toggleRemoteControl()`, which is what the
-banner's ✕ did. `/remote-control` (or `/rc`) turns it back on.
+a dialog. The bundle ships five dialog CSS modules in three families; the one
+copied here is the family used **twice** for confirmations (the "Different
+repository" and worktree-changes dialogs) rather than the outlier that hardcodes
+its scrim colour and uses no spacing tokens:
+
+- a 380px box on an `--app-modal-background` scrim, `--app-spacing-*` and
+  `--corner-radius-*` throughout, `1px solid var(--app-widget-border)`,
+- an `h3` title, a description carrying an inline monospace pill (theirs holds a
+  repo, ours holds `claude.ai/code`),
+- and a **numbered option list**, not a Cancel/Confirm button row:
+  `1 Open in the browser` / `2 Disconnect` / `3 Cancel`, first row primary.
+
+The keyboard behaviour is copied too, because it is part of the pattern: Escape
+backs out, the number keys pick a row, the arrows move the selection, Enter runs
+it. Option 1 is a real `<a target="_blank">` so the webview hands the url to the
+browser exactly as the app's own links do; the overlay is torn down on the next
+tick so removing it cannot cancel that navigation mid-dispatch. Disconnect calls
+`session.toggleRemoteControl()`, which is what the banner's ✕ did, and
+`/remote-control` (or `/rc`) turns it back on.
 
 The dialog is plain DOM, not a component: the chip is a call inside the footer's
 render rather than a component of our own, so there are no hooks to hold "open"
-in. Its CSS re-expresses the app's own dialog against the same design tokens
-instead of borrowing its hashed class names - one less minified identifier to
-track across versions.
+in. Its CSS re-expresses that family against the same design tokens instead of
+borrowing its hashed class names - one less minified identifier to track across
+versions.
 
 ## Anchors
 
