@@ -145,26 +145,20 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    ```
    A plain `node --check` passes on the two-char `\n`; only this catches the
    real newline that breaks the served script.
-6. **Run it for real, in a throwaway editor** - a parse-clean bundle can still
-   fail to render. Both editors take an isolated profile, so nothing real is
-   touched:
-   `code --extensions-dir <tmp>/extensions --user-data-dir <tmp>/ud --new-window <folder>`
-   (`Cursor.exe` takes the same flags). Then open the panel and read
-   `<tmp>/ud/logs/**/exthost/Anthropic.claude-code/Claude VSCode.log`.
-   **VS Code does not re-verify a patched extension:** its own log says
+6. **Run it for real** - a parse-clean bundle can still fail to render. Do not
+   assemble a throwaway editor by hand; `node tools/lab/lab.mjs up` does the
+   whole thing (pristine VSIX -> `apply.ps1` -> editor -> panel open -> a CDP
+   port), and `repatch` + `eval` are then the edit-and-look loop. It exists
+   because every step of that has a trap that fails **silently** - workspace
+   trust, `extensions.json`, where `argv.json` is read from, occluded windows.
+   `tools/lab/README.md` lists them; do not re-derive them.
+   Two facts about the real install still worth knowing:
+   **VS Code does not re-verify a patched extension** - its own log says
    `Extension signature verification result for anthropic.claude-code: Success`
-   with the patched bundle in place - verification covers the installed VSIX, not
-   the files afterwards. What *does* bite is **auto-update**: both editors replace
-   the folder on an extension update and the patches go with it (hence: re-run).
-   **A fresh profile does not trust the folder, and the extension declares
-   `untrustedWorkspaces.supported: false`** - so it is never loaded at all: no
-   line in `exthost.log`, no `Claude Code:` entries in the palette, no panel, and
-   nothing that says why. It reads exactly like a patch that killed the
-   extension. Write `"security.workspace.trust.enabled": false` into
-   `<tmp>/ud/User/settings.json` before launching. Populate the extensions dir
-   with a real install (`code --extensions-dir <tmp>/extensions
-   --user-data-dir <tmp>/ud2 --install-extension <vsix>`) rather than an unzip,
-   then `apply.ps1 -ExtensionsDir <tmp>/extensions`.
+   with the patched bundle in place, because verification covers the installed
+   VSIX, not the files afterwards. What *does* bite is **auto-update**: both
+   editors replace the folder on an extension update and the patches go with it
+   (hence: re-run).
 
 ## Attaching a real debugger to the webview (CDP)
 
@@ -212,7 +206,17 @@ something looks like - never as the way to find out what the panel is doing.
   named window, so `document` is the panel's document and `new MouseEvent(...)` is
   built in the right realm. Its README carries the rules for driving a live editor
   safely (`Alt+Enter` parks the queue so nothing is sent, put the DOM back, do not
-  clobber the clipboard).
+  clobber the clipboard). For a *test* editor rather than your own, `tools/lab/`
+  starts one already patched and already attached.
+- **Keyboard-driven steps need a page that is visible and not holding focus
+  somewhere useless.** Both failures look identical - the palette simply does not
+  open - and neither raises anything. Windows occlusion marks a covered window
+  `visibilityState: "hidden"` and Chromium then delivers it no input at all
+  (`--disable-features=CalculateNativeWinOcclusion` at launch); and a fresh
+  profile parks focus on the welcome page's Sign In button, from where
+  `Ctrl+Shift+P` arrives, trusted, and does nothing (`palette.mjs` blurs to the
+  body first). A key event that the page's own listener sees is *not* proof the
+  keybinding fired.
 - **A webview iframe is out-of-process, which breaks the two obvious ways to find
   it.** `Page.getFrameTree` on a *window* target does not list its webviews at all.
   Screen geometry (an OOPIF reports its top-level window's `screenX`/`screenY`)

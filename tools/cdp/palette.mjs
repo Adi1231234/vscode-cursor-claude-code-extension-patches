@@ -47,10 +47,19 @@ async function until(fn, tries = 20, waitMs = 150) {
 
 const matches = (row, title) => row.toLowerCase().startsWith(title.toLowerCase());
 
+/* Whatever holds DOM focus gets the keystroke first, and some of what the
+   workbench focuses on its own never lets it reach the keybinding service - a
+   fresh profile parks focus on the welcome page's Sign In button, and from
+   there Ctrl+Shift+P does nothing at all (the event arrives, trusted, and no
+   palette opens). Dropping focus back to the body is what a person does by
+   clicking elsewhere, and it costs nothing when focus was already fine. */
+const BLUR = `(() => { const a = document.activeElement; if (a && a !== document.body) a.blur(); return true; })()`;
+
 /* The shortcut is dropped if it lands while the window is still settling (right
    after a reload, most of all), so send it again rather than giving up on one. */
 async function openPalette(c) {
   for (let attempt = 0; attempt < 3; attempt++) {
+    await evalIn(c, BLUR);
     await key(c, PALETTE);
     if (await until(() => evalIn(c, VISIBLE_PALETTE), 8, 150)) return true;
   }
