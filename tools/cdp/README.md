@@ -4,6 +4,11 @@ Verifying a webview patch by hand means opening the panel and clicking. This run
 a script **inside the panel of a named window** instead, so a change can be checked
 against the real bundle, the real stylesheet and the real DOM.
 
+This is for an editor that is **already running** - usually your own. To check a
+patch, do not point it at your own install: `node tools/lab/lab.mjs up` builds a
+throwaway editor with the patched bundle and a port already open, and hands you
+its panel. It uses everything here.
+
 Open a CDP port first - see **Attaching a real debugger to the webview (CDP)** in
 the root `CLAUDE.md`. Then:
 
