@@ -87,8 +87,11 @@ arrows at the leading edge. It opens a small popup with three items:
 
 - **Send now** - jump the queue order, the schedule and the paused hold
   (`sendNow`). Disabled, with the reason in its tooltip, when the item is
-  skipped, when Claude is mid-turn, or while another send is in flight -
-  the old inline button silently did nothing in those states.
+  skipped, when Claude is mid-turn, or while another send is in flight. The
+  old inline button was only blocked for a skipped item (by CSS,
+  `pointer-events:none`) - in the other two it looked clickable and then
+  silently did nothing. The state is read when the menu opens, so a turn that
+  ends while the menu is up leaves the item disabled until it is reopened.
 - **Duplicate** - `duplicateItem` clones the item *with everything around it*
   (schedule `mode`/`at`/`start`/`dur`, the `missed`/`rearm` restart flags, the
   skipped state, attachments) and inserts it directly below the original. An
