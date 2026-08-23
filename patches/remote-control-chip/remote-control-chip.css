@@ -1,10 +1,28 @@
 /* RCCHIP */
 /* Remote Control status chip - the small icon in the input footer row that
    replaces the full-width "Remote Control is active" banner.
-   Layout, hover and icon sizing come from the app's own .footerButton; the
-   colour comes from .footerButtonPrimary / .footerButtonInactive, so the chip
-   is the same weight and colour as every other button in the row. Only the
-   error tint, the connecting pulse and the tooltip live here. */
+   Layout, hover and icon sizing come from the app's own .footerButton, so the
+   chip is the same weight and colour as every other button in the row. Only
+   the padding reset, the error tint, the connecting pulse and the tooltip
+   live here.
+
+   `.inputFooterV2 .footerButton` carries `padding: 0 8px 0 0` for the gap
+   between an icon and its text label. The chip has no label, so that 8px is
+   dead space: it makes the button 34px wide instead of 26px, pushes the next
+   button away, and - worst of all - puts the icon off-centre inside the hover
+   square. The class is doubled to match that rule's specificity (0,2,0); ours
+   is appended last, so it wins without an !important and without naming the
+   hashed `inputFooterV2` class.
+
+   Colour: .footerButton is `--app-secondary-foreground`, which is the row's
+   *label* colour. Every icon in the row - the "+", the "/", the permission
+   glyph - is drawn at the full `--app-primary-foreground`, so the chip is too;
+   at secondary it reads as a disabled sibling. */
+.cc-rc-chip.cc-rc-chip {
+    padding: 0;
+    color: var(--app-primary-foreground);
+}
+
 .cc-rc-chip[data-rc-state="connecting"] {
     animation: cc-rc-pulse 1.4s ease-in-out infinite;
 }
