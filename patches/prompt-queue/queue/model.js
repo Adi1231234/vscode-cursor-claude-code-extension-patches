@@ -42,10 +42,11 @@
     render();
   }
 
-  function moveToFirst(i) {
-    if (i <= 0 || i >= Q.length) return;
-    Q.unshift(Q.splice(i, 1)[0]);
-    render();
+  /* Jump to either end. Both are a move to a clamped position, so they reuse
+     moveItemTo rather than splicing the queue a second way. */
+  function moveToEnd(i, last) {
+    if (i < 0 || i >= Q.length) return;
+    moveItemTo(Q[i], last ? Q.length : 1);
   }
 
   /* Reorder by typed position: MOVE (not swap) the item to 1-based slot p,

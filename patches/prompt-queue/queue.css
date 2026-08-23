@@ -20,10 +20,14 @@
 .__qRow:not(:last-child){border-bottom:1px solid color-mix(in srgb,var(--vscode-foreground,#cccccc) 12%,transparent)}
 .__qRow:hover{background:rgba(128,128,128,.08)}
 .__qNav{flex:none;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center}
-.__qTop,.__qUp,.__qDown{cursor:pointer;border:none;background:none;color:var(--vscode-foreground,#cccccc);opacity:.5;font-size:8px;line-height:1;padding:1px 3px;border-radius:3px;display:flex;align-items:center;justify-content:center;transition:opacity .1s ease,background .1s ease}
-.__qTop:hover,.__qUp:hover,.__qDown:hover{opacity:1;background:rgba(128,128,128,.2)}
-.__qTop:disabled,.__qUp:disabled,.__qDown:disabled{opacity:.13;cursor:default;background:none}
-.__qTop{font-size:11px;margin-bottom:1px}
+.__qTop,.__qUp,.__qDown,.__qBottom{cursor:pointer;border:none;background:none;color:var(--vscode-foreground,#cccccc);opacity:.5;font-size:8px;line-height:1;padding:1px 3px;border-radius:3px;display:flex;align-items:center;justify-content:center;transition:opacity .1s ease,background .1s ease}
+.__qTop:hover,.__qUp:hover,.__qDown:hover,.__qBottom:hover{opacity:1;background:rgba(128,128,128,.2)}
+.__qTop:disabled,.__qUp:disabled,.__qDown:disabled,.__qBottom:disabled{opacity:.13;cursor:default;background:none}
+/* The two jump-to-end glyphs are drawn larger than the step arrows; the tighter
+   padding keeps a four-button stack the same height the three-button one was. */
+.__qTop,.__qBottom{font-size:10px;padding:0 3px}
+.__qTop{margin-bottom:1px}
+.__qBottom{margin-top:1px}
 /* ---- per-row actions menu (kebab beside the reorder arrows) ---- */
 .__qMenuBtn{flex:none;box-sizing:border-box;width:16px;height:22px;padding:0;border:none;background:none;color:var(--vscode-foreground,#cccccc);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;opacity:.32;transition:opacity .12s ease,background .12s ease}
 .__qMenuBtn svg{width:14px;height:14px;display:block;pointer-events:none}

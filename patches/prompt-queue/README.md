@@ -67,6 +67,18 @@ Everything is in-memory + on-demand; it never touches `localStorage` at load and
 never wraps `acquireVsCodeApi` (both break the webview - see the root CLAUDE.md).
 This is how the persistence bug above was finally diagnosed inside the real webview.
 
+## Reordering a row (`buildNav` in `render-panel.js`)
+
+Four controls in one column at the leading edge: **to top**, **up**, **down**,
+**to bottom**. All four are always rendered and merely `disabled` at the ends -
+the to-top button used to be omitted on the first row, which made that one row
+shorter than the rest. The fourth button costs ~9px of row height; the glyphs
+are drawn at 10px with tighter padding so it is not more.
+
+Both jump-to-end buttons go through `moveToEnd(i, last)`, which is a call to
+the existing `moveItemTo(it, p)` with a clamped position - the queue is never
+spliced a second way.
+
 ## Row actions menu (`row-menu.js`)
 
 A row carries a lot of controls, so the per-row **send** and **delete**
