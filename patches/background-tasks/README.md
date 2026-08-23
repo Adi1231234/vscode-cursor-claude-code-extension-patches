@@ -70,7 +70,10 @@ never forwarded, so the feed shows tool calls only.
 
 ## Layout
 
-- `tasks.css` - indicator + dialog styles, all `__bg*` scoped
+- `tasks.css` / `log.css` - indicator + dialog styles and log-pane styles, all
+  `__bg*` scoped, each with its own guard. Scroll containers are styled through
+  the `--vscode-scrollbarSlider-*` variables Monaco uses, so they match the
+  editor instead of showing the platform's own bar
 - `tasks/*.js` - the panel script, concatenated in the explicit order in `patch.ps1`
   (`config-dom` opens the `<script>` and the IIFE, `init` closes both);
   `workflow.js` is the phase / agent tree, split out to keep `logpane.js` small

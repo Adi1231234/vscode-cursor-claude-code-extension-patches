@@ -11,7 +11,8 @@
 function Invoke-Patch {
     param($Ctx)
 
-    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'tasks.css') '/* BGTASKS */' 'background-tasks CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'tasks.css') '/* BGTASKS */' 'indicator + dialog CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'log.css') '/* BGTASKSLOG */' 'log pane CSS'
 
     # ---------------- extension.js (host reader + message hook) ----------------
     $js = Read-Text $Ctx.Js

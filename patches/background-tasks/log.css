@@ -1,0 +1,78 @@
+/* BGTASKSLOG */
+/* The log pane: header, the scrolling feed, the footer actions and the three
+   entry shapes it renders (a tool call, prose, a workflow step). Split from
+   tasks.css only to keep each file small; both are appended to the same sheet. */
+
+.__bgPane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.__bgPaneHead { padding: 9px 12px 7px; border-bottom: 1px solid var(--vscode-editorWidget-border, #454545); }
+.__bgPaneName { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgPaneMeta { font-size: 10.5px; opacity: .65; margin-top: 2px; }
+.__bgLog { flex: 1; overflow: auto; padding: 8px 10px; }
+.__bgPaneFoot {
+  display: flex; gap: 6px; padding: 7px 10px;
+  border-top: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgFootBtn {
+  background: none; cursor: pointer; font-size: 11px; padding: 3px 9px; border-radius: 4px;
+  color: inherit; border: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+.__bgFootBtn:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128,128,128,.16)); }
+
+/* The panel's own scroll containers get the platform scrollbar otherwise, which in
+   a dark theme is a bright white slab with stepper arrows. Match the editor by
+   reusing the variables Monaco styles its own sliders with. Deliberately only the
+   ::-webkit- pseudo-elements: setting scrollbar-color as well would make Chromium
+   ignore these and fall back to the native bar. */
+.__bgList::-webkit-scrollbar,
+.__bgLog::-webkit-scrollbar,
+.__bgEntryBody::-webkit-scrollbar { width: 10px; height: 10px; }
+.__bgList::-webkit-scrollbar-track,
+.__bgLog::-webkit-scrollbar-track,
+.__bgEntryBody::-webkit-scrollbar-track { background: transparent; }
+.__bgList::-webkit-scrollbar-thumb,
+.__bgLog::-webkit-scrollbar-thumb,
+.__bgEntryBody::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, .4));
+  border: 2px solid transparent; background-clip: padding-box; border-radius: 5px;
+}
+.__bgList::-webkit-scrollbar-thumb:hover,
+.__bgLog::-webkit-scrollbar-thumb:hover,
+.__bgEntryBody::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, .7));
+  background-clip: padding-box;
+}
+.__bgList::-webkit-scrollbar-thumb:active,
+.__bgLog::-webkit-scrollbar-thumb:active,
+.__bgEntryBody::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground, rgba(191, 191, 191, .4));
+  background-clip: padding-box;
+}
+.__bgList::-webkit-scrollbar-button,
+.__bgLog::-webkit-scrollbar-button,
+.__bgEntryBody::-webkit-scrollbar-button { display: none; }
+.__bgList::-webkit-scrollbar-corner,
+.__bgLog::-webkit-scrollbar-corner,
+.__bgEntryBody::-webkit-scrollbar-corner { background: transparent; }
+
+.__bgEmpty { padding: 14px 10px; font-size: 11.5px; opacity: .6; }
+.__bgSkip { font-size: 10.5px; opacity: .6; padding: 3px 0 6px; font-style: italic; }
+.__bgPre, .__bgEntryBody {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--vscode-editor-font-family, monospace); font-size: 11.5px; line-height: 1.45;
+  direction: ltr; text-align: left;
+}
+.__bgEntry { margin-bottom: 5px; font-size: 11.5px; line-height: 1.5; }
+.__bgTextEntry { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgThink { opacity: .6; font-style: italic; }
+.__bgToolEntry { border-inline-start: 2px solid var(--vscode-editorWidget-border, #454545); padding-inline-start: 8px; }
+.__bgToolOk { border-inline-start-color: var(--vscode-testing-iconPassed, #3fa66a); }
+.__bgToolErr { border-inline-start-color: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgEntryHead { display: flex; gap: 7px; cursor: pointer; align-items: baseline; }
+.__bgToolName { font-weight: 600; flex: none; }
+.__bgToolArg { opacity: .7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; }
+.__bgEntryBody { display: none; margin-top: 3px; opacity: .85; max-height: 320px; overflow: auto; }
+.__bgResBody { border-top: 1px dashed var(--vscode-editorWidget-border, #454545); padding-top: 3px; opacity: 1; }
+.__bgOpen .__bgEntryBody { display: block; }
+.__bgWf .__bgEntryHead { cursor: default; }
+.__bgWf-phase { border-inline-start-width: 3px; font-weight: 600; }
+.__bgWf-log { opacity: .7; border-inline-start-style: dotted; }
