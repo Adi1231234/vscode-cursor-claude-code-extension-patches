@@ -4,6 +4,12 @@
    the order the app's own confirm dialogs use. Nothing here says "click to
    disconnect": the options say what happens, which is the point of a dialog. */
 var __ccRcCopy = {
+    /* Off has a tooltip and no dialog: one click turns Remote Control on, so
+       there is nothing to confirm. The wording follows the app's own inactive
+       footer button, which says what is not happening and then "Click to ...". */
+    disconnected: {
+        tip: "Remote Control is off. Click to also open this session on claude.ai/code"
+    },
     connecting: {
         tip: "Remote Control: connecting to claude.ai/code",
         title: "Remote Control is connecting",
