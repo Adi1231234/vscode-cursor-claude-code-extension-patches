@@ -28,9 +28,10 @@ the dialog can still show them.
 Reuse the app's own modal look (`[class*="modalBackdrop"]` / `modalContent` /
 `modalHeader` are existing CSS-module classes) so it does not read as bolted on.
 
-**Leading pane: the list.** One row per task, each with a type icon and a name, plus
-a status dot and elapsed time. Selecting a row is the only interaction; the first
-running task is selected on open.
+**Leading pane: the list, in two groups.** Running tasks on top, then a separator,
+then finished ones below it. One row per task, each with a type icon and a name,
+plus a status dot and a duration. Selecting a row is the only interaction; the first
+running task is selected on open, or the newest finished one if nothing runs.
 
 - subagent (`local_agent`) -> agent icon; name `<subagent_type> · <description>`
 - background command (`local_bash`) -> terminal icon; name is the command
@@ -38,11 +39,21 @@ running task is selected on open.
 - everything else (`remote_agent`, `monitor_*`, `mcp_task`, ...) -> a generic icon
   and the description, so an unknown type still renders
 
-The list holds finished tasks too, dimmed, below the running ones: within one panel
-session that is free, since the store already has them. Across a reload only
-already-dead tasks are in question - a reload kills the CLI process and every
-running task with it - and their rows can be rebuilt from the replayed transcript
-while their logs come from disk via the host reader. See
+Ordering is chosen so rows do not jump: running sorted by start time ascending, so a
+long-running task keeps its place and a new one appears at the bottom of the group;
+finished sorted by end time descending, so the most recently finished sits directly
+under the separator. **When a running task finishes it moves live across the
+separator** to the top of the finished group, keeping its icon, name and log; if it
+is the selected row the selection follows it and the log pane does not reset, it
+just stops growing.
+
+The finished group is populated from two places. Within the panel session it is free
+- the store already holds every task it saw. Older tasks of the same conversation
+come from disk through the host reader: it enumerates the session's
+`subagents/**/agent-*.jsonl` and `tasks/*.output`, and the webview joins those ids
+with names taken from the replayed transcript (`Agent` tool_use inputs, Bash
+commands). A reload kills the CLI process and every task that was running, so
+nothing in the running group ever needs to survive one. See
 [data-sources.md](data-sources.md) §6.
 
 **Trailing pane: that task's live log.** It follows the selection and keeps
@@ -99,28 +110,20 @@ Each is independently shippable and useful on its own.
    bundle's own logic. Covers subagents and workflows completely; a background
    command lists and selects, but its log pane offers only "Open in editor" until
    patch 3.
-3. **`task-log-bridge`** - the host-side `fs.watch` on the resolved `tasks/` dir and
-   the `__ccbg` message pair, so a Bash task's log tails inside the dialog. Shared
-   session-dir resolver goes in `lib/js/ccSessionDirs.js` beside `ccWtResolve.js`.
+3. **`task-log-bridge`** - the host-side reader and the `__ccbg` message pair. Three
+   jobs: `fs.watch` + offset tail on `tasks/<id>.output` so a command's log streams
+   into the dialog; the same tail on `subagents/**/agent-<id>.jsonl` for a subagent
+   whose messages are no longer in memory; and a one-shot listing of both
+   directories so the finished group can include tasks from before this panel
+   session. Shared session-dir resolver goes in `lib/js/ccSessionDirs.js` beside
+   `ccWtResolve.js`.
 4. **`task-actions`** - wire Stop / send-to-background to the existing `stopTask` /
    `backgroundTasks` control requests (needs a host `case`, same site as 3).
 
 Order matters only in that 3 and 4 build on 2's UI.
 
-### Verified anchors
-
-All unique in 2.1.240 unless noted:
-
-- `agentProgressSummaries:void 0,promptSuggestions:void 0` (extension.js)
-- `type:"from-extension",message:e` (extension.js, the host->webview envelope)
-- `case"exec":return this.execCommand(` (extension.js, marks the `processRequest`
-  switch)
-- `?.fromClient(` (extension.js, **3 sites** - two chat surfaces and the session
-  list; match with a regex capturing the minified names, do not hardcode)
-- `s.data.type==="from-extension"` (webview/index.js, the app's own listener)
-- `if(t.task_type!=="local_agent")return` (webview/index.js) - only needed if a
-  later patch decides to populate the app's own `subagentTasks` instead of keeping a
-  private registry.
+The verified anchor list lives in
+[files-and-host-api.md](files-and-host-api.md).
 
 ## Open questions to settle during implementation
 
@@ -132,18 +135,10 @@ All unique in 2.1.240 unless noted:
 - **Cross-session tasks.** `background_tasks_changed` is per session. A task started
   in another panel/session will not appear. Decide whether that is acceptable
   (it matches the CLI's own scope) before promising a global view.
-- **How far back history should go.** Free: this panel session. Cheap, once the host
-  reader exists: earlier tasks of the same conversation, rebuilt from the transcript
-  and read off disk. Decide whether the extra rows are worth it, and whether a
-  finished row whose log file has since been cleaned should still be listed.
-
-## How to verify
-
-Follow the "Testing a change" recipe in `CLAUDE.md` (pristine VSIX in a throwaway
-`--extensions-dir` / `--user-data-dir`). Beyond the standard checks, exercise it
-live: start a long backgrounded Bash and a `run_in_background` subagent, confirm both
-appear in the list, switch between them and watch each log pane grow, let the turn
-end and confirm they keep updating, then Stop one and confirm its row settles. Also
-confirm the footer indicator is absent when nothing runs, that its animation respects
-`prefers-reduced-motion`, and that the two panes land on the correct sides under both
-`rtl` and LTR.
+- **Status of an older async agent.** For a task recovered from disk the final
+  status is often unknowable: `<task-notification>` is not replayed, and an async
+  agent's tool_result only says `async_launched`. Show such rows as "finished"
+  without a success or failure mark rather than guessing; a sync agent's tool_result
+  and a command's exit-code line in its `.output` do carry the outcome.
+- **Rows whose log file is gone.** `%TEMP%` is cleaned by the OS eventually. Decide
+  whether to list a finished task whose `.output` no longer exists, or drop it.

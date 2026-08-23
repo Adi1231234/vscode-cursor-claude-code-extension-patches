@@ -92,6 +92,17 @@ it can only be polled - rejected.)
 event-driven: the message listener on the webview side, `fs.watch` on the host side.
 Nothing in this design polls.
 
+## How to verify
+
+Follow the "Testing a change" recipe in `CLAUDE.md` (pristine VSIX in a throwaway
+`--extensions-dir` / `--user-data-dir`). Beyond the standard checks, exercise it
+live: start a long backgrounded Bash and a `run_in_background` subagent, confirm both
+appear in the list, switch between them and watch each log pane grow, let the turn
+end and confirm they keep updating, then Stop one and confirm its row settles. Also
+confirm the footer indicator is absent when nothing runs, that its animation respects
+`prefers-reduced-motion`, and that the two panes land on the correct sides under both
+`rtl` and LTR.
+
 ## Files
 
 - [data-sources.md](data-sources.md) - the measured stream events, what already

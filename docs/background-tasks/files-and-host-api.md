@@ -58,3 +58,18 @@ Already useful, with no host patch:
   description, resolvedModel, prompt}`.
 - Completion: a synthetic user message containing `<task-notification>` with
   `<task-id>`, `<tool-use-id>`, `<output-file>`, `<status>`, `<summary>`.
+
+## Verified anchors
+
+All unique in 2.1.240 unless noted:
+
+- `agentProgressSummaries:void 0,promptSuggestions:void 0` (extension.js)
+- `type:"from-extension",message:e` (extension.js, the host->webview envelope)
+- `case"exec":return this.execCommand(` (extension.js, marks the `processRequest`
+  switch)
+- `?.fromClient(` (extension.js, **3 sites** - two chat surfaces and the session
+  list; match with a regex capturing the minified names, do not hardcode)
+- `s.data.type==="from-extension"` (webview/index.js, the app's own listener)
+- `if(t.task_type!=="local_agent")return` (webview/index.js) - only needed if a
+  later patch decides to populate the app's own `subagentTasks` instead of keeping a
+  private registry.
