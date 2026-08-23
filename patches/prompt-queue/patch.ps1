@@ -12,7 +12,7 @@ function Invoke-Patch {
     $order = @(
         'config-dom', 'log', 'session', 'busy-files', 'chips-preview', 'persist', 'model',
         'schedule-lib', 'schedule-clock', 'add-button', 'schedule-modal',
-        'render-panel', 'row-menu', 'render-rows', 'resize-input', 'flush-init'
+        'render-panel', 'row-menu', 'render-rows', 'resize-input', 'stop-pause', 'flush-init'
     )
     $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "queue/$_.js") }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce; '__PVHASH__' = $Ctx.PvHash })

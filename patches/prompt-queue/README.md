@@ -27,6 +27,43 @@ The add button is re-anchored every tick (`ensureAddButton`) because the app
 re-renders its own footer; `insertBefore` on the existing node just moves it,
 so it never duplicates.
 
+## Stopping Claude parks the queue (`stop-pause.js`)
+
+Pressing **stop** while a turn is running sets `paused`, so the queue holds
+instead of firing the next item the moment the turn ends. Stopping means "not
+this, and not whatever came after it" - draining straight into the next prompt
+is the opposite of what the gesture asked for. The panel header shows
+`paused - N queued` with the play button, and the state is persisted like any
+other pause; one click releases it.
+
+The hook is on the **session's own `interrupt()`**, decorated per session
+(`hookStopPause`, re-run each tick because the object is replaced when the
+active conversation changes; guarded by `__qStopHook` so it decorates once,
+and isolated in its own try/catch - it decorates someone else's object, and a
+throw there would otherwise take the rest of the tick down with it, on that
+tick and every one after).
+That is the single funnel every stop path goes through - the composer's stop
+button (`onClick` -> `session.interrupt()`), a plain Escape (the app's
+body-level handler), and `restartClaude`. It runs **synchronously with the
+gesture**, i.e. before `busy` flips false and before the 150ms flush tick wakes
+up. Watching for the same gestures in the DOM instead would mean
+re-implementing the app's own conditions *and* would still race the flush; and
+`busy` going false is not a signal on its own - it is identical for a normal
+turn end.
+
+Two guards keep it to real stops: `interrupt()` also runs for a plain Escape
+while **idle** (the app's handler is not gated on busy), which is not a stop -
+so `isBusy()` must hold; and an empty queue has nothing to park, so `paused` is
+never set behind the user's back when the queue isn't in use.
+
+Note this is the same `paused` as the play/pause button, so a **due** scheduled
+item still fires (see `firstSendableIndex`) - a commitment to a wall-clock
+moment is deliberately not cancelled by a pause, however that pause arrived.
+
+Decorating an instance method is safe here (an own property over the prototype,
+`orig.apply(this, arguments)` returns the original promise untouched) - it is
+not the `acquireVsCodeApi` wrap the root CLAUDE.md forbids.
+
 ## Persistence (`persist.js`)
 
 The queue survives a full editor restart, per session:

@@ -63,6 +63,18 @@ status tokens, never a literal, so they follow the editor theme:
 - **connecting** - the row's normal colour, pulsing.
 - **error** - `--app-error-foreground`, with the message in the tooltip.
 
+### Off is a state, not an absence
+
+The chip is permanent - with Remote Control off it stays in the row instead of
+disappearing, so the row does not reflow and the feature has a visible home.
+That state is drawn with the app's own `footerButtonInactive` (`opacity: .5`,
+back to `1` on hover) rather than a dim of our own, because the row already has
+exactly this idiom: the file-selection button wears the same class when nothing
+is attached, and its `title` reads *"Not showing Claude your current file
+selection (…). Click to attach."* Ours reads the same way, and clicking it - as
+with that button - simply performs the action: `session.toggleRemoteControl()`,
+straight, no dialog. Only the destructive direction is confirmed (below).
+
 ### Hover tooltip, not `title`
 
 `data-cc-tip` + a `::after` styled like the composer's own mic tooltip (menu
@@ -70,19 +82,34 @@ colours, `.85em`, 0.3s delay, wraps, `inset-inline-end` so it mirrors under
 RTL). The native `title` attribute is deliberately not set: it is slow,
 unstyled, and cannot wrap.
 
-### Click opens a dialog
+### Click opens a dialog, in the app's own dialog style
 
-A one-glyph status icon must never silently drop a connection, so clicking opens
-a confirm dialog: what Remote Control is, the `claude.ai/code` link for this
-session, and **Close** / **Disconnect**. Escape and a click on the backdrop
-close it; the confirm calls `session.toggleRemoteControl()`, which is what the
-banner's ✕ did. `/remote-control` (or `/rc`) turns it back on.
+A one-glyph status icon must never silently drop a connection, so clicking it
+*while it is on* opens a dialog (off, it just turns on - see above). The bundle ships five dialog CSS modules in three families; the one
+copied here is the family used **twice** for confirmations (the "Different
+repository" and worktree-changes dialogs) rather than the outlier that hardcodes
+its scrim colour and uses no spacing tokens:
+
+- a 380px box on an `--app-modal-background` scrim, `--app-spacing-*` and
+  `--corner-radius-*` throughout, `1px solid var(--app-widget-border)`,
+- an `h3` title, a description carrying an inline monospace pill (theirs holds a
+  repo, ours holds `claude.ai/code`),
+- and a **numbered option list**, not a Cancel/Confirm button row:
+  `1 Open in the browser` / `2 Disconnect` / `3 Cancel`, first row primary.
+
+The keyboard behaviour is copied too, because it is part of the pattern: Escape
+backs out, the number keys pick a row, the arrows move the selection, Enter runs
+it. Option 1 is a real `<a target="_blank">` so the webview hands the url to the
+browser exactly as the app's own links do; the overlay is torn down on the next
+tick so removing it cannot cancel that navigation mid-dispatch. Disconnect calls
+`session.toggleRemoteControl()`, which is what the banner's ✕ did, and
+`/remote-control` (or `/rc`) turns it back on.
 
 The dialog is plain DOM, not a component: the chip is a call inside the footer's
 render rather than a component of our own, so there are no hooks to hold "open"
-in. Its CSS re-expresses the app's own dialog against the same design tokens
-instead of borrowing its hashed class names - one less minified identifier to
-track across versions.
+in. Its CSS re-expresses that family against the same design tokens instead of
+borrowing its hashed class names - one less minified identifier to track across
+versions.
 
 ## Anchors
 
@@ -118,3 +145,11 @@ Verified against 2.1.227 and 2.1.241 (one match each, in both bundles).
   text; footer height is unchanged at `36.576px` so the composer does not move;
   and clicking opens the dialog with this session's real `claude.ai/code` URL
   and focus on **Close**. Nothing was left behind in the DOM.
+- **The off state, live, both directions** (2.1.241 installed clean into a
+  throwaway profile, patched, panel opened over CDP): `connected` -> the dialog
+  -> **Disconnect** leaves the chip *in the row* as
+  `footerButton_gGYT1w footerButtonInactive_gGYT1w cc-rc-chip`,
+  `data-rc-state="disconnected"`, still `26x26`, `opacity: 0.5`, tooltip
+  *"Remote Control is off. Click to also open this session on claude.ai/code"*;
+  clicking that opens **no** dialog and walks `disconnected` -> `connecting`
+  (pulsing) -> `connected` (green) on its own.

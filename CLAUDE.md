@@ -81,6 +81,21 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   more `100vw`, 4 `100vh` and 5 JS viewport reads that are exposed the same way.
   Measure the viewport as `document.body.getBoundingClientRect().width` when the
   number will meet a rect.
+- **Injected UI copies the app's design line - measured, never chosen.** Anything
+  we add to the panel has to be indistinguishable from what the app draws itself.
+  Find the app's own element that plays the same role and take its values off the
+  **live DOM**, not off the source: `getComputedStyle` on the real siblings and
+  `svg.getBBox()` on their glyphs settle size, colour and spacing in one call and
+  catch rules a source read misses. Use the app's custom properties (`--app-*`),
+  never a literal colour - a hex breaks on the next theme. When the app disagrees
+  with itself, copy **the family that appears more than once** (the bundle ships
+  five dialog modules; the outlier had a hardcoded scrim and no spacing tokens).
+  Copy the *interaction* too: its confirm dialogs are a numbered option list
+  driven by Escape / digits / arrows / Enter, not a Cancel+Confirm button row.
+  And mind specificity when overriding an app rule - `.inputFooterV2 .footerButton`
+  is (0,2,0) and beats a single class of ours whatever the order; double our own
+  class instead of reaching for `!important` or hardcoding a hashed name.
+  `patches/remote-control-chip/` is the worked example.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not
@@ -154,6 +169,15 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    with the patched bundle in place - verification covers the installed VSIX, not
    the files afterwards. What *does* bite is **auto-update**: both editors replace
    the folder on an extension update and the patches go with it (hence: re-run).
+   **A fresh profile does not trust the folder, and the extension declares
+   `untrustedWorkspaces.supported: false`** - so it is never loaded at all: no
+   line in `exthost.log`, no `Claude Code:` entries in the palette, no panel, and
+   nothing that says why. It reads exactly like a patch that killed the
+   extension. Write `"security.workspace.trust.enabled": false` into
+   `<tmp>/ud/User/settings.json` before launching. Populate the extensions dir
+   with a real install (`code --extensions-dir <tmp>/extensions
+   --user-data-dir <tmp>/ud2 --install-extension <vsix>`) rather than an unzip,
+   then `apply.ps1 -ExtensionsDir <tmp>/extensions`.
 
 ## Attaching a real debugger to the webview (CDP)
 
