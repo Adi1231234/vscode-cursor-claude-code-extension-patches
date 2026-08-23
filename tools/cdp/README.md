@@ -83,6 +83,10 @@ Two details that are not obvious:
   panel's DOM is one frame deeper. That child frame has its own default execution
   context inside the same target, so `Runtime.evaluate` with its `contextId` lands
   in the panel directly, with no `contentWindow` hops.
+- **A picture of the panel has to come from the *window* target.**
+  `Page.captureScreenshot` on the webview target fails with `Command can only be
+  executed on top-level targets`; run it on the `type: "page"` target named after
+  the window and the composited frame includes the panel.
 
 ## Driving a live editor without breaking anything
 

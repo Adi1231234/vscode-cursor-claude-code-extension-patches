@@ -1,0 +1,53 @@
+/* RCCHIP */
+/* Remote Control status chip - the small icon in the input footer row that
+   replaces the full-width "Remote Control is active" banner.
+   Layout, hover and icon sizing come from the app's own .footerButton; the
+   colour comes from .footerButtonPrimary / .footerButtonInactive, so the chip
+   is the same weight and colour as every other button in the row. Only the
+   error tint, the connecting pulse and the tooltip live here. */
+.cc-rc-chip[data-rc-state="connecting"] {
+    animation: cc-rc-pulse 1.4s ease-in-out infinite;
+}
+
+.cc-rc-chip[data-rc-state="error"] {
+    color: var(--app-error-foreground);
+}
+
+@keyframes cc-rc-pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+}
+
+/* Hover tooltip, styled like the composer's own (menu colours, .85em, short
+   delay). The native title attribute is deliberately not used: it is slow,
+   unstyled and cannot wrap. .footerButton is already position:relative. */
+.cc-rc-chip::after {
+    content: attr(data-cc-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    inset-inline-end: 0;
+    z-index: 30;
+    width: max-content;
+    max-width: min(260px, calc(100vw - 24px));
+    padding: 4px 8px;
+    background: var(--app-menu-background);
+    color: var(--app-menu-foreground);
+    border: 1px solid var(--app-menu-border);
+    border-radius: var(--corner-radius-medium);
+    box-shadow: 0 2px 6px #00000026;
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: start;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in;
+}
+
+.cc-rc-chip:hover::after,
+.cc-rc-chip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.3s;
+}
