@@ -2,45 +2,61 @@
 
 ## The UI
 
-**A strip above the composer** (same anchor `prompt-queue` uses:
-`inp().closest('[class*="messageInputContainer_"]')`, inserted as a preceding
-sibling). Hidden when nothing is running, so it costs nothing in the common case.
+### 1. An animated indicator in the composer footer
 
-The row set comes straight from `background_tasks_changed.tasks`
-(`{task_id, task_type, description}`), enriched from `task_started` /
-`task_progress` / `task_updated`, and moved to a "finished" section by
-`task_notification`. Because the CLI evicts finished tasks from its registry after
-~30 s, the strip keeps its own history for the session.
+Not a strip above the composer: a single small control **in the composer footer
+row**, the same row the `prompt-queue` add button already lives in
+(`form.querySelector('[class*="sendButton"]').parentNode`, i.e. `inputFooterV2`).
+Insert it immediately before `.__qAdd`, so the action cluster reads
+`[running] [queue add] [send]`, and re-anchor it on the same tick `ensureAddButton`
+uses, because React re-renders that footer.
 
-One row per task: a status dot (running / done / failed / stopped), a type glyph,
-the label, and a live right-hand detail.
+It appears only while at least one task is running, and shows a running count with a
+continuous animation (a pulsing dot plus a slow rotating ring - `prefers-reduced-
+motion` falls back to a static dot). Its tooltip lists the running task names, using
+the same styled-tooltip markup as the queue button, not a native `title`.
 
-- `local_bash` -> label is the command, detail is the last output line.
-- `local_agent` -> label is `<subagent_type> · <description>`, detail is
-  `last_tool_name` (or the rolling `summary`, if `agentProgressSummaries` is on),
-  plus tokens and elapsed.
-- `local_workflow` -> label is the workflow name, detail is the last
-  `workflow_progress` entry (`phaseTitle: label`).
+State comes straight from the stream: `background_tasks_changed.tasks`
+(`{task_id, task_type, description}`) is the authoritative running set, enriched by
+`task_started` / `task_progress` / `task_updated`, and cleared per task by
+`task_notification`. Because the CLI evicts a finished task from its registry after
+~30 s, the indicator's own store keeps finished tasks for the rest of the session so
+the dialog can still show them.
 
-Row actions: **open log** (the whole row), **stop** (`stopTask(task_id)`), and for a
-foreground task **send to background** (`backgroundTasks(tool_use_id)`).
+### 2. Click -> a two-pane dialog
 
-**Click -> a log dialog.** Reuse the app's own modal look (`[class*="modalBackdrop"]`
-/ `modalContent` / `modalHeader` already exist as CSS-module classes) so it does not
-read as bolted on.
+Reuse the app's own modal look (`[class*="modalBackdrop"]` / `modalContent` /
+`modalHeader` are existing CSS-module classes) so it does not read as bolted on.
 
-- Subagent: a rendered feed built from `session.messages` filtered by
-  `sdkParentToolUseId === task.toolUseId` - each entry a tool call (name + one-line
+**Leading pane: the list.** One row per task, each with a type icon and a name, plus
+a status dot and elapsed time. Selecting a row is the only interaction; the first
+running task is selected on open.
+
+- subagent (`local_agent`) -> agent icon; name `<subagent_type> · <description>`
+- background command (`local_bash`) -> terminal icon; name is the command
+- workflow (`local_workflow`) -> workflow icon; name is the workflow name
+- everything else (`remote_agent`, `monitor_*`, `mcp_task`, ...) -> a generic icon
+  and the description, so an unknown type still renders
+
+**Trailing pane: that task's live log.** It follows the selection and keeps
+streaming while the dialog is open, auto-scrolled while pinned to the bottom with a
+follow toggle that releases when the user scrolls up.
+
+- subagent -> a rendered feed from `session.messages` filtered by
+  `sdkParentToolUseId === task.toolUseId`: each entry a tool call (name + one-line
   input) with its result collapsed, and prose/thinking as text once
   `forwardSubagentText` is on. No file access at all.
-- Bash: a `<pre>` tailing the `.output` file over the host bridge, auto-scrolled
-  while pinned to the bottom, with a follow toggle that releases when the user
-  scrolls up.
-- Workflow: the `workflow_progress` array as a phase/agent tree.
-- Header: description, agent type, model, tokens, tool count, elapsed, status.
-  Footer: Stop, Copy, and **Open in editor** -> `store.openFile(outputFile)` for a
-  Bash task (free - no bridge, and the editor does its own live reloading), or
-  `store.openContent(...)` for a rendered subagent log.
+- background command -> a `<pre>` tailing the `.output` file over the host bridge.
+- workflow -> the `workflow_progress` array as a phase/agent tree.
+
+Header: description, agent type, model, tokens, tool count, elapsed, status.
+Footer: **Stop** (`stopTask(task_id)`), **Copy**, and **Open in editor**
+(`store.openFile(outputFile)` for a command, `store.openContent(...)` for a rendered
+subagent log).
+
+Panes use normal flow and logical properties, never `inset-inline-end` on a
+full-width container, so under the `rtl` patch the list sits on the right and the
+log on the left, and in LTR the mirror of that.
 
 ## Hazards specific to this repo
 
@@ -48,9 +64,9 @@ read as bolted on.
   `pre,code` rule in `rtl.css` already forces the log block LTR - do not add a
   competing selector. Avoid `position:absolute` + `inset-inline-end` on a full-width
   container.
-- **Zero added height in the message list.** The composer strip sits outside the
-  list, which is one more reason to put it there; anything that ever renders inside
-  the list must cancel its own height (see `CLAUDE.md`).
+- **Zero added height in the message list.** The indicator lives in the composer
+  footer, outside the list, which is one more reason to put it there; anything that
+  ever renders inside the list must cancel its own height (see `CLAUDE.md`).
 - **Template-literal escapes.** Everything injected into the webview lands inside a
   `` ` `` literal in `extension.js`: no backticks, no `${`, and no `\n`/`\t` escapes
   (use `String.fromCharCode(10)`). Verify the *evaluated* form, not just
@@ -70,11 +86,12 @@ Each is independently shippable and useful on its own.
    values, in their own `.js` resource per the no-JS-in-PowerShell rule. Useful
    before any UI exists: subagent prose starts streaming and `task_progress` starts
    carrying a live summary.
-2. **`task-strip`** - the composer strip + dialog shell, driven entirely by an
-   injected `window.addEventListener("message")` observer over the SDK stream plus
-   `messages.subscribe(...)`. No host changes, no edit to the webview bundle's own
-   logic. Covers subagents and workflows completely; a Bash row shows status but
-   its dialog offers only "Open in editor".
+2. **`task-indicator`** - the animated footer control + the two-pane dialog, driven
+   entirely by an injected `window.addEventListener("message")` observer over the SDK
+   stream plus `messages.subscribe(...)`. No host changes, no edit to the webview
+   bundle's own logic. Covers subagents and workflows completely; a background
+   command lists and selects, but its log pane offers only "Open in editor" until
+   patch 3.
 3. **`task-log-bridge`** - the host-side `fs.watch` on the resolved `tasks/` dir and
    the `__ccbg` message pair, so a Bash task's log tails inside the dialog. Shared
    session-dir resolver goes in `lib/js/ccSessionDirs.js` beside `ccWtResolve.js`.
@@ -114,6 +131,8 @@ All unique in 2.1.240 unless noted:
 Follow the "Testing a change" recipe in `CLAUDE.md` (pristine VSIX in a throwaway
 `--extensions-dir` / `--user-data-dir`). Beyond the standard checks, exercise it
 live: start a long backgrounded Bash and a `run_in_background` subagent, confirm both
-appear, open each dialog and watch it grow, let the turn end and confirm the rows
-keep updating, then Stop one and confirm the row settles. Also confirm the strip is
-absent when nothing runs, and that the panel still renders under `rtl`.
+appear in the list, switch between them and watch each log pane grow, let the turn
+end and confirm they keep updating, then Stop one and confirm its row settles. Also
+confirm the footer indicator is absent when nothing runs, that its animation respects
+`prefers-reduced-motion`, and that the two panes land on the correct sides under both
+`rtl` and LTR.
