@@ -77,7 +77,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   bidi control character.** Two facts behind that. (1) The webview ships a
   Trojan-Source mitigation: it replaces every U+061C / U+200E / U+200F /
   U+202A-202E / U+2066-2069 in message content with the literal text `\uXXXX`, so
-  an RLM inserted to force a direction is *printed*, not applied. (2) A per-block
+  an RLM inserted to force a direction is *printed*, not applied.
+  `patches/bidi-mark-strip/` stops the printing - it drops the three implicit marks
+  (ALM / LRM / RLM) before that pass and leaves the reordering characters escaped -
+  but a mark still never *applies*, so it is no more usable than before. (2) A per-block
   heuristic - the app's own `unicode-bidi:plaintext`, or any letter/word vote of
   our own - flips a Hebrew line the moment one English word outweighs it. The
   standards say to declare the direction once where it is known (HTML calls the
@@ -145,6 +148,16 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 inspection (evaluate in the page, read the DOM, drive it from a CDP client), open a
 Chrome DevTools Protocol port:
 
+**Reach for CDP, not for desktop automation.** Anything you need from a running
+editor - what the panel rendered, which window owns which webview, the console, a
+command, a reload - goes through `tools/cdp/` or a direct CDP call. Do **not** drive
+the editor with screenshot / click / type MCPs (`adi-tools` and friends): they see
+pixels instead of the DOM, act on whatever window happens to be in front, need the
+window focused and visible, and leave no evidence anyone can re-check. CDP answers
+with the actual DOM, addresses a window by name, works on an occluded window, and
+every step is a script that can be re-run. Screenshots are for showing a human what
+something looks like - never as the way to find out what the panel is doing.
+
 - **VS Code: put it in `argv.json`** (`Preferences: Configure Runtime Arguments`,
   i.e. `~/.vscode/argv.json`). `main.js` allowlists `remote-debugging-port` next to
   `disable-hardware-acceleration`, and calls `appendSwitch` **only for a string
@@ -182,5 +195,15 @@ Chrome DevTools Protocol port:
   does group them, but silently mislabels every window stacked in the same place.
   What is exact: the window's own DOM still holds the `<iframe>` **element**, and
   its `src` carries the same `?id=<uuid>` as the webview target's url.
+- **After patching a bundle under a running editor, only a real `Developer: Reload
+  Window` picks it up.** A renderer-level reload (`Page.reload`, the
+  `vscode:reloadWindow` channel, Ctrl+R - all three are `webContents.reload()`)
+  brings the panel back **blank**, with a `SyntaxError` blamed on `index.js` at a
+  line/column that does not match the file on disk; it survives further renderer
+  reloads until the real command runs. The command reaches
+  `INativeHostService.reload()` -> `CodeWindow.reload()`, which rebuilds the window
+  configuration. The workbench renderer exposes no command API, so the only way in
+  is keystrokes: `node tools/cdp/cdp.mjs reload <window>` types the palette over
+  CDP's Input domain and waits for the panel to come back.
 - The port has no authentication and any local process can attach, so take the line
   back out when you are done.

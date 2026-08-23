@@ -35,6 +35,7 @@ $order = @(
     'prompt-queue'
     'copy-message'
     'message-bidi'
+    'bidi-mark-strip'
     'inline-code-copy'
     'bypass-permissions'
     'electron-run-as-node'

@@ -58,6 +58,8 @@ Each links to its folder's README for the full root cause + proof.
 - 🔤 [**cwd drive-letter case**](patches/cwd-drive-case) — from **CLI 2.1.222** on, IDE-started worktree sessions die on resume with `process exited with code 1`. `URI.fsPath` hands the CLI `c:\…`, git reports `C:/…`, and the new isolation-worktree guard compares them **case-sensitively**. *Proof:* same repo, same session, only the drive letter changed → exit 0 vs exit 1; and 2.1.221 resumes where 2.1.222 refuses.
 - 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the sessionID was dropped on deserialize; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s + retry `activate` instead of new-chatting. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`.
 
+- ↔️ [**Bidi marks printed as text**](patches/bidi-mark-strip) — the webview's Trojan-Source mitigation rewrites every bidi control character into printable escape text, so an invisible RLM inside an answer is *shown* mid-sentence. The three implicit marks (ALM / LRM / RLM) are now dropped instead; the characters that can actually reorder a run are still escaped.
+
 ## 🔬 How the intermittent bugs were caught
 
 Injected logging at the decisive points on **both** sides of the webview boundary — host (`fs.appendFileSync`) and webview (capture the `vscode` API at the top, `postMessage` to the host) — then reloaded until the failure fired and read the evidence. All instrumentation is stripped from the shipped patch.
