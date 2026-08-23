@@ -6,7 +6,8 @@
        - everything else: normal flow, on its own line at the end of the message.
      The app re-renders its message list constantly, so both the button and its
      placement are re-asserted from a MutationObserver rather than once at load.
-     Sections: config + clipboard (here), button, placement + observer. */
+     Sections: config (here), the shared clipboard runtime, button,
+     placement + observer. */
 
   var MSG = ".__MSG__";          /* message_<hash> - one chat message wrapper */
   var USERMSG = ".__USERMSG__";  /* userMessage_<hash> - the user's text bubble */
