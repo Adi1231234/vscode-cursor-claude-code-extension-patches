@@ -1,18 +1,27 @@
 <script nonce="${__NONCE__}">/* MSGBIDI */(function () {
-  /* Which way each rendered message block should read.
+  /* Which way a rendered message should read.
 
-     The app's markdown CSS marks every block unicode-bidi:plaintext, which makes
-     the UA pick the base direction from the first strong character and ignore the
-     rtl patch's direction:rtl entirely. So a Hebrew answer opening with an English
-     word renders LTR and reads scrambled (see message-bidi.css for the full root
-     cause). Here we replace that heuristic with a majority-of-letters one and put
-     the verdict in the dir attribute; message-bidi.css is what lets dir win.
+     The app marks every markdown block unicode-bidi:plaintext, which makes the UA
+     derive a base direction per block from its FIRST STRONG character and ignore
+     the rtl patch's direction:rtl (see message-bidi.css for the full root cause).
+     That heuristic is what the HTML standard calls "very crude" and reserves for
+     text "whose direction is truly unknown" - here it is known, so we decide it
+     once for the whole message and let every block inherit, which is what
+     w3.org/International/questions/qa-html-dir prescribes for a document.
 
-     Sections: classification (here), then apply + observer. */
+     The count is over WORDS, and a word is RTL when its first strong character is
+     (so "he-benchmark" is a Hebrew word, not nine Latin letters), with the RTL
+     share compared against 0.4 rather than a half. Both details are lifted from
+     goog.i18n.bidi.estimateDirection, which is the same decision made in
+     production: an RTL text nearly always carries Latin terminology, while the
+     reverse is rare, so a symmetric vote is biased against RTL from the start.
 
-  var MD = ".__MD__";                                        /* root_<hash> - one rendered markdown block */
+     Sections: counting (here), then apply + observer. */
+
+  var MD = ".__MD__";                                        /* root_<hash> - one rendered message */
   var BLOCKS = "p,li,h1,h2,h3,h4,h5,h6,blockquote,td,th";    /* exactly what the app marks plaintext */
-  var SKIP = "code,pre";                                     /* already forced LTR by the rtl patch */
+  var SKIP = "code,pre";                                     /* terminology, and forced LTR anyway */
+  var RTL_SHARE = 0.4;
 
   /* Strong direction of one code point: -1 RTL, 1 LTR, 0 weak/neutral.
      Numeric ranges rather than a regex on purpose - this file is injected inside
@@ -29,26 +38,58 @@
     return 0;
   }
 
-  /* Sum of strong letters in a block: negative means RTL wins, positive LTR.
-     Code spans are skipped - a flag or an identifier is terminology, not the
-     language of the sentence, and it is rendered LTR regardless. Counting it
-     would flip a short Hebrew line the moment it mentioned one. */
-  function balance(el) {
+  /* The text of one block, minus code spans. Inline markup splits a word across
+     text nodes ("he-" in the paragraph, "benchmark" inside <strong>), so the
+     pieces are joined with nothing between them and only whitespace separates
+     words - otherwise every emphasised term would be counted as its own word. */
+  function textOf(el) {
     var walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    var score = 0;
-    var node, text, i;
+    var out = "";
+    var node;
     while ((node = walk.nextNode())) {
       if (node.parentElement && node.parentElement.closest(SKIP)) continue;
-      text = node.nodeValue;
-      for (i = 0; i < text.length; i++) score += strength(text.charCodeAt(i));
+      out += node.nodeValue;
     }
-    return score;
+    return out;
   }
 
-  /* An empty answer (no letters at all, or a dead heat) leaves the block without
-     a dir attribute, so it keeps inheriting the panel direction - and the CSS,
-     scoped to [dir], leaves the app's own plaintext behaviour in place for it. */
-  function decide(el) {
-    var score = balance(el);
-    return score < 0 ? "rtl" : score > 0 ? "ltr" : "";
+  /* One word, classified the way estimateDirection does: RTL if its first strong
+     character is RTL, LTR if it holds any Latin letter at all, and otherwise not
+     counted - a bare number or a URL is weak and must not carry the vote. */
+  function tally(word, counts) {
+    if (word.slice(0, 4) === "http") return;
+    var first = 0;
+    var hasLtr = false;
+    for (var i = 0; i < word.length; i++) {
+      var s = strength(word.charCodeAt(i));
+      if (!s) continue;
+      if (!first) first = s;
+      if (s > 0) hasLtr = true;
+    }
+    if (first < 0) { counts.rtl++; counts.total++; return; }
+    if (hasLtr) counts.total++;
+  }
+
+  /* Split on whitespace by code point, never with a regex: a backslash escape in
+     this file is eaten by the template literal it is injected into, so a literal
+     whitespace class would reach the browser as the letter it escapes. */
+  function count(text, counts) {
+    var word = "";
+    for (var i = 0; i < text.length; i++) {
+      if (text.charCodeAt(i) <= 32) {
+        if (word) { tally(word, counts); word = ""; }
+        continue;
+      }
+      word += text.charAt(i);
+    }
+    if (word) tally(word, counts);
+  }
+
+  /* Does this text carry any strong letter of the given direction? That is the
+     only per-block question left: a block with none of the message's own script
+     is the "rare occasion" where a block may override the declared direction. */
+  function holds(text, dir) {
+    var want = dir === "rtl" ? -1 : 1;
+    for (var i = 0; i < text.length; i++) if (strength(text.charCodeAt(i)) === want) return true;
+    return false;
   }

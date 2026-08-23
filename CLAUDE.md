@@ -66,6 +66,18 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   full-width container: the element lands at the *far side of the viewport*, not
   beside its content. Prefer normal flow, and check the result under RTL - a
   browser harness over the patched `webview/index.css` shows it in seconds.
+- **Text direction is decided per *message*, never per line, and never with a
+  bidi control character.** Two facts behind that. (1) The webview ships a
+  Trojan-Source mitigation: it replaces every U+061C / U+200E / U+200F /
+  U+202A-202E / U+2066-2069 in message content with the literal text `\uXXXX`, so
+  an RLM inserted to force a direction is *printed*, not applied. (2) A per-block
+  heuristic - the app's own `unicode-bidi:plaintext`, or any letter/word vote of
+  our own - flips a Hebrew line the moment one English word outweighs it. The
+  standards say to declare the direction once where it is known (HTML calls the
+  first-strong heuristic "very crude" and reserves it for text "truly unknown";
+  W3C `qa-html-dir` says declare at the root and override a block only on "rare
+  occasions"). `patches/message-bidi/` is that declaration - read its README
+  before touching direction anywhere.
 - **Build the test harness from the markup the app *emits*, not from what the
   source looks like it emits.** A CSS-module lookup that has no matching key
   (`lu.messageHovered` where `lu` never defines it) renders as the literal
