@@ -156,6 +156,15 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    with the patched bundle in place - verification covers the installed VSIX, not
    the files afterwards. What *does* bite is **auto-update**: both editors replace
    the folder on an extension update and the patches go with it (hence: re-run).
+   **A fresh profile does not trust the folder, and the extension declares
+   `untrustedWorkspaces.supported: false`** - so it is never loaded at all: no
+   line in `exthost.log`, no `Claude Code:` entries in the palette, no panel, and
+   nothing that says why. It reads exactly like a patch that killed the
+   extension. Write `"security.workspace.trust.enabled": false` into
+   `<tmp>/ud/User/settings.json` before launching. Populate the extensions dir
+   with a real install (`code --extensions-dir <tmp>/extensions
+   --user-data-dir <tmp>/ud2 --install-extension <vsix>`) rather than an unzip,
+   then `apply.ps1 -ExtensionsDir <tmp>/extensions`.
 
 ## Attaching a real debugger to the webview (CDP)
 
