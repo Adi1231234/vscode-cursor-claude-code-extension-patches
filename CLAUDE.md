@@ -74,7 +74,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   bidi control character.** Two facts behind that. (1) The webview ships a
   Trojan-Source mitigation: it replaces every U+061C / U+200E / U+200F /
   U+202A-202E / U+2066-2069 in message content with the literal text `\uXXXX`, so
-  an RLM inserted to force a direction is *printed*, not applied. (2) A per-block
+  an RLM inserted to force a direction is *printed*, not applied.
+  `patches/bidi-mark-strip/` stops the printing - it drops the three implicit marks
+  (ALM / LRM / RLM) before that pass and leaves the reordering characters escaped -
+  but a mark still never *applies*, so it is no more usable than before. (2) A per-block
   heuristic - the app's own `unicode-bidi:plaintext`, or any letter/word vote of
   our own - flips a Hebrew line the moment one English word outweighs it. The
   standards say to declare the direction once where it is known (HTML calls the
