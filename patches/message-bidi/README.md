@@ -65,11 +65,15 @@ So `bidi/*.js`:
    `goog.i18n.bidi.estimateDirection` (closure-library), which is the same decision
    made in production - RTL text nearly always carries Latin terminology while the
    reverse is rare, so a symmetric vote is biased against RTL from the start.
-2. Lets every block inherit that. A block gets its own `dir` **only** when it holds
-   no letter of the message's own script at all (an English path or quote inside a
-   Hebrew answer, a Hebrew line inside an English answer). That is the "rare
-   occasion" the W3C guidance means.
-3. A message with no strongly directional word is left untouched.
+2. Lets every block inherit that. A block gets its own `dir` **only** when it carries
+   letters of the opposite script and none of the message's own (an English path or
+   quote inside a Hebrew answer, a Hebrew line inside an English answer). That is the
+   "rare occasion" the W3C guidance means.
+3. A block with no strong letter either way - a numbers-only cell, a `---` separator -
+   inherits like any other. It must not default to LTR (string-meta: "the default
+   direction should not be set to LTR"), and flipping it would also drag a list
+   item's marker inline through the `__ccBidiOdd` rule.
+4. A message with no strongly directional word at all is left untouched.
 
 `message-bidi.css` overrides `unicode-bidi` back to `isolate` for the blocks of a
 message the script has decided on, with a selector that out-specifies the app's rule
