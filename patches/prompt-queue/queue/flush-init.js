@@ -85,6 +85,7 @@
   setInterval(function () {
     try {
       syncSession();
+      hookStopPause();
       ensureAddButton();
       if (Q.length && (!panel || !panel.isConnected)) render();
       armAfterItems();
