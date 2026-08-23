@@ -23,8 +23,9 @@
 .__qTop,.__qUp,.__qDown,.__qBottom{cursor:pointer;border:none;background:none;color:var(--vscode-foreground,#cccccc);opacity:.5;font-size:8px;line-height:1;padding:1px 3px;border-radius:3px;display:flex;align-items:center;justify-content:center;transition:opacity .1s ease,background .1s ease}
 .__qTop:hover,.__qUp:hover,.__qDown:hover,.__qBottom:hover{opacity:1;background:rgba(128,128,128,.2)}
 .__qTop:disabled,.__qUp:disabled,.__qDown:disabled,.__qBottom:disabled{opacity:.13;cursor:default;background:none}
-/* The two jump-to-end glyphs are drawn larger than the step arrows; the tighter
-   padding keeps a four-button stack the same height the three-button one was. */
+/* The two jump-to-end glyphs are drawn larger than the step arrows. The fourth
+   button costs ~9px of row height (49 -> 58 measured); 10px + tighter padding
+   keeps it to that without shrinking the hit targets below what they were. */
 .__qTop,.__qBottom{font-size:10px;padding:0 3px}
 .__qTop{margin-bottom:1px}
 .__qBottom{margin-top:1px}
