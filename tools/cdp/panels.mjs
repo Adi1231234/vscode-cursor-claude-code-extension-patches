@@ -48,7 +48,10 @@ export async function webviews(port) {
 }
 
 /* The child frame's default execution context - i.e. the panel itself. */
-async function panelContext(client) {
+/* Exported because anything that drives the panel - not just `eval` - has to
+   address the same frame; the webview target's default context is the outer
+   shell document, where the panel's DOM does not exist. */
+export async function panelContext(client) {
   const contexts = [];
   client.on('Runtime.executionContextCreated', (p) => contexts.push(p.context));
   await client.send('Page.enable');

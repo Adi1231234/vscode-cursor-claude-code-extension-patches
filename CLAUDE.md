@@ -16,8 +16,9 @@ in place. Read this before changing anything so the structure stays clean.
   - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
   - `js/` - shared runtime JS, one copy each: `ccWtResolve.js` (the
     `__ccWtResolve` transcript-dir resolver, pulled in with
-    `Add-CcWtResolveHelper`) and `ccCopyText.js` (`window.__ccCopyText`, pulled
-    into a patch's fragment list with `Get-LibJsPath`).
+    `Add-CcWtResolveHelper`), `ccCopyText.js` (`window.__ccCopyText`) and
+    `ccStore.js` (`__ccStore` / `__ccFiber`, the webview session-store finder) -
+    the last two pulled into a patch's fragment list with `Get-LibJsPath`.
 - **`patches/<name>/`** - one folder per feature or bug fix. Contains:
   - `patch.ps1` - defines a single `function Invoke-Patch { param($Ctx) ... }`.
   - `README.md` - what it does + the proven root cause.
@@ -74,7 +75,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **UTF-8 no BOM.** Only touch files through the `lib/Io.ps1` helpers.
 - **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
   1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
-  2. **No backslash escapes that the template literal evaluates inside strings** - `\n`, `\t`, `\r`, `\b`, `\f` become a real newline/char *before the browser sees them*, turning `join("\n")` into a broken multi-line string literal - the whole injected `<script>` then fails to parse and **nothing runs** (no error you can see). `✓`-style escapes that yield a normal glyph are fine (they're used for icons). For a real newline use `String.fromCharCode(10)`. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+  2. **No backslash at all, beyond a \u escape** - the literal evaluates every escape *before the browser sees the script*. \n / \t / \r become real newlines and break the string they sit in; \d, \w, \. in a regex silently lose the backslash and change what the pattern matches; a lone backslash in a string is a syntax error. A \u escape is the one exception (it yields a normal glyph, and the icons rely on it). For a newline use `String.fromCharCode(10)`, for a backslash `String.fromCharCode(92)`, and write regexes with character classes (`[0-9]`, `[.]`) rather than escapes. Grep the fragment for backslashes before shipping. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
 - **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
   sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
   viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel

@@ -1,47 +1,49 @@
 /* The width of the lab's Claude panel - a test parameter, not a detail.
 
    Everything the panel places against its own edges - popovers, wrapping,
-   ellipsising, RTL - only misbehaves once the panel is narrow, and `up` opens
-   it as an editor tab, which is wide. Without a way to set the width, the
-   regime those bugs live in is exactly the one the lab never reproduces.
-   `patches/history-dialog-clip` is the worked example: correct at 790px,
-   157px outside the panel at 300px.
+   ellipsising, RTL - only misbehaves once the panel is narrow, and `up` opens it
+   as an editor tab, which is wide. Without a way to set the width, the regime
+   those bugs live in is exactly the one the lab never reproduces.
+   `patches/history-dialog-clip` is the worked example: correct at 790px, 157px
+   outside the panel at 300px.
 
-   There is no command API for the workbench layout, so the width is set the way
-   a person sets it: by dragging the sash beside the panel. It has to be CDP's
-   Input domain - those events are trusted, so the sash's own pointer handling
-   runs. Synthetic PointerEvents dispatched into the DOM are ignored by it and
-   the drag silently does nothing (measured: the side bar stayed 296px through
-   twelve of them).
+   The width is set by sizing the workbench viewport, not by dragging the sash
+   beside the panel. Dragging is the obvious way and it is a trap: which sash
+   governs the panel depends on the layout; pulling the side bar's sash far enough
+   *collapses the side bar*, which hands its space to the editor area and makes the
+   panel wider instead of narrower (measured: asked 400, got 1409); and once the
+   side bar is gone there is no sash beside the panel at all, so the tool has
+   locked itself out of its own parameter. That is not hypothetical - it is where
+   an afternoon of testing left it.
 
-   The result is read back from INSIDE the panel, because that is the number the
-   panel's own code sees, and it is not always what you asked for - VS Code
-   clamps to its minimum widths. Callers report both. */
+   The panel is the editor area, so its width is the viewport minus whatever chrome
+   sits beside it. Measure that and the viewport needed for any panel width is
+   arithmetic: one CDP call, no mouse events, nothing to collapse, and it comes
+   back down as easily as it goes up. Measured across 150 / 200 / 300 / 420 / 620 /
+   780 / 1200 / 4000 - every one exact, with the panel's own clientWidth agreeing.
+
+   The override belongs to the window's page target, not to the panel, so it
+   survives a real `Developer: Reload Window` - measured: 300px before `repatch`,
+   300px after. Setting a width once holds for the rest of the session. */
 
 import { connect, targets, unwrap } from '../cdp/client.mjs';
-import { evalInPanel } from '../cdp/panels.mjs';
+import { LAYOUT, UUID } from './layout.mjs';
+import { readWidth } from './measure.mjs';
 
-/* This panel's iframe and every sash still draggable, in window coordinates.
-   The iframe is matched on the panel's own webview id, not on "the first Claude
-   webview": a window can hold several, and the one being measured has to be the
-   one being resized. */
-const LAYOUT = (id) => `(() => {
-  const frame = [...document.querySelectorAll('iframe')]
-    .find((f) => ((f.getAttribute('src') || '') + (f.src || '')).includes(${JSON.stringify(id)}));
-  const sashes = [...document.querySelectorAll('.monaco-sash.vertical')]
-    .filter((s) => !s.classList.contains('disabled'))
-    .map((s) => { const r = s.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-  if (!frame) return { sashes };
-  const r = frame.getBoundingClientRect();
-  return { panel: { left: r.left, right: r.right, width: r.width }, sashes };
-})()`;
+/* The chrome beside the panel changes with the viewport - a side bar has a minimum
+   of its own and gives up its space in steps - so one round of arithmetic can
+   undershoot and the loop repeats until it stops making progress.
 
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
-
-export async function readWidth(panel) {
-    const w = await evalInPanel(panel.target, 'document.documentElement.clientWidth');
-    return typeof w === 'number' ? w : null;
-}
+   The settle is the part that had to be measured rather than guessed. At 400ms the
+   big narrowings stalled short and reported it honestly (1200 -> 150 landed on 214,
+   then reached 150 when run again, because the second run started after the layout
+   had finished moving); at 900ms every transition tried lands first time:
+   1200 -> 150, 300 -> 150, 1400 -> 200, 150 -> 1200, 620 -> 300. A slower machine
+   could still stall, and then the report says where the workbench settled instead
+   of pretending the width was delivered. */
+const ROUNDS = 4;
+const PASSES = 5;
+const SETTLE_MS = 900;
 
 export async function setWidth(port, panel, want) {
     if (!Number.isFinite(want) || want < 120) throw new Error(`--width needs a number of pixels, at least 120 (got "${want}")`);
@@ -52,41 +54,40 @@ export async function setWidth(port, panel, want) {
     if (!id) throw new Error('this panel has no webview id to find it by');
 
     const client = await connect(page.webSocketDebuggerUrl);
+    let from = null;
     try {
-        const view = unwrap(await client.send('Runtime.evaluate', { expression: LAYOUT(id), returnByValue: true }));
-        if (!view || !view.panel) throw new Error('this panel has no iframe in the window - is it still open?');
-        const sash = nearestSash(view);
-        if (!sash) throw new Error('the panel has no draggable sash beside it - open the side bar, or widen the window');
-        const delta = want - view.panel.width;
-        await drag(client, sash, sash.x + (sash.side === 'left' ? -delta : delta));
+        const look = async () => {
+            const v = unwrap(await client.send('Runtime.evaluate', { expression: LAYOUT(id), returnByValue: true }));
+            if (!v || !v.panel) throw new Error('this panel has no iframe in the window - is it still open?');
+            return v;
+        };
+        let view = await look();
+        from = Math.round(view.panel.width);
+        /* A round can stall at an intermediate layout that still has a step left in
+           it - the side bar shrinks to its minimum, the arithmetic stops moving, and
+           running the command a second time then lands exactly, because it starts
+           over from there. Measured: 1200 -> 150 stalling at 214, then reaching 150
+           on the next invocation. So the restart happens here instead of being
+           something the caller has to know to do. */
+        for (let round = 0; round < ROUNDS && Math.abs(view.panel.width - want) > 1; round++) {
+            let stuck = 0;
+            for (let pass = 0; pass < PASSES && Math.abs(view.panel.width - want) > 1; pass++) {
+                const before = Math.round(view.panel.width);
+                const r = await client.send('Emulation.setDeviceMetricsOverride', {
+                    width: Math.max(1, Math.round(want + view.chrome)),
+                    height: Math.round(view.height) || 900,
+                    deviceScaleFactor: 0,
+                    mobile: false,
+                });
+                if (r && r.error) throw new Error(`the workbench refused a viewport override: ${r.error.message}`);
+                await new Promise((s) => setTimeout(s, SETTLE_MS));
+                view = await look();
+                stuck = Math.round(view.panel.width) === before ? stuck + 1 : 0;
+                if (stuck >= 2) break;
+            }
+        }
     } finally {
         client.close();
     }
-    await new Promise((r) => setTimeout(r, 700));
-    return readWidth(panel);
-}
-
-/* Which boundary actually governs this panel: the nearest sash sitting on one
-   of its edges. Moving a sash on the left towards the left widens the panel;
-   on the right it is the other way round, which is why the side is carried. */
-function nearestSash({ panel, sashes }) {
-    let best = null;
-    for (const s of sashes) {
-        const side = s.x <= panel.left + 4 ? 'left' : s.x >= panel.right - 4 ? 'right' : null;
-        if (!side) continue;
-        const distance = side === 'left' ? panel.left - s.x : s.x - panel.right;
-        if (!best || distance < best.distance) best = { ...s, side, distance };
-    }
-    return best;
-}
-
-/* A press, a few moves, a release - the sash follows the pointer, so it needs
-   the intermediate moves, not just the endpoint. */
-async function drag(client, sash, toX) {
-    const mouse = (type, x) => client.send('Input.dispatchMouseEvent', {
-        type, x, y: sash.y, button: 'left', clickCount: 1, buttons: type === 'mouseReleased' ? 0 : 1,
-    });
-    await mouse('mousePressed', sash.x);
-    for (let i = 1; i <= 8; i++) await mouse('mouseMoved', sash.x + ((toX - sash.x) * i) / 8);
-    await mouse('mouseReleased', toX);
+    return { ...(await readWidth(panel, port)), from };
 }

@@ -9,12 +9,16 @@ function Invoke-Patch {
     param($Ctx)
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue.css') '/* QUEUE */' 'queue CSS'
 
+    # lib/js/ccStore.js is the shared session-store finder, dropped in right after
+    # the fragment that opens the IIFE (background-tasks pulls in the same file).
     $order = @(
-        'config-dom', 'log', 'session', 'busy-files', 'chips-preview', 'persist', 'model',
+        'log', 'session', 'busy-files', 'chips-preview', 'persist', 'debug', 'model',
         'schedule-lib', 'schedule-clock', 'add-button', 'schedule-modal',
         'render-panel', 'row-menu', 'render-rows', 'resize-input', 'stop-pause', 'flush-init'
     )
-    $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "queue/$_.js") }) -join ''
+    $parts = @((Join-Path $PSScriptRoot 'queue/config-dom.js'), (Get-LibJsPath 'ccStore.js')) +
+        ($order | ForEach-Object { Join-Path $PSScriptRoot "queue/$_.js" })
+    $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce; '__PVHASH__' = $Ctx.PvHash })
     Add-ScriptAfterMarker $Ctx $script '/* QUEUE */' 'queue JS' @('/* INPUTRTL */', '/* ZOOM */')
 }

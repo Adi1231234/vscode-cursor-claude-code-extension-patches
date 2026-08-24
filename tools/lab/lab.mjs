@@ -16,7 +16,8 @@ import { launch, portOwner, stop, useCodeExe, waitForPort } from './editor.mjs';
 import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
-import { readWidth, setWidth } from './width.mjs';
+import { makeReport } from './report.mjs';
+import { pressKey, sendPrompt } from './drive.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -39,6 +40,7 @@ if (!version) fail('no claude-code install found to take a version from - pass -
 const port = Number(flags.port || DEFAULT_PORT);
 try { if (flags.code) useCodeExe(flags.code); } catch (e) { fail(e.message); }
 const lay = layout(version, port);
+const report = makeReport({ lay, port, version, log, flags });
 
 /* A port that answers is not proof this lab is up - another worktree's lab may
    hold it, and then every measurement you take is of someone else's window. */
@@ -64,7 +66,10 @@ async function up() {
     await vsix.restore(lay);
     await applyPatches(lay, log);
     log(`starting the editor on port ${port}`);
-    launch(lay, port);
+    const own = await launch(lay, port);
+    log(own.ok
+        ? 'started on a desktop of its own - it cannot appear on your screen or take your focus'
+        : `could not give it a desktop of its own (${own.reason}), so it is on yours`);
     if (!(await waitForPort(port))) fail('the editor never opened its CDP port - see the lab\'s own main.log');
     await report(await ensurePanel(port, log));
 }
@@ -76,14 +81,16 @@ async function repatch() {
     const page = (await targets(port)).find((t) => t.type === 'page' && t.title);
     if (!page) fail('the lab has no editor window to reload');
     const r = await runCommand(page, 'Developer: Reload Window');
-    if (!r.ok) fail(`reload refused: ${r.reason}`);
+    /* The window state travels with the refusal: which of the reasons it was
+       decides what to do about it, and guessing costs a whole debugging session. */
+    if (!r.ok) fail(`reload refused: ${r.reason}${r.window ? `
+  window: ${JSON.stringify(r.window)}` : ''}`);
     const panel = await waitForPanel(port);
     if (!panel) fail('the panel did not come back after the reload');
     await report(panel);
 }
 
-/* Width is a test parameter: `width 300` puts the panel in the narrow regime
-   where edge-placed UI actually breaks. With no argument it just reports. */
+/* `width 300` puts the panel in the narrow regime where edge-placed UI breaks. */
 async function width(px) {
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     await report(await ensurePanel(port, log), px ?? flags.width);
@@ -93,9 +100,30 @@ async function evaluate(file) {
     if (!file) fail('eval needs a script file: lab.mjs eval <script.js>');
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     const panel = await ensurePanel(port, log);
+    /* A panel that is not visible is never laid out again, so every rect answers
+       with the geometry it had when it last was - invisible in the numbers. */
+    const hidden = await evalInPanel(panel.target, 'document.visibilityState !== "visible"');
+    if (hidden === true) log('the panel is not visible, so its geometry is frozen - whatever it reports is the size it had when it last was');
     const result = await evalInPanel(panel.target, readFileSync(file, 'utf8'));
     console.log(JSON.stringify(result, null, 1));
     process.exit(result && result.__error ? 1 : 0);
+}
+
+/* Some patches do nothing until a session exists - see drive.mjs for the two
+   traps in getting one. `press` answers the numbered confirm a tool call raises. */
+async function prompt(text) {
+    if (!text) fail('prompt needs something to say: lab.mjs prompt "..."');
+    if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
+    const r = await sendPrompt(port, text);
+    if (!r.sent) fail('typed, but the composer did not clear - it was probably not submitted');
+    log('sent');
+}
+
+async function press(k) {
+    if (!k) fail('press needs a key: lab.mjs press 1  (confirm dialogs are numbered)');
+    if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
+    await pressKey(port, k);
+    log(`pressed ${k}`);
 }
 
 async function down() {
@@ -106,21 +134,13 @@ async function down() {
     log(`removed ${lay.dir} (the vsix cache is kept)`);
 }
 
-/* Every run ends by saying what to do next: this is the tool an agent meets
-   once, and the commands that follow `up` are the whole working loop. The panel
-   width is part of that answer - it decides which bugs can reproduce at all, so
-   it is reported even when nobody asked for one. */
-async function report(panel, want = flags.width) {
-    const asked = want === undefined ? undefined : Number(want);
-    const panelWidth = asked === undefined ? await readWidth(panel) : await setWidth(port, panel, asked);
-    if (asked !== undefined && panelWidth !== asked) {
-        log(`panel is ${panelWidth}px, not the ${asked}px asked for - the editor clamps to what the layout allows`);
-    }
-    console.log(JSON.stringify({ port, version, window: panel.window, panelWidth, target: panel.target.id, dir: lay.dir }, null, 1));
-    log('edit a patch, then: lab.mjs repatch  |  inspect: lab.mjs eval <script.js>  |  narrow it: lab.mjs width 300');
-}
-
-const COMMANDS = { up, repatch, down, eval: () => evaluate(args[0]), width: () => width(args[0]) };
+const COMMANDS = {
+    up, repatch, down,
+    eval: () => evaluate(args[0]),
+    width: () => width(args[0]),
+    prompt: () => prompt(args.join(' ')),
+    press: () => press(args[0]),
+};
 
 try {
     if (!COMMANDS[cmd]) fail(`unknown command "${cmd}" - one of: ${Object.keys(COMMANDS).join(', ')}`);

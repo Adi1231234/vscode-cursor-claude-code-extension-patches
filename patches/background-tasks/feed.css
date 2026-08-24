@@ -1,0 +1,66 @@
+/* BGTASKSFEED */
+/* The log feed: text logs, tool-call entries and workflow steps. */
+
+/* ---------- Feed ---------- */
+.__bgPre, .__bgEntryBody {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--app-monospace-font-family, monospace);
+  font-size: var(--app-monospace-font-size-small, 11px); line-height: 1.55;
+  direction: ltr; text-align: left;
+}
+.__bgNoWrap .__bgPre, .__bgNoWrap .__bgEntryBody { white-space: pre; overflow-wrap: normal; }
+.__bgFiltered { display: none; }
+
+.__bgEntry { display: flex; gap: 9px; font-size: 11.5px; line-height: 1.55; padding: 2px 0; }
+.__bgAt {
+  flex: none; width: 8ch; text-align: end; font-family: var(--app-monospace-font-family, monospace);
+  font-size: 10px; color: var(--app-secondary-foreground, #999); opacity: .5;
+  padding-top: 2px; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap;
+}
+.__bgTextEntry { align-items: flex-start; }
+.__bgTextBody { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.__bgThink .__bgTextBody { color: var(--app-secondary-foreground, #999); font-style: italic; }
+
+.__bgToolEntry { display: block; }
+.__bgEntryHead {
+  direction: ltr; text-align: left;
+  display: flex; gap: 6px; cursor: pointer; align-items: baseline;
+  border-radius: var(--bg-r-chip); padding: 2px 4px; margin-inline-start: -4px;
+  transition: background-color .1s ease-out;
+}
+.__bgEntryHead:hover { background: var(--bg-raise-1); }
+.__bgEntryHead:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: -1px; }
+.__bgCaret {
+  flex: none; opacity: .35; display: inline-block; width: 8px;
+  transition: transform .12s ease-out, opacity .12s ease-out;
+}
+.__bgOpen > .__bgEntryHead .__bgCaret { transform: rotate(90deg); }
+.__bgToolName { font-weight: 600; flex: none; }
+.__bgToolOk > .__bgEntryHead .__bgCaret { opacity: .7; }
+.__bgToolErr > .__bgEntryHead .__bgCaret { opacity: 1; color: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgToolErr > .__bgEntryHead .__bgToolName { color: var(--vscode-testing-iconFailed, #d1524a); }
+.__bgToolArg {
+  color: var(--app-secondary-foreground, #999); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-family: var(--app-monospace-font-family, monospace);
+  font-size: 10.5px; unicode-bidi: plaintext;
+}
+.__bgEntryBody {
+  display: none; margin: 4px 0 7px calc(8ch + 9px);
+  padding: 7px 9px; max-height: 320px; overflow: auto; overscroll-behavior: contain;
+  background: var(--bg-raise-2); border: 1px solid var(--bg-line-soft);
+  border-radius: var(--bg-r-chip);
+}
+.__bgResBody { border-inline-start: 2px solid var(--bg-line); }
+.__bgOpen .__bgEntryBody { display: block; }
+
+.__bgWf { display: block; }
+.__bgWf .__bgEntryHead { cursor: default; }
+.__bgWf .__bgEntryHead:hover { background: none; }
+.__bgWf-phase { font-weight: 600; margin-top: 8px; }
+.__bgWf-log { color: var(--app-secondary-foreground, #999); }
+
+@media (prefers-reduced-motion: reduce) {
+  .__bgProgress::after { animation: none; opacity: .5; }
+  .__bgJump { animation: none; }
+  .__bgCaret { transition: none; }
+}

@@ -45,7 +45,13 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode.
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode · ⚙️ [Background tasks + live logs](patches/background-tasks) · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags).
+
+⚙️ **Background tasks** — an animated indicator in the composer footer whenever a
+subagent, a backgrounded command or a workflow is running. Click it for a two-pane
+dialog: running tasks on top, a separator, finished ones below, and the selected
+task's log streaming live beside them (a subagent's tool calls and prose straight
+off the SDK stream, everything else tailed from disk by the extension host).
 
 ## 🐞 Bug fixes
 

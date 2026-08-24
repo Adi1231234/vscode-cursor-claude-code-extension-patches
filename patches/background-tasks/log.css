@@ -1,0 +1,105 @@
+/* BGTASKSLOG */
+/* The detail pane: header with the live hairline, view toolbar, feed, actions.
+
+   The signature element is that hairline. A background task is work happening while
+   you are not watching, so the one piece of motion in the dialog is an indeterminate
+   sweep under the task's name - the workbench's own vocabulary for "still going" -
+   and everything else stays still. */
+
+.__bgPane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.__bgPaneHead {
+  position: relative;
+  padding: var(--app-spacing-large, 12px) var(--app-spacing-large, 12px) var(--app-spacing-medium, 8px);
+}
+.__bgPaneTop { display: flex; align-items: baseline; gap: 7px; }
+.__bgPaneName {
+  font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em;
+  overflow-wrap: anywhere; unicode-bidi: plaintext;
+}
+.__bgPaneMeta {
+  font-size: 10.5px; color: var(--app-secondary-foreground, #999); margin-top: 3px;
+  font-variant-numeric: tabular-nums; unicode-bidi: plaintext;
+}
+.__bgPaneSummary { font-size: 11.5px; opacity: .85; margin-top: 7px; line-height: 1.5; unicode-bidi: plaintext; }
+.__bgLive {
+  width: 6px; height: 6px; flex: none; border-radius: 50%; align-self: center;
+  background: var(--bg-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bg-accent) 22%, transparent);
+}
+/* Signature: an indeterminate sweep, only while the task is actually running. */
+.__bgProgress {
+  position: absolute; inset-inline: 0; bottom: 0; height: 1px; overflow: hidden;
+  background: var(--bg-line-soft);
+}
+.__bgProgress::after {
+  content: ""; position: absolute; inset-block: 0; width: 38%;
+  background: linear-gradient(90deg, transparent, var(--app-progressbar-background, var(--bg-accent)), transparent);
+  animation: __bgSweep 1.9s cubic-bezier(.5,0,.5,1) infinite;
+}
+@keyframes __bgSweep { from { transform: translateX(-100%); } to { transform: translateX(360%); } }
+
+.__bgTools {
+  display: flex; align-items: center; gap: var(--app-spacing-small, 4px);
+  padding: var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
+}
+.__bgFind {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+  background: var(--app-input-background, rgba(128,128,128,.12));
+  border: 1px solid var(--bg-line-soft);
+  border-radius: var(--bg-r-card); padding: 0 var(--app-spacing-medium, 8px);
+  transition: border-color .12s ease-out;
+}
+.__bgFind:hover { border-color: var(--bg-line); }
+.__bgFind:focus-within { border-color: var(--app-input-active-border, var(--vscode-focusBorder, #007fd4)); }
+.__bgFindInput {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  color: var(--app-input-foreground, inherit); font: inherit; font-size: 11.5px; padding: 5px 0;
+}
+.__bgFindInput::placeholder { color: var(--app-input-placeholder-foreground, inherit); opacity: .55; }
+.__bgFindCount {
+  font-size: 10px; color: var(--app-secondary-foreground, #999);
+  font-variant-numeric: tabular-nums; flex: none; unicode-bidi: plaintext;
+}
+
+.__bgLogWrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.__bgLog {
+  flex: 1; overflow: auto; overscroll-behavior: contain;
+  padding: 2px var(--app-spacing-large, 12px) var(--app-spacing-large, 12px);
+}
+.__bgLog:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: -2px; }
+.__bgJump {
+  position: absolute; inset-block-end: 14px; inset-inline-end: 16px;
+  padding: 4px 11px; font: inherit; font-size: 11px; cursor: pointer;
+  border-radius: 999px; border: 1px solid var(--bg-line);
+  background: var(--app-menu-background, #252526); color: var(--app-menu-foreground, inherit);
+  box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 18px -6px rgba(0,0,0,.5);
+  animation: __bgRise .14s ease-out;
+  transition: background-color .12s ease-out;
+}
+.__bgJump:hover { background: var(--bg-raise-2); }
+.__bgJump:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
+
+.__bgPaneFoot {
+  display: flex; align-items: center; gap: 6px;
+  padding: var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
+  border-top: 1px solid var(--bg-line-soft);
+}
+.__bgFootMain { display: flex; gap: 6px; flex: 1; min-width: 0; }
+.__bgFootSide { display: flex; gap: 2px; flex: none; }
+.__bgBtn {
+  background: none; cursor: pointer; font: inherit; font-size: 11.5px; padding: 4px 11px;
+  border-radius: var(--bg-r-card); color: inherit; border: 1px solid var(--bg-line);
+  transition: background-color .12s ease-out, border-color .12s ease-out;
+}
+.__bgBtn:hover { background: var(--bg-raise-2); border-color: var(--bg-line); }
+.__bgBtn:active { background: var(--bg-line-soft); }
+.__bgBtn:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
+/* Stop ends someone's work, so it never reads as a peer of Copy. */
+.__bgBtnDanger { color: var(--vscode-testing-iconFailed, #d1524a); border-color: color-mix(in srgb, var(--vscode-testing-iconFailed, #d1524a) 45%, transparent); }
+.__bgBtnDanger:hover { background: color-mix(in srgb, var(--vscode-testing-iconFailed, #d1524a) 14%, transparent); border-color: currentColor; }
+
+/* ---------- States ---------- */
+.__bgEmpty { padding: var(--app-spacing-xlarge, 16px) 6px; max-width: 44ch; }
+.__bgEmptyTitle { font-size: 12.5px; }
+.__bgEmptyBody { font-size: 11.5px; color: var(--app-secondary-foreground, #999); margin-top: 5px; line-height: 1.55; }
+.__bgSkip { font-size: 10.5px; color: var(--app-secondary-foreground, #999); padding: 5px 0; font-style: italic; }

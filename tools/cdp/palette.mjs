@@ -55,15 +55,42 @@ const matches = (row, title) => row.toLowerCase().startsWith(title.toLowerCase()
    clicking elsewhere, and it costs nothing when focus was already fine. */
 const BLUR = `(() => { const a = document.activeElement; if (a && a !== document.body) a.blur(); return true; })()`;
 
+/* The keybinding only fires in a page the browser considers focused, and a page
+   loses that as soon as anything else in the process takes it. `Page.bringToFront`
+   is the way to ask for it back, and on Electron it does exactly that and no more:
+   measured, it leaves a minimized window minimized and does not touch which OS
+   window is in the foreground (Electron does not implement the Browser domain, so
+   there is nothing there that could move the window). Removing this call, on the
+   theory that it raises the window, breaks every keyboard-driven step with
+   "the window does not have focus". */
+async function raise(c) {
+  try { await c.send('Page.bringToFront'); } catch { /* not every target allows it */ }
+}
+
+/* When the chord does nothing there are several possible reasons and they need
+   different answers, so collect what the window actually looked like rather than
+   leaving the next reader to guess from "palette did not open". */
+const STATE = `(() => {
+  const a = document.activeElement;
+  return {
+    visibility: document.visibilityState,
+    focused: document.hasFocus(),
+    activeElement: a ? (a.className || a.tagName) : null,
+    quickInputExists: !!document.querySelector('.quick-input-widget'),
+    modal: !!document.querySelector('.monaco-dialog-box, .dialog-shadow'),
+  };
+})()`;
+
 /* The shortcut is dropped if it lands while the window is still settling (right
    after a reload, most of all), so send it again rather than giving up on one. */
 async function openPalette(c) {
+  await raise(c);
   for (let attempt = 0; attempt < 3; attempt++) {
     await evalIn(c, BLUR);
     await key(c, PALETTE);
     if (await until(() => evalIn(c, VISIBLE_PALETTE), 8, 150)) return true;
   }
-  return false;
+  return await evalIn(c, STATE);
 }
 
 /* Type `title` into the window's palette and run the first entry, but only if
@@ -73,7 +100,18 @@ export async function runCommand(pageTarget, title, { commit = true } = {}) {
   const c = await connect(pageTarget.webSocketDebuggerUrl);
   try {
     if (await evalIn(c, VISIBLE_PALETTE)) await key(c, ESCAPE);
-    if (!(await openPalette(c))) return { ok: false, reason: 'palette did not open' };
+    const opened = await openPalette(c);
+    if (opened !== true) {
+      const s = opened || {};
+      /* Ordered by how reliably each one explains it. A modal really does eat the
+         chord. Focus is the next best signal. visibilityState is reported but not
+         blamed: measured in this lab, a window can read "hidden" and still be
+         delivered these key events perfectly well. */
+      const why = s.modal ? ' - a modal dialog is in the way'
+        : s.focused === false ? ' - the window does not have focus'
+        : '';
+      return { ok: false, reason: `palette did not open${why}`, window: s };
+    }
 
     await c.send('Input.insertText', { text: title });
     const rows = await until(async () => {

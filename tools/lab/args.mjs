@@ -26,6 +26,11 @@ const HELP = `tools/lab - a patched Claude Code bundle, running in a real editor
   node tools/lab/lab.mjs up                 pristine VSIX -> apply.ps1 -> editor -> panel open
   node tools/lab/lab.mjs eval <script.js>   run one expression inside that panel
   node tools/lab/lab.mjs width [px]         set the panel's width (no argument: just report it)
+
+  node tools/lab/lab.mjs prompt "..."       send a real prompt to the panel (needs a session)
+  node tools/lab/lab.mjs press <key>        press a key in the panel (confirms are numbered: 1)
+
+  node tools/lab/selftest/run.mjs [--fresh] check the patcher and the lab themselves
   node tools/lab/lab.mjs repatch            pristine again -> apply.ps1 -> real window reload
   node tools/lab/lab.mjs down [--purge]     stop it (--purge also deletes the lab profile)
 
