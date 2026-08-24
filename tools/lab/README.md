@@ -7,21 +7,49 @@ a trap in it, and each one fails **silently** - which is why this exists.
 ```
 node tools/lab/lab.mjs up               # pristine -> patched -> editor -> panel open
 node tools/lab/lab.mjs eval <script.js> # run a script inside that panel
+node tools/lab/lab.mjs width [px]       # set the panel's width (no argument: report it)
 node tools/lab/lab.mjs repatch          # pristine again -> apply.ps1 -> real reload
 node tools/lab/lab.mjs down [--purge]   # stop it (--purge also deletes the profile)
 ```
 
-`up` prints the port, the window and the panel target id. The edit-and-look loop
-is `repatch` + `eval`; the editor stays up between them.
+`up` prints the port, the window, the panel target id and the panel's width. The
+edit-and-look loop is `repatch` + `eval`; the editor stays up between them.
 
 Run it from the repo root as written, or from anywhere with the full path to
 `lab.mjs` - it finds the repo from its own location. The script you hand `eval`
 is resolved against *your* working directory, so a relative path is fine.
 
 Flags: `--version 2.1.241` (default: the newest version installed on this
-machine), `--port N` (default 9555), `--code <path to Code.exe>` (default: the
-usual install locations). `--help` prints all of it. Needs Windows, VS Code and
-Node 22+.
+machine), `--port N` (default 9555), `--width N` (panel width for `up` /
+`repatch`), `--code <path to Code.exe>` (default: the usual install locations).
+`--help` prints all of it. Needs Windows, VS Code and Node 22+.
+
+## Width is a test parameter
+
+`up` opens the panel as an editor tab, which is **wide** - and anything the
+panel places against its own edges (popovers, wrapping, ellipsising, RTL) only
+misbehaves once the panel is narrow. A lab that only ever runs wide is a lab
+that reproduces none of those.
+
+So every command reports `panelWidth`, and `up --width 300` (or `width 300` on
+a running lab) puts you in the regime where they show up. The worked example is
+`patches/history-dialog-clip`: at 790px its dialog is exactly where it should
+be, and at 300px the unpatched bundle puts it 157px outside the panel.
+
+The width is set by dragging the sash beside the panel over CDP's Input domain,
+because those events are trusted and the sash's own pointer handling runs;
+`PointerEvent`s dispatched into the DOM are ignored and the drag silently does
+nothing. What comes back is measured *inside* the panel, so it is the number the
+panel's own code sees - and VS Code clamps to what the layout allows, so asking
+for 4000 and being told 1090 is the tool being honest, not failing.
+
+A window can hold **more than one** Claude panel (one in a tab, one in the side
+bar), and the editor keeps a backgrounded one alive at `visibility: hidden`. A
+hidden webview is not laid out, so it answers CDP with the size and the DOM it
+had when it was last on screen - which is how `eval` can quietly run against a
+panel nobody is looking at. `claudePanels` now returns the visible one first
+(`cdp.mjs list` marks the others `hidden`), and the width is set on the same
+panel it is read from.
 
 Everything lives in `%TEMP%\cc-lab\<version>-p<port>\` - a lab is identified by
 both, so `--port 9556` is a second, independent lab. Your own editor, profile,

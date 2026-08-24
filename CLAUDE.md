@@ -26,8 +26,10 @@ in place. Read this before changing anything so the structure stays clean.
   `apply.ps1`.
   - `tools/lab/` - **the way to check a patch for real.** `node tools/lab/lab.mjs up`
     builds a throwaway editor running the patched bundle, with the panel open and a
-    debugger attached; then `repatch` + `eval` are the edit-and-look loop. Read its
-    README before doing any of that by hand.
+    debugger attached; then `repatch` + `eval` are the edit-and-look loop. `up`
+    opens the panel wide, so add `--width 300` (or `lab.mjs width 300`) whenever the
+    behaviour depends on panel width - most edge-placed UI only breaks there. Read
+    its README before doing any of that by hand.
   - `tools/cdp/` - drives the Claude panel of a *running* editor over a CDP port
     (see the CDP section below). The lab is built on it.
 

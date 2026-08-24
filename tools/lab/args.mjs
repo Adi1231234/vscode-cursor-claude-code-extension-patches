@@ -6,7 +6,7 @@
    `probe.js`, not `9555`. Naive filtering of everything that does not start
    with `--` gets that wrong, silently, and reads the port as a script. */
 
-const VALUED = new Set(['version', 'port', 'code']);
+const VALUED = new Set(['version', 'port', 'code', 'width']);
 
 export function parse(argv) {
     const flags = {};
@@ -25,15 +25,22 @@ const HELP = `tools/lab - a patched Claude Code bundle, running in a real editor
 
   node tools/lab/lab.mjs up                 pristine VSIX -> apply.ps1 -> editor -> panel open
   node tools/lab/lab.mjs eval <script.js>   run one expression inside that panel
+  node tools/lab/lab.mjs width [px]         set the panel's width (no argument: just report it)
   node tools/lab/lab.mjs repatch            pristine again -> apply.ps1 -> real window reload
   node tools/lab/lab.mjs down [--purge]     stop it (--purge also deletes the lab profile)
 
   --version <x.y.z>   which extension version to test (default: the newest one installed here)
   --port <n>          CDP port for this lab (default 9555; use another for a second lab)
+  --width <px>        panel width to set on "up" / "repatch" (default: whatever the layout gives)
   --code <path>       Code.exe to use, when it is not in one of the usual places
 
 The loop is: edit a patch, "repatch", "eval". The editor stays up in between,
 and none of it touches your own editor, profile or argv.json.
+
+Every command reports the panel width, because it decides which bugs can
+reproduce at all: "up" opens the panel as an editor tab, which is wide, and
+anything the panel places against its own edges only misbehaves once it is
+narrow. Reach for "up --width 300" when that is what you are testing.
 
 The eval script is ONE expression, evaluated inside the panel - "document" is
 the panel's document. Wrap anything longer in (async () => { ... })(). What it
