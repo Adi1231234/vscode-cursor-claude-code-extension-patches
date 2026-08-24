@@ -57,6 +57,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Add-CcWtResolveHelper $js` - prepend the shared worktree resolver once (returns new text). Use this for anything that must resolve a `<sid>.jsonl` across worktree project dirs; never paste the helper inline.
    - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
+   - `Add-WebviewMessageHook $js <hookPath>` - put a returning guard at the top of **every** chat surface's `onDidReceiveMessage` in `extension.js`, so a patch can answer messages of its own before the app's protocol switch logs them as unknown. The hook's `__WV__` / `__MSG__` / `__COMMS__` placeholders are filled for you; returns the new text, or `$null` when the shape is gone (then `Write-Miss` and write nothing). Several patches hook the same listener - what is already there is carried through, so their order does not matter (`background-tasks`, `panel-restart-button`).
 
 ## Non-negotiable conventions
 
@@ -157,6 +158,19 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   and compare with `scrollHeight - clientHeight` (healthy is one chunk of
   growth, ~20px; broken is the whole message height).
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
+- **One panel can be reloaded on its own, and that restarts its CLI too.**
+  Re-assigning `webview.html` (rebuilt by the host's own `getHtmlForWebview`,
+  which mints a fresh nonce every call, so the string always differs) re-runs
+  `webview/index.js` from scratch in that view alone. The booting client then
+  sends `init` with **no `channelId`**, which is upstream's own "the client
+  reloaded" signal: the `init` case closes every channel that comms object
+  still holds, because the webview comms class sets
+  `clientInitImpliesFreshClient = true`. So the `claude` process behind that
+  panel is torn down and relaunched resuming the same session id - reconnecting
+  is upstream behaviour to trigger, never something to reimplement. That is
+  `patches/panel-restart-button`; measured in a live editor, the clicked panel
+  got a new document and a new channel while its neighbours kept theirs, and
+  exactly one `claude.exe` was left running.
 
 ## Testing a change (without touching your real install)
 

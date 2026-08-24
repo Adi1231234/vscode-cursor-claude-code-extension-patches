@@ -23,16 +23,12 @@ function Invoke-Patch {
     if ($js.Contains('/* BGTASKSHOST */')) {
         Write-Skip 'host reader already patched'
     } else {
-        # Every chat surface installs the same listener shape; capture the webview,
-        # the message and the comms names rather than assuming any of them.
-        $rx = '(\w+)\.webview\.onDidReceiveMessage\(\((\w+)\)=>\{(this\.output\.info\([^;]*?\),)(\w+)\?\.fromClient\(\2\)\}'
-        if ($js -notmatch $rx) {
+        # The shared listener hook (lib/Patch.ps1) puts host/hook.js at the top of
+        # every chat surface's onDidReceiveMessage, ahead of the app's protocol switch.
+        $js = Add-WebviewMessageHook $js (Join-Path $PSScriptRoot 'host/hook.js')
+        if (-not $js) {
             Write-Miss 'webview message-listener anchor not found'
         } else {
-            $hook = (Get-InjectedJs (Join-Path $PSScriptRoot 'host/hook.js') ([ordered]@{
-                '__MSG__' = '${2}'; '__WV__' = '${1}'; '__COMMS__' = '${4}'
-            })).Trim()
-            $js = [regex]::Replace($js, $rx, ('${1}.webview.onDidReceiveMessage((${2})=>{' + $hook + '${3}${4}?.fromClient(${2})}'))
             $parts = @('dirs', 'tail', 'handle')
             $hostJs = ($parts | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "host/$_.js") }) -join ''
             Write-Text $Ctx.Js ("/* BGTASKSHOST */`n" + $hostJs.Trim() + "`n" + $js)
