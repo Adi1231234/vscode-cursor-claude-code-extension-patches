@@ -26,7 +26,6 @@ var __ccRcCopy = {
         lead: "This session is also open on ",
         tail: ". Keep working here, on your phone, or in a browser - it is the same conversation.",
         options: [
-            { label: "Open in the browser", kind: "open" },
             { label: "Disconnect", kind: "disconnect" },
             { label: "Cancel", kind: "close" }
         ]

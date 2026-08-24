@@ -95,7 +95,14 @@ its scrim colour and uses no spacing tokens:
 - an `h3` title, a description carrying an inline monospace pill (theirs holds a
   repo, ours holds `claude.ai/code`),
 - and a **numbered option list**, not a Cancel/Confirm button row:
-  `1 Open in the browser` / `2 Disconnect` / `3 Cancel`, first row primary.
+  `1 Disconnect` / `2 Cancel`, first row primary.
+
+There used to be an `Open in the browser` row above those two, and with it a whole
+seam: the row was a real `<a>` rather than a button so the webview would hand the
+url to the browser, its click had to let the navigation run before tearing the
+overlay down, and the row was filtered out when no session url was known. All of
+that went with the row - every option now acts inside the panel, so every row is a
+button.
 
 The keyboard behaviour is copied too, because it is part of the pattern: Escape
 backs out, the number keys pick a row, the arrows move the selection, Enter runs

@@ -5,9 +5,6 @@
 function __ccRcDialog(state, onDisconnect) {
     if (document.querySelector(".cc-rc-overlay")) return;
     var copy = __ccRcCopyFor(state);
-    var options = copy.options.filter(function (o) {
-        return o.kind !== "open" || state.sessionUrl;
-    });
 
     var overlay = __ccRcEl("div", "cc-rc-overlay");
     var dialog = __ccRcEl("div", "cc-rc-dialog");
@@ -18,17 +15,13 @@ function __ccRcDialog(state, onDisconnect) {
 
     var list = __ccRcEl("div", "cc-rc-options");
     var selected = 0;
-    var rows = options.map(function (option, index) {
-        var row = __ccRcOption(option, index, state.sessionUrl);
+    var rows = copy.options.map(function (option, index) {
+        var row = __ccRcOption(option, index);
         row.addEventListener("mousemove", function () {
             selected = index;
             __ccRcSelect(rows, selected);
         });
         row.addEventListener("click", function () {
-            /* The "open" row is an anchor: let its own navigation run first,
-               then tear the overlay down, so removing it cannot cancel the
-               default action mid-dispatch. */
-            if (option.kind === "open") return void setTimeout(close, 0);
             close();
             if (option.kind === "disconnect") onDisconnect();
         });

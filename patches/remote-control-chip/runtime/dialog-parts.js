@@ -18,18 +18,11 @@ function __ccRcDesc(copy) {
     return p;
 }
 
-/* An option row. "open" is a real anchor rather than a button so the webview
-   hands the url to the browser the same way the app's own links do. */
-function __ccRcOption(option, index, url) {
-    var isLink = option.kind === "open";
-    var el = __ccRcEl(isLink ? "a" : "button", "cc-rc-option");
-    if (isLink) {
-        el.href = url;
-        el.target = "_blank";
-        el.rel = "noreferrer";
-    } else {
-        el.type = "button";
-    }
+/* An option row. Every one of them acts inside the panel, so they are all
+   buttons - there is no longer a row that navigates out to a url. */
+function __ccRcOption(option, index) {
+    var el = __ccRcEl("button", "cc-rc-option");
+    el.type = "button";
     el.appendChild(__ccRcEl("span", "cc-rc-option-key", String(index + 1)));
     el.appendChild(__ccRcEl("span", "cc-rc-option-label", option.label));
     return el;
