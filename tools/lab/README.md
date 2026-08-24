@@ -43,8 +43,8 @@ nothing. What comes back is measured *inside* the panel, so it is the number the
 panel's own code sees - and VS Code clamps to what the layout allows, so asking
 for 4000 and being told 1090 is the tool being honest, not failing. A drag that
 never landed is *not* reported that way: the panel is measured before and after,
-and a width that did not change at all says so, and says the window was
-minimized when that is why.
+so a width that did not change at all says so, and a drag that moved the panel
+*away* from what was asked for says that instead of blaming the layout.
 
 Both sides of the iframe are read, because a webview that is not on screen gets
 no rendering opportunity and keeps answering with the size it had when it was
@@ -98,17 +98,37 @@ extension" rather than like what it is.
   so the palette never opens and nothing keyboard-driven works, which is
   everything (see `tools/cdp/README.md`). The lab launches with
   `--disable-features=CalculateNativeWinOcclusion`.
-- **A minimized window takes keystrokes but not mouse events.** That asymmetry is
-  the trap: with the lab minimized, `repatch` works perfectly (the palette opens,
-  the window reloads) while `width 300` quietly does nothing, and neither says
-  why. Measured: twelve `mouseMoved` events reached a capture-phase listener on
-  `window` and the `mousePressed` between them never arrived, so the sash never
-  picked up the drag. The occlusion flag does not help - minimized is hidden
-  regardless - and CDP cannot fix it either, because Electron does not implement
-  the Browser domain (`Browser.getWindowForTarget` is "wasn't found") and
-  `Page.bringToFront` returns without the window coming back. `window.mjs`
-  restores it with the Win32 call, matching the lab's own processes on the lab
-  directory so a minimized editor of yours is never touched.
+- **The lab must not hold your screen, and nothing in band will do that.** It is
+  left running for an afternoon while you work in your own editor, so it minimizes
+  itself right after launch and never raises itself again. There is no supported
+  way to ask for that, and all four obvious answers are dead ends: VS Code has no
+  minimized window state (its own enum carries `Minimized // not used anymore`,
+  and `newWindowDimensions` offers only default/inherit/offset/maximized/
+  fullscreen); Chromium has `--start-maximized` but no `start-minimized` anywhere
+  in its source; `Start-Process -WindowStyle Minimized` sets
+  `STARTUPINFO.wShowWindow`, which Windows uses only "if the nCmdShow parameter of
+  ShowWindow is set to SW_SHOWDEFAULT" - Chrome opts in
+  (`BrowserDesktopWindowTreeHostWin::GetInitialShowState` reads STARTUPINFO),
+  Electron does not (`GetInitialShowState` appears nowhere in its source, so it
+  inherits `SW_SHOWNORMAL`), and measured, the window came up not minimized; and
+  CDP cannot move it because Electron does not implement the Browser domain. So
+  `window.mjs` uses `ShowWindow(SW_SHOWMINNOACTIVE)`, matching the lab's own
+  processes on the lab directory so nothing of yours moves.
+- **A minimized window is never laid out, and that is the whole cost of it.**
+  Keystrokes still arrive (the palette opens, `Developer: Reload Window` runs) and
+  so do mouse events, but no layout runs at all. Measured with the same
+  `Emulation.setDeviceMetricsOverride` call in both states: minimized, the
+  workbench viewport went to 900 and then 1500 while the panel's iframe stayed at
+  659 both times; restored, the same calls gave 406 and then 1006 with the panel's
+  own measurement agreeing exactly. So every rect and `clientWidth` you read from
+  a minimized lab is the geometry it had when it was last on screen - `eval` says
+  so when it sees a hidden panel, and `width` is the one command that brackets
+  itself with a restore and a re-minimize, because it is the one that needs layout.
+- **`Page.bringToFront` is focus, not the window.** It is what lets the palette
+  chord fire, and on Electron it does nothing else: measured, a minimized window
+  stays minimized and the foreground window does not change. Removing it on the
+  theory that it raises the window breaks every keyboard-driven step with "the
+  window does not have focus".
 - **The editor's own first-run dialog.** A fresh profile puts a modal *"Welcome
   to VS Code / Sign in to use GitHub Copilot"* over everything and parks focus
   on its Sign In button, from where `Ctrl+Shift+P` does nothing. The gate is

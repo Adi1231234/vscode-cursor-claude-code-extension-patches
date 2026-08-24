@@ -16,8 +16,8 @@ import { launch, portOwner, stop, useCodeExe, waitForPort } from './editor.mjs';
 import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
-import { readWidth, setWidth } from './width.mjs';
-import { restoreWindow } from './window.mjs';
+import { makeReport } from './report.mjs';
+import { hideWindow } from './window.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -40,6 +40,7 @@ if (!version) fail('no claude-code install found to take a version from - pass -
 const port = Number(flags.port || DEFAULT_PORT);
 try { if (flags.code) useCodeExe(flags.code); } catch (e) { fail(e.message); }
 const lay = layout(version, port);
+const report = makeReport({ lay, port, version, log, flags });
 
 /* A port that answers is not proof this lab is up - another worktree's lab may
    hold it, and then every measurement you take is of someone else's window. */
@@ -67,6 +68,10 @@ async function up() {
     log(`starting the editor on port ${port}`);
     launch(lay, port);
     if (!(await waitForPort(port))) fail('the editor never opened its CDP port - see the lab\'s own main.log');
+    /* Out of the way for the rest of its life. Everything below drives it over
+       CDP, so it never needs the desktop again. */
+    const hid = await hideWindow(lay).catch(() => null);
+    log(hid && hid.minimized ? 'window minimized - the lab is driven over CDP, not on screen' : 'could not minimize the lab window - it will sit on your desktop');
     await report(await ensurePanel(port, log));
 }
 
@@ -97,6 +102,12 @@ async function evaluate(file) {
     if (!file) fail('eval needs a script file: lab.mjs eval <script.js>');
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     const panel = await ensurePanel(port, log);
+    /* The lab runs minimized, and a minimized window is never laid out again - so
+       every rect, every clientWidth, every media query answers with the geometry
+       the panel had when it was last on screen. Reading state is fine; measuring
+       is not, and the difference is invisible in the numbers. */
+    const hidden = await evalInPanel(panel.target, 'document.visibilityState !== "visible"');
+    if (hidden === true) log('the panel is not on screen, so its geometry is frozen - `lab.mjs width <px>` to lay it out again');
     const result = await evalInPanel(panel.target, readFileSync(file, 'utf8'));
     console.log(JSON.stringify(result, null, 1));
     process.exit(result && result.__error ? 1 : 0);
@@ -108,35 +119,6 @@ async function down() {
     if (!flags.purge) return;
     rmSync(lay.dir, { recursive: true, force: true });
     log(`removed ${lay.dir} (the vsix cache is kept)`);
-}
-
-/* Every run ends by saying what to do next: this is the tool an agent meets
-   once, and the commands that follow `up` are the whole working loop. The panel
-   width is part of that answer - it decides which bugs can reproduce at all, so
-   it is reported even when nobody asked for one. */
-async function report(panel, want = flags.width) {
-    const asked = want === undefined ? undefined : Number(want);
-    /* The drag is mouse input, and a minimized window is delivered none of it while
-       still taking keystrokes - so this has to happen before the sash is touched,
-       or the width silently does nothing while every other command still works. */
-    const win = asked === undefined ? null : await restoreWindow(lay).catch(() => null);
-    const w = asked === undefined ? await readWidth(panel, port) : await setWidth(port, panel, asked);
-    const panelWidth = w.inner;
-    /* Three stories that used to print as one: the layout refusing the width, the
-       panel not having caught up with it yet, and the drag never landing at all.
-       Only a width that was *not* delivered is worth a word - a panel already at
-       the size asked for needs no drag, and `moved` is false for that too. */
-    if (!w.settled) {
-        log(`the panel still measures ${w.inner}px while the window has it at ${w.outer}px - it is not on screen, so it has not been laid out again yet`);
-    } else if (asked !== undefined && panelWidth !== asked) {
-        log(w.moved
-            ? `panel is ${panelWidth}px, not the ${asked}px asked for - the editor clamps to what the layout allows`
-            : `the sash drag did not move the panel at all, so it is still ${panelWidth}px`
-              + (win && win.minimized ? ' - the window is still minimized and is delivered no mouse input' : '')
-              + (win && !win.found ? ' - the lab window was not found, so it could not be restored' : ''));
-    }
-    console.log(JSON.stringify({ port, version, window: panel.window, panelWidth, windowWidth: w.outer, target: panel.target.id, dir: lay.dir }, null, 1));
-    log('edit a patch, then: lab.mjs repatch  |  inspect: lab.mjs eval <script.js>  |  narrow it: lab.mjs width 300');
 }
 
 const COMMANDS = { up, repatch, down, eval: () => evaluate(args[0]), width: () => width(args[0]) };

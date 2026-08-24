@@ -77,7 +77,9 @@ foreach ($Ctx in $installs) {
             . $patchFile      # (re)defines Invoke-Patch for this folder
             Invoke-Patch $Ctx # $PSScriptRoot inside resolves to patches/<name>/
         } catch {
-            $script:failures += "$name : $($_.Exception.Message)"
+            # The editor is part of the entry: discovery patches every install it
+            # finds, so the same patch name can fail on one and be fine on another.
+            $script:failures += "$($Ctx.Editor) / $name : $($_.Exception.Message)"
             Write-Fail "$name threw: $($_.Exception.Message)"
         }
     }
@@ -85,7 +87,7 @@ foreach ($Ctx in $installs) {
 
 $editors = ($installs | ForEach-Object { $_.Editor }) -join ' / '
 if ($script:failures) {
-    Write-Host "`n$($script:failures.Count) patch(es) failed - this install is only partly patched:" -ForegroundColor Red
+    Write-Host "`n$($script:failures.Count) patch(es) failed - the install below is only partly patched:" -ForegroundColor Red
     foreach ($f in $script:failures) { Write-Host "  $f" -ForegroundColor Red }
     exit 1
 }

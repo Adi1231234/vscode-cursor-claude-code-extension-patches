@@ -55,8 +55,14 @@ const matches = (row, title) => row.toLowerCase().startsWith(title.toLowerCase()
    clicking elsewhere, and it costs nothing when focus was already fine. */
 const BLUR = `(() => { const a = document.activeElement; if (a && a !== document.body) a.blur(); return true; })()`;
 
-/* A page that is not being delivered input cannot be typed into, so ask for the
-   window first. Cheap, and it costs nothing when the window was already up. */
+/* The keybinding only fires in a page the browser considers focused, and a page
+   loses that as soon as anything else in the process takes it. `Page.bringToFront`
+   is the way to ask for it back, and on Electron it does exactly that and no more:
+   measured, it leaves a minimized window minimized and does not touch which OS
+   window is in the foreground (Electron does not implement the Browser domain, so
+   there is nothing there that could move the window). Removing this call, on the
+   theory that it raises the window, breaks every keyboard-driven step with
+   "the window does not have focus". */
 async function raise(c) {
   try { await c.send('Page.bringToFront'); } catch { /* not every target allows it */ }
 }
