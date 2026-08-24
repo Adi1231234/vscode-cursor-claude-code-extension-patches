@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { launchOnDesktop } from './desktop.mjs';
 import { powershell, quote } from './powershell.mjs';
 
 /* An install in a place none of the usual candidates cover (Insiders, portable,
@@ -53,26 +54,29 @@ export function runCli(args) {
 }
 
 /* `--disable-features=CalculateNativeWinOcclusion` is not a nicety. Windows
-   occlusion detection flips a covered window to `visibilityState: "hidden"`,
-   and a hidden page is not delivered input: `Input.dispatchKeyEvent` silently
-   goes nowhere, so the palette never opens and every keyboard-driven step
-   (opening the panel, a real Developer: Reload Window) fails the moment your
-   own editor is in front of the lab - which it always is. It does not cover a
-   *minimized* window, which is hidden regardless and additionally drops mouse
-   input while still taking keystrokes - see window.mjs. */
-export function launch(lay, port) {
-    const child = spawn(codeExe(), [
+   occlusion detection flips a covered window to `visibilityState: "hidden"`, and
+   a hidden page is not laid out - so every rect the panel reports goes stale the
+   moment your own editor is in front of the lab, which is always.
+
+   The editor is started on a Windows desktop of its own (see desktop.mjs), which
+   is what keeps it off your screen and out of your focus without hiding it from
+   Chromium. If that cannot be done, it still starts - on your desktop, with a
+   word about it - because a lab in the way beats no lab at all. */
+export async function launch(lay, port) {
+    const env = { USERPROFILE: lay.home, HOME: lay.home, CC_LAB_PORT: String(port) };
+    const args = [
         '--disable-features=CalculateNativeWinOcclusion',
         '--extensions-dir', lay.extensions,
         '--user-data-dir', lay.ud,
         '--new-window', lay.proj,
-    ], {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: false,
-        env: { ...process.env, USERPROFILE: lay.home, HOME: lay.home, CC_LAB_PORT: String(port) },
+    ];
+    const own = await launchOnDesktop(lay, codeExe(), args, env);
+    if (own.ok) return own;
+    const child = spawn(codeExe(), args, {
+        detached: true, stdio: 'ignore', windowsHide: false, env: { ...process.env, ...env },
     });
     child.unref();
+    return own;
 }
 
 export async function waitForPort(port, tries = 60, waitMs = 1000) {

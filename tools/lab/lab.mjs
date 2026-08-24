@@ -17,7 +17,6 @@ import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
 import { makeReport } from './report.mjs';
-import { hideWindow } from './window.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -66,12 +65,11 @@ async function up() {
     await vsix.restore(lay);
     await applyPatches(lay, log);
     log(`starting the editor on port ${port}`);
-    launch(lay, port);
+    const own = await launch(lay, port);
+    log(own.ok
+        ? 'started on a desktop of its own - it cannot appear on your screen or take your focus'
+        : `could not give it a desktop of its own (${own.reason}), so it is on yours`);
     if (!(await waitForPort(port))) fail('the editor never opened its CDP port - see the lab\'s own main.log');
-    /* Out of the way for the rest of its life. Everything below drives it over
-       CDP, so it never needs the desktop again. */
-    const hid = await hideWindow(lay).catch(() => null);
-    log(hid && hid.minimized ? 'window minimized - the lab is driven over CDP, not on screen' : 'could not minimize the lab window - it will sit on your desktop');
     await report(await ensurePanel(port, log));
 }
 
@@ -102,12 +100,12 @@ async function evaluate(file) {
     if (!file) fail('eval needs a script file: lab.mjs eval <script.js>');
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     const panel = await ensurePanel(port, log);
-    /* The lab runs minimized, and a minimized window is never laid out again - so
-       every rect, every clientWidth, every media query answers with the geometry
-       the panel had when it was last on screen. Reading state is fine; measuring
-       is not, and the difference is invisible in the numbers. */
+    /* A panel that is not visible is never laid out again, so every rect and every
+       clientWidth answers with the geometry it had when it last was. On its own
+       desktop it stays visible, so this should not fire - but reading a frozen
+       measurement is invisible in the numbers, so it is worth the one call. */
     const hidden = await evalInPanel(panel.target, 'document.visibilityState !== "visible"');
-    if (hidden === true) log('the panel is not on screen, so its geometry is frozen - `lab.mjs width <px>` to lay it out again');
+    if (hidden === true) log('the panel is not visible, so its geometry is frozen - whatever it reports is the size it had when it last was');
     const result = await evalInPanel(panel.target, readFileSync(file, 'utf8'));
     console.log(JSON.stringify(result, null, 1));
     process.exit(result && result.__error ? 1 : 0);

@@ -6,7 +6,6 @@
 
 import { readWidth } from './measure.mjs';
 import { setWidth } from './width.mjs';
-import { hideWindow, showWindow } from './window.mjs';
 
 /* Every run ends by saying what to do next: this is the tool an agent meets
    once, and the commands that follow `up` are the whole working loop. The panel
@@ -14,17 +13,7 @@ import { hideWindow, showWindow } from './window.mjs';
    it is reported even when nobody asked for one. */
 export const makeReport = ({ lay, port, version, log, flags }) => async function report(panel, want = flags.width) {
     const asked = want === undefined ? undefined : Number(want);
-    /* The only step that needs the window on screen: a minimized window is not
-       laid out, so the sash moves nothing and every measurement is the stale one
-       from when it was last visible. Put it back, resize, and hide it again - the
-       lab is meant to be left running without holding your screen. */
-    let w;
-    if (asked === undefined) {
-        w = await readWidth(panel, port);
-    } else {
-        await showWindow(lay).catch(() => null);
-        try { w = await setWidth(port, panel, asked); } finally { await hideWindow(lay).catch(() => null); }
-    }
+    const w = asked === undefined ? await readWidth(panel, port) : await setWidth(port, panel, asked);
     const panelWidth = w.inner;
     /* Three stories that used to print as one: the layout refusing the width, the
        panel not having caught up with it yet, and the drag never landing at all.

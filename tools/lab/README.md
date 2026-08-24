@@ -44,7 +44,11 @@ panel's own code sees - and VS Code clamps to what the layout allows, so asking
 for 4000 and being told 1090 is the tool being honest, not failing. A drag that
 never landed is *not* reported that way: the panel is measured before and after,
 so a width that did not change at all says so, and a drag that moved the panel
-*away* from what was asked for says that instead of blaming the layout.
+*away* from what was asked for says that instead of blaming the layout. That last
+one is real - when the only sash beside the panel is the side bar's, pulling it
+far enough collapses the side bar and hands the space to the editor area, so the
+panel gets *wider* (measured: asked 400, got 1409). `setWidth` makes two passes,
+because a right-edge sash exists after that collapse.
 
 Both sides of the iframe are read, because a webview that is not on screen gets
 no rendering opportunity and keeps answering with the size it had when it was
@@ -99,36 +103,48 @@ extension" rather than like what it is.
   everything (see `tools/cdp/README.md`). The lab launches with
   `--disable-features=CalculateNativeWinOcclusion`.
 - **The lab must not hold your screen, and nothing in band will do that.** It is
-  left running for an afternoon while you work in your own editor, so it minimizes
-  itself right after launch and never raises itself again. There is no supported
-  way to ask for that, and all four obvious answers are dead ends: VS Code has no
-  minimized window state (its own enum carries `Minimized // not used anymore`,
-  and `newWindowDimensions` offers only default/inherit/offset/maximized/
-  fullscreen); Chromium has `--start-maximized` but no `start-minimized` anywhere
-  in its source; `Start-Process -WindowStyle Minimized` sets
-  `STARTUPINFO.wShowWindow`, which Windows uses only "if the nCmdShow parameter of
-  ShowWindow is set to SW_SHOWDEFAULT" - Chrome opts in
+  left running for an afternoon while you work in your own editor. All four
+  obvious answers are dead ends: VS Code has no minimized window state (its own
+  enum carries `Minimized // not used anymore`, and `newWindowDimensions` offers
+  only default/inherit/offset/maximized/fullscreen); Chromium has
+  `--start-maximized` but no `start-minimized` anywhere in its source;
+  `Start-Process -WindowStyle Minimized` sets `STARTUPINFO.wShowWindow`, which
+  Windows uses only "if the nCmdShow parameter of ShowWindow is set to
+  SW_SHOWDEFAULT" - Chrome opts in
   (`BrowserDesktopWindowTreeHostWin::GetInitialShowState` reads STARTUPINFO),
-  Electron does not (`GetInitialShowState` appears nowhere in its source, so it
-  inherits `SW_SHOWNORMAL`), and measured, the window came up not minimized; and
-  CDP cannot move it because Electron does not implement the Browser domain. So
-  `window.mjs` uses `ShowWindow(SW_SHOWMINNOACTIVE)`, matching the lab's own
-  processes on the lab directory so nothing of yours moves.
-- **A minimized window is never laid out, and that is the whole cost of it.**
-  Keystrokes still arrive (the palette opens, `Developer: Reload Window` runs) and
-  so do mouse events, but no layout runs at all. Measured with the same
-  `Emulation.setDeviceMetricsOverride` call in both states: minimized, the
-  workbench viewport went to 900 and then 1500 while the panel's iframe stayed at
-  659 both times; restored, the same calls gave 406 and then 1006 with the panel's
-  own measurement agreeing exactly. So every rect and `clientWidth` you read from
-  a minimized lab is the geometry it had when it was last on screen - `eval` says
-  so when it sees a hidden panel, and `width` is the one command that brackets
-  itself with a restore and a re-minimize, because it is the one that needs layout.
+  Electron never defines that method and inherits `SW_SHOWNORMAL`, and measured,
+  the window came up not minimized; and CDP cannot move it because Electron does
+  not implement the Browser domain.
+- **Minimizing it afterwards is worse than it looks.** The window is briefly on
+  the screen before the call lands, and - the real problem - a minimized window
+  runs no layout at all. Measured with the same `Emulation.setDeviceMetricsOverride`
+  in both states: minimized, the workbench viewport went to 900 and then 1500
+  while the panel's iframe stayed at 659 both times; restored, the same calls gave
+  406 and then 1006 with the panel agreeing exactly. A lab whose whole point is
+  width-dependent bugs cannot be a lab that never lays out.
+- **So the window is never on your desktop.** Windows lets a process start on a
+  desktop object of its own, and only the input desktop is on screen: a window on
+  any other one cannot be shown, focused, clicked, or alt-tabbed to. `desktop.ps1`
+  creates one and passes it as `STARTUPINFO.lpDesktop`, which has to happen at
+  `CreateProcess` time - which is why it is not `Start-Process`. Measured: zero
+  windows visible from the normal desktop, CDP fully working,
+  `visibilityState: "visible"`, and `width 300` / `width 900` landing exactly.
+  Two traps in that one call, both of which kill the editor with no log line at
+  all: `CreateProcess` writes into `lpCommandLine`, so it needs a `StringBuilder`
+  and not a marshaled string (otherwise ERROR_PATH_NOT_FOUND, which reads as a bad
+  exe path), and the desktop object dies with its last handle, so the launcher has
+  to stay alive until the editor has attached to it - `WaitForInputIdle`, not a
+  sleep. `lab.mjs down` is the only way to close that editor, since it has no
+  taskbar entry, and it does stop it.
 - **`Page.bringToFront` is focus, not the window.** It is what lets the palette
-  chord fire, and on Electron it does nothing else: measured, a minimized window
-  stays minimized and the foreground window does not change. Removing it on the
-  theory that it raises the window breaks every keyboard-driven step with "the
-  window does not have focus".
+  chord fire, and on Electron it does nothing else - measured, it leaves a
+  minimized window minimized and does not change the foreground window. Removing
+  it on the theory that it raises the window breaks every keyboard-driven step
+  with "the window does not have focus".
+- **A port that answers is not a window to type into.** The CDP port opens when
+  Chromium starts, which is before the workbench registers a page target, so
+  `ensurePanel` waits for the window rather than looking once. This was hidden for
+  a while by whatever slow call happened to sit in between.
 - **The editor's own first-run dialog.** A fresh profile puts a modal *"Welcome
   to VS Code / Sign in to use GitHub Copilot"* over everything and parks focus
   on its Sign In button, from where `Ctrl+Shift+P` does nothing. The gate is
