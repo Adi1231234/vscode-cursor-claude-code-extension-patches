@@ -13,7 +13,10 @@ const parses = (file) => {
     catch (e) { return String(e.stderr || e.message).split('\n')[0].slice(0, 160); }
 };
 
-const lines = (file) => readFileSync(file, 'utf8').split('\n').length;
+/* Newlines, not split().length - a file ending in one would otherwise count a line
+   longer than it is, and 150 is a limit a file is allowed to sit exactly on. This
+   counts what `wc -l` and PowerShell's Measure-Object -Line count. */
+const lines = (file) => (readFileSync(file, 'utf8').match(/\n/g) || []).length;
 
 const walk = function* (dir, ext) {
     for (const name of readdirSync(dir, { withFileTypes: true })) {
