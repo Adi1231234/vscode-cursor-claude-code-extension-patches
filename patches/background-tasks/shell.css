@@ -9,9 +9,14 @@
   background: rgba(0, 0, 0, .48); backdrop-filter: blur(2px);
   animation: __bgFade .12s ease-out;
 }
+/* Sized against the backdrop, never against vh/vw: the zoom patch puts the panel in
+   two coordinate systems, and viewport units keep reporting the *unzoomed* one while
+   every rect is 1/zoom of it - a fixed box sized in vh is simply clipped. Percentages
+   of the fixed backdrop stay in the same system as the rects. See CLAUDE.md and
+   patches/history-dialog-clip. */
 .__bgModal {
   display: flex; flex-direction: column; width: 100%; max-width: 940px;
-  height: min(80vh, 660px);
+  height: 100%; max-height: 660px;
   background: var(--app-primary-background, #1e1e1e); color: var(--app-primary-foreground, #ccc);
   border: 1px solid var(--bg-line);
   border-radius: var(--bg-r-shell); overflow: hidden;

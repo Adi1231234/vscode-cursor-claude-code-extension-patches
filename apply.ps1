@@ -37,6 +37,8 @@ $order = @(
     'subagent-stream-flags'
     'copy-message'
     'message-bidi'
+    'bidi-mark-strip'
+    'inline-code-copy'
     'bypass-permissions'
     'electron-run-as-node'
     'worktree-history'
@@ -44,6 +46,8 @@ $order = @(
     'worktree-fork-diff'
     'cwd-drive-case'
     'reload-restore'
+    'remote-control-chip'
+    'history-dialog-clip'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to

@@ -53,9 +53,10 @@ function Get-InjectedJs {
     Expand-JsTokens (Read-Text $Path) $Subs
 }
 
-# The shared webview store finder (used by prompt-queue + background-tasks). Both
-# inject it into their own <script>; the file's own guards make the second a no-op.
-function Get-CcStoreHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccStore.js')).Trim() }
+# Path to a shared runtime JS resource in lib/js (e.g. 'ccCopyText.js'). For the
+# patches that build their injected <script> from an ordered fragment list: drop
+# this in at the right position instead of copying the runtime into the patch.
+function Get-LibJsPath { param([string]$Name) Join-Path $PSScriptRoot "js/$Name" }
 
 # The shared worktree-session resolver (used by worktree-title-dir + worktree-fork-diff).
 function Get-CcWtResolveHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccWtResolve.js')).Trim() }

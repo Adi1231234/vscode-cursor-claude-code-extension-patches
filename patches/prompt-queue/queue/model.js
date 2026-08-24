@@ -3,8 +3,34 @@
     Q.push({ id: ++idc, text: text, files: files });
   }
 
-  function removeAt(i) {
+  /* Identity-based, not index-based: the row menu can outlive a queue shift
+     (an item above it flushing) between opening the menu and clicking Delete. */
+  function removeItem(it) {
+    var i = Q.indexOf(it);
+    if (i < 0) return;
     Q.splice(i, 1);
+    render();
+  }
+
+  /* Copy an item WITH everything around it - schedule (mode/at/start/dur and
+     its restart flags), skipped state and attachments - right below the
+     original. A 'time' copy keeps the same wall-clock moment; a 'timer' copy
+     keeps the same remaining countdown, so it reads identically to its source. */
+  function duplicateItem(it) {
+    var i = Q.indexOf(it);
+    if (i < 0) return;
+    Q.splice(i + 1, 0, {
+      id: ++idc,
+      text: it.text,
+      files: (it.files || []).map(function (f) { return { name: f.name, dataUrl: f.dataUrl, file: f.file }; }),
+      off: !!it.off,
+      mode: it.mode || "queue",
+      at: it.at || null,
+      start: it.start || null,
+      dur: it.dur || null,
+      missed: !!it.missed,
+      rearm: !!it.rearm
+    });
     render();
   }
 
@@ -16,10 +42,11 @@
     render();
   }
 
-  function moveToFirst(i) {
-    if (i <= 0 || i >= Q.length) return;
-    Q.unshift(Q.splice(i, 1)[0]);
-    render();
+  /* Jump to either end. Both are a move to a clamped position, so they reuse
+     moveItemTo rather than splicing the queue a second way. */
+  function moveToEnd(i, last) {
+    if (i < 0 || i >= Q.length) return;
+    moveItemTo(Q[i], last ? Q.length : 1);
   }
 
   /* Reorder by typed position: MOVE (not swap) the item to 1-based slot p,

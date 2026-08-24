@@ -14,14 +14,25 @@ in place. Read this before changing anything so the structure stays clean.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
   - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
-  - `js/ccWtResolve.js` - the one copy of the `__ccWtResolve` runtime helper.
-  - `js/ccStore.js` - the one copy of the webview store finder (`__ccStore` /
-    `__ccFiber`). Pulled in by `Get-CcStoreHelper`; both patches that need it inject
-    the same file and its own guards make the second copy a no-op.
+  - `js/` - shared runtime JS, one copy each: `ccWtResolve.js` (the
+    `__ccWtResolve` transcript-dir resolver, pulled in with
+    `Add-CcWtResolveHelper`), `ccCopyText.js` (`window.__ccCopyText`) and
+    `ccStore.js` (`__ccStore` / `__ccFiber`, the webview session-store finder) -
+    the last two pulled into a patch's fragment list with `Get-LibJsPath`.
 - **`patches/<name>/`** - one folder per feature or bug fix. Contains:
   - `patch.ps1` - defines a single `function Invoke-Patch { param($Ctx) ... }`.
   - `README.md` - what it does + the proven root cause.
   - optional resources: `*.css`, `queue/*.js`, `cleanup.js`.
+- **`tools/`** - developer tooling, not shipped to users and never touched by
+  `apply.ps1`.
+  - `tools/lab/` - **the way to check a patch for real.** `node tools/lab/lab.mjs up`
+    builds a throwaway editor running the patched bundle, with the panel open and a
+    debugger attached; then `repatch` + `eval` are the edit-and-look loop. `up`
+    opens the panel wide, so add `--width 300` (or `lab.mjs width 300`) whenever the
+    behaviour depends on panel width - most edge-placed UI only breaks there. Read
+    its README before doing any of that by hand.
+  - `tools/cdp/` - drives the Claude panel of a *running* editor over a CDP port
+    (see the CDP section below). The lab is built on it.
 
 ## The `$Ctx` contract
 
@@ -45,6 +56,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Add-CcWtResolveHelper $js` - prepend the shared worktree resolver once (returns new text). Use this for anything that must resolve a `<sid>.jsonl` across worktree project dirs; never paste the helper inline.
+   - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
 
 ## Non-negotiable conventions
 
@@ -64,11 +76,54 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
   1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
   2. **No backslash at all, beyond a \u escape** - the literal evaluates every escape *before the browser sees the script*. \n / \t / \r become real newlines and break the string they sit in; \d, \w, \. in a regex silently lose the backslash and change what the pattern matches; a lone backslash in a string is a syntax error. A \u escape is the one exception (it yields a normal glyph, and the icons rely on it). For a newline use `String.fromCharCode(10)`, for a backslash `String.fromCharCode(92)`, and write regexes with character classes (`[0-9]`, `[.]`) rather than escapes. Grep the fragment for backslashes before shipping. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+- **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
+  sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
+  viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
+  width: `window.innerWidth`, `document.documentElement.clientWidth`,
+  `visualViewport.width` and `vw`/`vh` all keep reporting the **unzoomed** viewport,
+  while `document.body.clientWidth` and every `getBoundingClientRect()` come back
+  at exactly `1/zoom` of it. So any code that subtracts one from the other, or caps
+  a size with `100vw` and positions it from a rect, is off by the zoom factor - and
+  a `position: fixed` box just gets clipped by the viewport, with no ellipsis and no
+  scrollbar. That is `patches/history-dialog-clip` (read its README); the app has 7
+  more `100vw`, 4 `100vh` and 5 JS viewport reads that are exposed the same way.
+  Measure the viewport as `document.body.getBoundingClientRect().width` when the
+  number will meet a rect.
+- **Injected UI copies the app's design line - measured, never chosen.** Anything
+  we add to the panel has to be indistinguishable from what the app draws itself.
+  Find the app's own element that plays the same role and take its values off the
+  **live DOM**, not off the source: `getComputedStyle` on the real siblings and
+  `svg.getBBox()` on their glyphs settle size, colour and spacing in one call and
+  catch rules a source read misses. Use the app's custom properties (`--app-*`),
+  never a literal colour - a hex breaks on the next theme. When the app disagrees
+  with itself, copy **the family that appears more than once** (the bundle ships
+  five dialog modules; the outlier had a hardcoded scrim and no spacing tokens).
+  Copy the *interaction* too: its confirm dialogs are a numbered option list
+  driven by Escape / digits / arrows / Enter, not a Cancel+Confirm button row.
+  And mind specificity when overriding an app rule - `.inputFooterV2 .footerButton`
+  is (0,2,0) and beats a single class of ours whatever the order; double our own
+  class instead of reaching for `!important` or hardcoding a hashed name.
+  `patches/remote-control-chip/` is the worked example.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not
   beside its content. Prefer normal flow, and check the result under RTL - a
   browser harness over the patched `webview/index.css` shows it in seconds.
+- **Text direction is decided per *message*, never per line, and never with a
+  bidi control character.** Two facts behind that. (1) The webview ships a
+  Trojan-Source mitigation: it replaces every U+061C / U+200E / U+200F /
+  U+202A-202E / U+2066-2069 in message content with the literal text `\uXXXX`, so
+  an RLM inserted to force a direction is *printed*, not applied.
+  `patches/bidi-mark-strip/` stops the printing - it drops the three implicit marks
+  (ALM / LRM / RLM) before that pass and leaves the reordering characters escaped -
+  but a mark still never *applies*, so it is no more usable than before. (2) A per-block
+  heuristic - the app's own `unicode-bidi:plaintext`, or any letter/word vote of
+  our own - flips a Hebrew line the moment one English word outweighs it. The
+  standards say to declare the direction once where it is known (HTML calls the
+  first-strong heuristic "very crude" and reserves it for text "truly unknown";
+  W3C `qa-html-dir` says declare at the root and override a block only on "rare
+  occasions"). `patches/message-bidi/` is that declaration - read its README
+  before touching direction anywhere.
 - **Build the test harness from the markup the app *emits*, not from what the
   source looks like it emits.** A CSS-module lookup that has no matching key
   (`lu.messageHovered` where `lu` never defines it) renders as the literal
@@ -111,14 +166,94 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    ```
    A plain `node --check` passes on the two-char `\n`; only this catches the
    real newline that breaks the served script.
-6. **Run it for real, in a throwaway editor** - a parse-clean bundle can still
-   fail to render. Both editors take an isolated profile, so nothing real is
-   touched:
-   `code --extensions-dir <tmp>/extensions --user-data-dir <tmp>/ud --new-window <folder>`
-   (`Cursor.exe` takes the same flags). Then open the panel and read
-   `<tmp>/ud/logs/**/exthost/Anthropic.claude-code/Claude VSCode.log`.
-   **VS Code does not re-verify a patched extension:** its own log says
+6. **Run it for real** - a parse-clean bundle can still fail to render. Do not
+   assemble a throwaway editor by hand; `node tools/lab/lab.mjs up` does the
+   whole thing (pristine VSIX -> `apply.ps1` -> editor -> panel open -> a CDP
+   port), and `repatch` + `eval` are then the edit-and-look loop. It exists
+   because every step of that has a trap that fails **silently** - workspace
+   trust, `extensions.json`, where `argv.json` is read from, occluded windows.
+   `tools/lab/README.md` lists them; do not re-derive them.
+   Two facts about the real install still worth knowing:
+   **VS Code does not re-verify a patched extension** - its own log says
    `Extension signature verification result for anthropic.claude-code: Success`
-   with the patched bundle in place - verification covers the installed VSIX, not
-   the files afterwards. What *does* bite is **auto-update**: both editors replace
-   the folder on an extension update and the patches go with it (hence: re-run).
+   with the patched bundle in place, because verification covers the installed
+   VSIX, not the files afterwards. What *does* bite is **auto-update**: both
+   editors replace the folder on an extension update and the patches go with it
+   (hence: re-run).
+
+## Attaching a real debugger to the webview (CDP)
+
+`Developer: Open Webview Developer Tools` is enough for a quick look. For scripted
+inspection (evaluate in the page, read the DOM, drive it from a CDP client), open a
+Chrome DevTools Protocol port:
+
+**Reach for CDP, not for desktop automation.** Anything you need from a running
+editor - what the panel rendered, which window owns which webview, the console, a
+command, a reload - goes through `tools/cdp/` or a direct CDP call. Do **not** drive
+the editor with screenshot / click / type MCPs (`adi-tools` and friends): they see
+pixels instead of the DOM, act on whatever window happens to be in front, need the
+window focused and visible, and leave no evidence anyone can re-check. CDP answers
+with the actual DOM, addresses a window by name, works on an occluded window, and
+every step is a script that can be re-run. Screenshots are for showing a human what
+something looks like - never as the way to find out what the panel is doing.
+
+- **VS Code: put it in `argv.json`** (`Preferences: Configure Runtime Arguments`,
+  i.e. `~/.vscode/argv.json`). `main.js` allowlists `remote-debugging-port` next to
+  `disable-hardware-acceleration`, and calls `appendSwitch` **only for a string
+  value**: `"remote-debugging-port": "9333"` opens the port, unquoted `9333` is
+  silently ignored. This is the only way to get the port on the *normal* profile,
+  with no `--user-data-dir` and no flags to remember.
+- **It is read once, when the main process starts.** The editor is single-instance,
+  so closing one window and reopening it just rejoins the process that is already
+  running and nothing changes. The port appears only after every window is closed
+  and the editor starts cold.
+- **Cursor does not support this** - its argv.json allowlist has only the four base
+  switches. There, pass `--remote-debugging-port=<n>` on the command line, and only
+  with no instance already running: a second launch hands its args to the running
+  instance and exits, so its port answers CDP for about a second and then dies. A
+  single probe sees that as success.
+- `http://127.0.0.1:<n>/json/list` then lists one `page` per window (titled by
+  `window.title`) plus one `iframe` per webview, tagged
+  `extensionId=Anthropic.claude-code`. That iframe is the webview *shell*
+  (`vscode-webview://.../index.html`, one `<script>`, empty body) - the panel's own
+  DOM is one frame deeper.
+- **Port open but zero targets = a pending editor update**, not a CDP problem. While
+  the `vscode-updating` mutex is held (`new_Code.exe` + `updating_version` in the
+  install dir), a new instance waits 30s and dies with `Code is currently being
+  updated`. Chromium has already bound the port by then, so `/json/version` answers
+  while no renderer exists and `Target.getTargets` returns `[]`.
+- **Do not hand-roll a client - use `tools/cdp/`** (`cdp.mjs list` / `cdp.mjs eval
+  <window> <script.js>`, no dependencies). It runs a script *inside the panel* of a
+  named window, so `document` is the panel's document and `new MouseEvent(...)` is
+  built in the right realm. Its README carries the rules for driving a live editor
+  safely (`Alt+Enter` parks the queue so nothing is sent, put the DOM back, do not
+  clobber the clipboard). For a *test* editor rather than your own, `tools/lab/`
+  starts one already patched and already attached.
+- **Keyboard-driven steps need a page that is visible and not holding focus
+  somewhere useless.** Both failures look identical - the palette simply does not
+  open - and neither raises anything. Windows occlusion marks a covered window
+  `visibilityState: "hidden"` and Chromium then delivers it no input at all
+  (`--disable-features=CalculateNativeWinOcclusion` at launch); and a fresh
+  profile opens a modal *"Sign in to use GitHub Copilot"* whose button holds
+  focus, from where `Ctrl+Shift+P` arrives, trusted, and does nothing (the lab
+  turns that dialog off with `workbench.welcomePage.experimentalOnboarding`, and
+  `palette.mjs` blurs to the body as a backstop). A key event that the page's own
+  listener sees is *not* proof the keybinding fired.
+- **A webview iframe is out-of-process, which breaks the two obvious ways to find
+  it.** `Page.getFrameTree` on a *window* target does not list its webviews at all.
+  Screen geometry (an OOPIF reports its top-level window's `screenX`/`screenY`)
+  does group them, but silently mislabels every window stacked in the same place.
+  What is exact: the window's own DOM still holds the `<iframe>` **element**, and
+  its `src` carries the same `?id=<uuid>` as the webview target's url.
+- **After patching a bundle under a running editor, only a real `Developer: Reload
+  Window` picks it up.** A renderer-level reload (`Page.reload`, the
+  `vscode:reloadWindow` channel, Ctrl+R - all three are `webContents.reload()`)
+  brings the panel back **blank**, with a `SyntaxError` blamed on `index.js` at a
+  line/column that does not match the file on disk; it survives further renderer
+  reloads until the real command runs. The command reaches
+  `INativeHostService.reload()` -> `CodeWindow.reload()`, which rebuilds the window
+  configuration. The workbench renderer exposes no command API, so the only way in
+  is keystrokes: `node tools/cdp/cdp.mjs reload <window>` types the palette over
+  CDP's Input domain and waits for the panel to come back.
+- The port has no authentication and any local process can attach, so take the line
+  back out when you are done.

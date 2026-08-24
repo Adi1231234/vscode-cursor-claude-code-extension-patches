@@ -22,7 +22,7 @@
     if (!msg) return;
     var t = textOf(msg);
     if (!t) return;
-    copyText(t).then(function () { flash(b); }, function () {});
+    window.__ccCopyText(t).then(function () { flash(b); }, function () {});
   }
 
   /* A click focuses the button, and the app's own actionButton rule includes

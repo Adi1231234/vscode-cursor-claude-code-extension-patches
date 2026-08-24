@@ -27,6 +27,43 @@ The add button is re-anchored every tick (`ensureAddButton`) because the app
 re-renders its own footer; `insertBefore` on the existing node just moves it,
 so it never duplicates.
 
+## Stopping Claude parks the queue (`stop-pause.js`)
+
+Pressing **stop** while a turn is running sets `paused`, so the queue holds
+instead of firing the next item the moment the turn ends. Stopping means "not
+this, and not whatever came after it" - draining straight into the next prompt
+is the opposite of what the gesture asked for. The panel header shows
+`paused - N queued` with the play button, and the state is persisted like any
+other pause; one click releases it.
+
+The hook is on the **session's own `interrupt()`**, decorated per session
+(`hookStopPause`, re-run each tick because the object is replaced when the
+active conversation changes; guarded by `__qStopHook` so it decorates once,
+and isolated in its own try/catch - it decorates someone else's object, and a
+throw there would otherwise take the rest of the tick down with it, on that
+tick and every one after).
+That is the single funnel every stop path goes through - the composer's stop
+button (`onClick` -> `session.interrupt()`), a plain Escape (the app's
+body-level handler), and `restartClaude`. It runs **synchronously with the
+gesture**, i.e. before `busy` flips false and before the 150ms flush tick wakes
+up. Watching for the same gestures in the DOM instead would mean
+re-implementing the app's own conditions *and* would still race the flush; and
+`busy` going false is not a signal on its own - it is identical for a normal
+turn end.
+
+Two guards keep it to real stops: `interrupt()` also runs for a plain Escape
+while **idle** (the app's handler is not gated on busy), which is not a stop -
+so `isBusy()` must hold; and an empty queue has nothing to park, so `paused` is
+never set behind the user's back when the queue isn't in use.
+
+Note this is the same `paused` as the play/pause button, so a **due** scheduled
+item still fires (see `firstSendableIndex`) - a commitment to a wall-clock
+moment is deliberately not cancelled by a pause, however that pause arrived.
+
+Decorating an instance method is safe here (an own property over the prototype,
+`orig.apply(this, arguments)` returns the original promise untouched) - it is
+not the `acquireVsCodeApi` wrap the root CLAUDE.md forbids.
+
 ## Persistence (`persist.js`)
 
 The queue survives a full editor restart, per session:
@@ -66,6 +103,60 @@ default - `window.__ccLogBtn()` shows it, `window.__ccLogs()` returns the array.
 Everything is in-memory + on-demand; it never touches `localStorage` at load and
 never wraps `acquireVsCodeApi` (both break the webview - see the root CLAUDE.md).
 This is how the persistence bug above was finally diagnosed inside the real webview.
+
+## Reordering a row (`buildNav` in `render-panel.js`)
+
+Four controls in one column at the leading edge: **to top**, **up**, **down**,
+**to bottom**. All four are always rendered and merely `disabled` at the ends -
+the to-top button used to be omitted on the first row, which made that one row
+shorter than the rest. The fourth button costs ~9px of row height; the glyphs
+are drawn at 10px with tighter padding so it is not more.
+
+Both jump-to-end buttons go through `moveToEnd(i, last)`, which is a call to
+the existing `moveItemTo(it, p)` with a clamped position - the queue is never
+spliced a second way.
+
+## Row actions menu (`row-menu.js`)
+
+A row carries a lot of controls, so the per-row **send** and **delete**
+buttons were folded into one kebab (three dots) sitting beside the reorder
+arrows at the leading edge. It opens a small popup with three items:
+
+- **Send now** - jump the queue order, the schedule and the paused hold
+  (`sendNow`). When it cannot run - the item is skipped, Claude is mid-turn,
+  or another send is in flight - **the reason takes the label’s place** in
+  amber and the item goes inactive, rather than hiding in a tooltip. The old
+  inline button was only blocked for a skipped item (by CSS,
+  `pointer-events:none`); in the other two it looked clickable and then
+  silently did nothing.
+
+  `sendBlocked(it)` is re-run **on the click, not only while the menu is
+  built**: the turn state can flip during the seconds the menu sits open, and
+  `sendNow` would then hit its own `isBusy()` guard and `return` - a live item
+  doing nothing at all with no feedback. On a refusal the menu stays open so
+  the reason can be read. The reasons are kept short and `.__qMenu` has a
+  `min-width` that fits the longest of them, so the swap moves nothing.
+- **Duplicate** - `duplicateItem` clones the item *with everything around it*
+  (schedule `mode`/`at`/`start`/`dur`, the `missed`/`rearm` restart flags, the
+  skipped state, attachments) and inserts it directly below the original. An
+  at-time copy keeps the same wall-clock moment; a timer copy keeps the same
+  remaining countdown, so the copy reads identically to its source.
+- **Delete** - `removeItem`.
+
+The **clock cell is deliberately not in this menu**: a schedule stays visible
+and one click away in the row itself, exactly as before.
+
+Two things the popup has to get right:
+
+- It is **body-mounted and `position:fixed`** - the queue body scrolls
+  (`overflow-y:auto`) and would clip an in-flow menu. `placeMenu` anchors it
+  under the button and flips it up / pulls it in at the viewport edges.
+- Because it lives outside the panel, `render()` calls `closeRowMenu()` -
+  a rebuild would otherwise orphan it. It also closes on outside mousedown,
+  `Escape`, scroll (capture, so the queue body counts) and resize.
+
+Menu actions are **identity-based** (`Q.indexOf(it)`), not index-based: an
+item above can flush between opening the menu and clicking an entry.
 
 ## Scheduling (`schedule-lib.js`, `schedule-clock.js`, `schedule-modal.js`)
 

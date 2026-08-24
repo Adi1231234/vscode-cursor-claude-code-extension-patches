@@ -44,7 +44,7 @@
   background: var(--app-menu-background, #252526); color: var(--app-menu-foreground, #ccc);
   border: 1px solid var(--app-menu-border, #454545);
   border-radius: var(--bg-r-chip, 4px); padding: 3px 7px; font-size: 11px; z-index: 40;
-  max-width: 60vw; overflow: hidden; text-overflow: ellipsis;
+  max-width: 280px; overflow: hidden; text-overflow: ellipsis;
   box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 12px rgba(0,0,0,.28);
 }
 .__bgInd:hover .__bgTip, .__bgIcoBtn:hover .__bgTip, .__bgIcoBtn:focus-visible .__bgTip { opacity: 1; }

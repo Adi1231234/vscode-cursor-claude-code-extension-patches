@@ -1,0 +1,84 @@
+/* RCCHIP */
+/* Remote Control status chip - the small icon in the input footer row that
+   replaces the full-width "Remote Control is active" banner.
+   Layout, hover and icon sizing come from the app's own .footerButton, so the
+   chip is the same weight and colour as every other button in the row. Only
+   the padding reset, the error tint, the connecting pulse and the tooltip
+   live here.
+
+   `.inputFooterV2 .footerButton` carries `padding: 0 8px 0 0` for the gap
+   between an icon and its text label. The chip has no label, so that 8px is
+   dead space: it makes the button 34px wide instead of 26px, pushes the next
+   button away, and - worst of all - puts the icon off-centre inside the hover
+   square. The class is doubled to match that rule's specificity (0,2,0); ours
+   is appended last, so it wins without an !important and without naming the
+   hashed `inputFooterV2` class.
+
+   Colour: .footerButton is `--app-secondary-foreground`, which is the row's
+   *label* colour. Every icon in the row - the "+", the "/", the permission
+   glyph - is drawn at the full `--app-primary-foreground`, so that is the base
+   here too; at secondary it reads as a disabled sibling. The three states then
+   tint it with the app's own status tokens, never a literal colour, so they
+   follow the editor theme. */
+.cc-rc-chip.cc-rc-chip {
+    padding: 0;
+    color: var(--app-primary-foreground);
+}
+
+/* Off gets no rule here on purpose: the chip carries the app's own
+   `footerButtonInactive` in that state (opacity .5, full on hover), which is
+   how the row already draws its file-selection button when nothing is
+   attached. Dimming it ourselves would be a second, competing convention. */
+
+/* Connected is the state worth reading at a glance, so it gets the app's
+   success green - the same token its own success text uses. */
+.cc-rc-chip[data-rc-state="connected"] {
+    color: var(--app-success-foreground);
+}
+
+.cc-rc-chip[data-rc-state="connecting"] {
+    animation: cc-rc-pulse 1.4s ease-in-out infinite;
+}
+
+.cc-rc-chip[data-rc-state="error"] {
+    color: var(--app-error-foreground);
+}
+
+@keyframes cc-rc-pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+}
+
+/* Hover tooltip, styled like the composer's own (menu colours, .85em, short
+   delay). The native title attribute is deliberately not used: it is slow,
+   unstyled and cannot wrap. .footerButton is already position:relative. */
+.cc-rc-chip::after {
+    content: attr(data-cc-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    inset-inline-end: 0;
+    z-index: 30;
+    width: max-content;
+    max-width: min(260px, calc(100vw - 24px));
+    padding: 4px 8px;
+    background: var(--app-menu-background);
+    color: var(--app-menu-foreground);
+    border: 1px solid var(--app-menu-border);
+    border-radius: var(--corner-radius-medium);
+    box-shadow: 0 2px 6px #00000026;
+    font-size: 0.85em;
+    line-height: 1.4;
+    text-align: start;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in;
+}
+
+.cc-rc-chip:hover::after,
+.cc-rc-chip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.3s;
+}

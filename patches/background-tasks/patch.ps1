@@ -41,17 +41,17 @@ function Invoke-Patch {
     }
 
     # ---------------- webview script ----------------
-    # '@ccStore' is the shared store finder from lib/js (prompt-queue injects the
-    # same file; its own guards make the second copy a no-op).
-    $order = @(
-        'config-dom', '@ccStore', 'store', 'shells', 'stream', 'bridge', 'entry',
+    # Explicit order, not filename-sorted: 'config-dom' opens the <script> and the
+    # IIFE, 'init' closes both. lib/js/ccStore.js is the shared session-store finder
+    # (prompt-queue pulls in the same file; its guards make the second copy a no-op).
+    $names = @(
+        'config-dom', 'store', 'shells', 'stream', 'bridge', 'entry',
         'logpane', 'toolbar', 'footer', 'tail', 'workflow', 'dialog', 'keys',
         'list', 'indicator', 'init'
     )
-    $script = ($order | ForEach-Object {
-        if ($_ -eq '@ccStore') { "`n" + (Get-CcStoreHelper) + "`n" }
-        else { Read-Text (Join-Path $PSScriptRoot "tasks/$_.js") }
-    }) -join ''
+    $parts = @(Join-Path $PSScriptRoot 'tasks/config-dom.js', (Get-LibJsPath 'ccStore.js')) +
+        ($names | Select-Object -Skip 1 | ForEach-Object { Join-Path $PSScriptRoot "tasks/$_.js" })
+    $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script @{ '__NONCE__' = $Ctx.Nonce }
     Add-ScriptAfterMarker $Ctx $script '/* BGTASKS */' 'background-tasks JS' @('/* QUEUE */', '/* INPUTRTL */', '/* ZOOM */')
 }

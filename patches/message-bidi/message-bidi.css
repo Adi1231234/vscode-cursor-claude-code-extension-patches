@@ -1,5 +1,5 @@
 /* MSGBIDI */
-/* Per-block base direction for rendered chat messages.
+/* Base direction for rendered chat messages, declared per message.
 
    The extension's own markdown stylesheet ships
 
@@ -16,17 +16,17 @@
    This is not a specificity fight - direction:rtl!important on the block itself is
    ignored just the same. The only way out is to override `unicode-bidi`.
 
-   message-bidi.js replaces that first-strong-character heuristic with a
-   majority-of-letters one and writes its answer to `dir`. The rule below is what
-   lets `dir` take effect: it has to out-specify the plaintext rule above (0,1,1),
-   hence the extra class + attribute (0,3,1). Scoped to [dir] so it only applies to
-   blocks the script has actually decided on - with the script absent, nothing here
-   changes and the app's own behaviour is untouched. */
-[class*="messagesContainer_"] [class*="root_"] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th)[dir] {
+   bidi/*.js decides the direction once per message and declares it as `dir` on the
+   message root; the rule below is what lets that declaration reach the blocks
+   inside it. It has to out-specify the plaintext rule above (0,1,1), hence the
+   extra attribute selectors (0,3,1). Scoped to a root the script has actually
+   decided on - with the script absent, nothing here matches and the app's own
+   behaviour is untouched. */
+[class*="messagesContainer_"] [class*="root_"][dir] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) {
   unicode-bidi: isolate;
 }
 
-/* Lists themselves keep the panel direction, so their markers stay together on
+/* Lists themselves keep the message direction, so their markers stay together on
    one side. The exception is an item that ends up reading the other way: its
    marker would hang off the far side of the message, past the list padding
    (which sits on the opposite side), where the markdown root's overflow:hidden
