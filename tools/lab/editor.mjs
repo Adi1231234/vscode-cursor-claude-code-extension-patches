@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { powershell, quote } from './powershell.mjs';
 
 /* An install in a place none of the usual candidates cover (Insiders, portable,
    a custom directory) is what `--code` is for; lab.mjs sets it once from the
@@ -56,7 +57,9 @@ export function runCli(args) {
    and a hidden page is not delivered input: `Input.dispatchKeyEvent` silently
    goes nowhere, so the palette never opens and every keyboard-driven step
    (opening the panel, a real Developer: Reload Window) fails the moment your
-   own editor is in front of the lab - which it always is. */
+   own editor is in front of the lab - which it always is. It does not cover a
+   *minimized* window, which is hidden regardless and additionally drops mouse
+   input while still taking keystrokes - see window.mjs. */
 export function launch(lay, port) {
     const child = spawn(codeExe(), [
         '--disable-features=CalculateNativeWinOcclusion',
@@ -105,21 +108,4 @@ export async function portOwner(port) {
         true,
     );
     return out.trim();
-}
-
-const quote = (s) => s.replace(/'/g, "''");
-
-/* -EncodedCommand, not -Command: a script passed as an argument goes through
-   Windows command-line quoting on the way in, and any double quote inside it
-   comes out mangled - the command then runs and returns *nothing*, which reads
-   as "no such process" rather than as a bug. Base64 UTF-16LE has no such edge. */
-function powershell(script, capture = false) {
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    return new Promise((resolve, reject) => {
-        const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded], { windowsHide: true });
-        let out = '';
-        if (capture) p.stdout.on('data', (d) => { out += d; });
-        p.on('error', reject);
-        p.on('exit', () => resolve(out));
-    });
 }

@@ -17,6 +17,7 @@ import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
 import { readWidth, setWidth } from './width.mjs';
+import { restoreWindow } from './window.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -76,7 +77,10 @@ async function repatch() {
     const page = (await targets(port)).find((t) => t.type === 'page' && t.title);
     if (!page) fail('the lab has no editor window to reload');
     const r = await runCommand(page, 'Developer: Reload Window');
-    if (!r.ok) fail(`reload refused: ${r.reason}`);
+    /* The window state travels with the refusal: which of the reasons it was
+       decides what to do about it, and guessing costs a whole debugging session. */
+    if (!r.ok) fail(`reload refused: ${r.reason}${r.window ? `
+  window: ${JSON.stringify(r.window)}` : ''}`);
     const panel = await waitForPanel(port);
     if (!panel) fail('the panel did not come back after the reload');
     await report(panel);
@@ -112,11 +116,26 @@ async function down() {
    it is reported even when nobody asked for one. */
 async function report(panel, want = flags.width) {
     const asked = want === undefined ? undefined : Number(want);
-    const panelWidth = asked === undefined ? await readWidth(panel) : await setWidth(port, panel, asked);
-    if (asked !== undefined && panelWidth !== asked) {
-        log(`panel is ${panelWidth}px, not the ${asked}px asked for - the editor clamps to what the layout allows`);
+    /* The drag is mouse input, and a minimized window is delivered none of it while
+       still taking keystrokes - so this has to happen before the sash is touched,
+       or the width silently does nothing while every other command still works. */
+    const win = asked === undefined ? null : await restoreWindow(lay).catch(() => null);
+    const w = asked === undefined ? await readWidth(panel, port) : await setWidth(port, panel, asked);
+    const panelWidth = w.inner;
+    /* Three stories that used to print as one: the layout refusing the width, the
+       panel not having caught up with it yet, and the drag never landing at all.
+       Only a width that was *not* delivered is worth a word - a panel already at
+       the size asked for needs no drag, and `moved` is false for that too. */
+    if (!w.settled) {
+        log(`the panel still measures ${w.inner}px while the window has it at ${w.outer}px - it is not on screen, so it has not been laid out again yet`);
+    } else if (asked !== undefined && panelWidth !== asked) {
+        log(w.moved
+            ? `panel is ${panelWidth}px, not the ${asked}px asked for - the editor clamps to what the layout allows`
+            : `the sash drag did not move the panel at all, so it is still ${panelWidth}px`
+              + (win && win.minimized ? ' - the window is still minimized and is delivered no mouse input' : '')
+              + (win && !win.found ? ' - the lab window was not found, so it could not be restored' : ''));
     }
-    console.log(JSON.stringify({ port, version, window: panel.window, panelWidth, target: panel.target.id, dir: lay.dir }, null, 1));
+    console.log(JSON.stringify({ port, version, window: panel.window, panelWidth, windowWidth: w.outer, target: panel.target.id, dir: lay.dir }, null, 1));
     log('edit a patch, then: lab.mjs repatch  |  inspect: lab.mjs eval <script.js>  |  narrow it: lab.mjs width 300');
 }
 

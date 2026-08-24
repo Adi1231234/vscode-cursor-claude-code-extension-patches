@@ -38,9 +38,42 @@ const LAYOUT = (id) => `(() => {
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 
-export async function readWidth(panel) {
+/* Inside the panel: the number the panel's own code sees, which is what a patch is
+   actually laid out against. */
+async function innerWidth(panel) {
     const w = await evalInPanel(panel.target, 'document.documentElement.clientWidth');
-    return typeof w === 'number' ? w : null;
+    return typeof w === 'number' ? Math.round(w) : null;
+}
+
+/* From the workbench: the iframe's own box. The window is never throttled, so this
+   is the truth about the layout even when the panel has not caught up. */
+async function outerWidth(port, panel) {
+    const page = (await targets(port)).find((t) => t.type === 'page' && t.title);
+    const id = (String(panel.target.url || '').match(UUID) || [])[0];
+    if (!page || !id) return null;
+    const client = await connect(page.webSocketDebuggerUrl);
+    try {
+        const view = unwrap(await client.send('Runtime.evaluate', { expression: LAYOUT(id), returnByValue: true }));
+        return view && view.panel ? Math.round(view.panel.width) : null;
+    } finally { client.close(); }
+}
+
+/* A webview that is not on screen gets no rendering opportunity, so it is not
+   re-laid-out and keeps answering with the size it had when it was last visible -
+   measured: 643 reported three times running for a panel the workbench had already
+   moved to 300. Poll both sides until they agree rather than reporting a stale
+   number as fact, and when they never do, say which is which. */
+export async function readWidth(panel, port) {
+    let inner = await innerWidth(panel);
+    if (port === undefined) return inner;
+    let outer = null;
+    for (let i = 0; i < 12; i++) {
+        outer = await outerWidth(port, panel);
+        inner = await innerWidth(panel);
+        if (inner === null || outer === null || Math.abs(inner - outer) <= 2) break;
+        await new Promise((r) => setTimeout(r, 150));
+    }
+    return { inner, outer, settled: inner === null || outer === null || Math.abs(inner - outer) <= 2 };
 }
 
 export async function setWidth(port, panel, want) {
@@ -51,33 +84,51 @@ export async function setWidth(port, panel, want) {
     const id = (String(panel.target.url || '').match(UUID) || [])[0];
     if (!id) throw new Error('this panel has no webview id to find it by');
 
+    /* `moved` is the difference between the layout refusing the width and the drag
+       never happening - which look identical in the number that comes back. */
+    let moved = false;
     const client = await connect(page.webSocketDebuggerUrl);
     try {
-        const view = unwrap(await client.send('Runtime.evaluate', { expression: LAYOUT(id), returnByValue: true }));
-        if (!view || !view.panel) throw new Error('this panel has no iframe in the window - is it still open?');
-        const sash = nearestSash(view);
-        if (!sash) throw new Error('the panel has no draggable sash beside it - open the side bar, or widen the window');
-        const delta = want - view.panel.width;
-        await drag(client, sash, sash.x + (sash.side === 'left' ? -delta : delta));
+        const look = async () => {
+            const v = unwrap(await client.send('Runtime.evaluate', { expression: LAYOUT(id), returnByValue: true }));
+            if (!v || !v.panel) throw new Error('this panel has no iframe in the window - is it still open?');
+            return v;
+        };
+        let view = await look();
+        const started = view.panel.width;
+        const edges = edgeSashes(view);
+        if (!edges.length) throw new Error('the panel has no draggable sash beside it - open the side bar, or widen the window');
+
+        /* A panel in the editor area has a sash on both edges, and which of them
+           governs its width depends on where the layout gives. Pull each in turn,
+           re-measuring, and stop as soon as one has delivered the width. */
+        for (const sash of edges) {
+            const delta = want - view.panel.width;
+            if (Math.abs(delta) <= 2) break;
+            await drag(client, sash, sash.x + (sash.side === 'left' ? -delta : delta));
+            await new Promise((r) => setTimeout(r, 250));
+            view = await look();
+        }
+        moved = Math.abs(view.panel.width - started) > 2;
     } finally {
         client.close();
     }
-    await new Promise((r) => setTimeout(r, 700));
-    return readWidth(panel);
+    await new Promise((r) => setTimeout(r, 300));
+    return { ...(await readWidth(panel, port)), moved };
 }
 
-/* Which boundary actually governs this panel: the nearest sash sitting on one
-   of its edges. Moving a sash on the left towards the left widens the panel;
-   on the right it is the other way round, which is why the side is carried. */
-function nearestSash({ panel, sashes }) {
-    let best = null;
+/* Every sash sitting on one of the panel's edges, nearest first. Moving a sash on
+   the left towards the left widens the panel; on the right it is the other way
+   round, which is why the side is carried. The right edge is tried before the left
+   at equal distance: in the editor area the left one is the side bar's. */
+function edgeSashes({ panel, sashes }) {
+    const found = [];
     for (const s of sashes) {
         const side = s.x <= panel.left + 4 ? 'left' : s.x >= panel.right - 4 ? 'right' : null;
         if (!side) continue;
-        const distance = side === 'left' ? panel.left - s.x : s.x - panel.right;
-        if (!best || distance < best.distance) best = { ...s, side, distance };
+        found.push({ ...s, side, distance: side === 'left' ? panel.left - s.x : s.x - panel.right });
     }
-    return best;
+    return found.sort((a, b) => a.distance - b.distance || (a.side === 'right' ? -1 : 1));
 }
 
 /* A press, a few moves, a release - the sash follows the pointer, so it needs

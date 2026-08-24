@@ -55,6 +55,8 @@ $order = @(
 # a wall of [miss] otherwise reads like a broken patcher.
 $minTested = [version]'2.1.220'
 
+$script:failures = @()
+
 foreach ($Ctx in $installs) {
     Write-Head "Patching $($Ctx.Editor): $($Ctx.Name)"
     Write-Info "nonce=$($Ctx.Nonce)  messageInput=$($Ctx.MessageInputClass)  preview=$($Ctx.PvHash)"
@@ -66,10 +68,25 @@ foreach ($Ctx in $installs) {
         $patchFile = Join-Path $here "patches\$name\patch.ps1"
         if (-not (Test-Path $patchFile)) { Write-Miss "patch '$name' not found"; continue }
         Write-Head $name
-        . $patchFile          # (re)defines Invoke-Patch for this folder
-        Invoke-Patch $Ctx     # $PSScriptRoot inside resolves to patches/<name>/
+        # $ErrorActionPreference is Stop, so without this one patch throwing ends the
+        # whole run and the patches after it are never attempted. That reads as "my
+        # patch does nothing" rather than as a broken patch, and tools/lab would go on
+        # to measure a half-patched bundle. Catch it, report it, carry on - and make
+        # the run itself fail at the end so nothing downstream mistakes it for success.
+        try {
+            . $patchFile      # (re)defines Invoke-Patch for this folder
+            Invoke-Patch $Ctx # $PSScriptRoot inside resolves to patches/<name>/
+        } catch {
+            $script:failures += "$name : $($_.Exception.Message)"
+            Write-Fail "$name threw: $($_.Exception.Message)"
+        }
     }
 }
 
 $editors = ($installs | ForEach-Object { $_.Editor }) -join ' / '
+if ($script:failures) {
+    Write-Host "`n$($script:failures.Count) patch(es) failed - this install is only partly patched:" -ForegroundColor Red
+    foreach ($f in $script:failures) { Write-Host "  $f" -ForegroundColor Red }
+    exit 1
+}
 Write-Host "`nDone ($editors). Reload the window: Ctrl+Shift+P -> Developer: Reload Window" -ForegroundColor Cyan

@@ -41,7 +41,16 @@ because those events are trusted and the sash's own pointer handling runs;
 `PointerEvent`s dispatched into the DOM are ignored and the drag silently does
 nothing. What comes back is measured *inside* the panel, so it is the number the
 panel's own code sees - and VS Code clamps to what the layout allows, so asking
-for 4000 and being told 1090 is the tool being honest, not failing.
+for 4000 and being told 1090 is the tool being honest, not failing. A drag that
+never landed is *not* reported that way: the panel is measured before and after,
+and a width that did not change at all says so, and says the window was
+minimized when that is why.
+
+Both sides of the iframe are read, because a webview that is not on screen gets
+no rendering opportunity and keeps answering with the size it had when it was
+last visible - measured: 643 reported three times running for a panel the window
+had already moved to 300. When the two disagree the report says which is which
+rather than handing you the stale one as fact.
 
 A window can hold **more than one** Claude panel (one in a tab, one in the side
 bar), and the editor keeps a backgrounded one alive at `visibility: hidden`. A
@@ -89,6 +98,17 @@ extension" rather than like what it is.
   so the palette never opens and nothing keyboard-driven works, which is
   everything (see `tools/cdp/README.md`). The lab launches with
   `--disable-features=CalculateNativeWinOcclusion`.
+- **A minimized window takes keystrokes but not mouse events.** That asymmetry is
+  the trap: with the lab minimized, `repatch` works perfectly (the palette opens,
+  the window reloads) while `width 300` quietly does nothing, and neither says
+  why. Measured: twelve `mouseMoved` events reached a capture-phase listener on
+  `window` and the `mousePressed` between them never arrived, so the sash never
+  picked up the drag. The occlusion flag does not help - minimized is hidden
+  regardless - and CDP cannot fix it either, because Electron does not implement
+  the Browser domain (`Browser.getWindowForTarget` is "wasn't found") and
+  `Page.bringToFront` returns without the window coming back. `window.mjs`
+  restores it with the Win32 call, matching the lab's own processes on the lab
+  directory so a minimized editor of yours is never touched.
 - **The editor's own first-run dialog.** A fresh profile puts a modal *"Welcome
   to VS Code / Sign in to use GitHub Copilot"* over everything and parks focus
   on its Sign In button, from where `Ctrl+Shift+P` does nothing. The gate is
@@ -104,9 +124,20 @@ extension" rather than like what it is.
 - **Remote Control stays off.** `<lab>/home/.claude/settings.json` sets
   `remoteControlAtStartup: false`, so starting a lab never publishes a throwaway
   session to claude.ai.
-- **`apply.ps1` always exits 0.** The lab reads its output instead: it stops if
-  nothing was patched, and prints every `[miss]`, because a missed anchor is the
-  usual reason a patch "does nothing" in a newer bundle.
+- **A patch that throws must not pass for a patched install.** `apply.ps1` runs
+  each patch in its own `try`, so one that throws no longer takes the rest of the
+  run with it: it is reported as `[fail]`, the remaining patches still run, and
+  the run ends with the list of failures and exit 1 instead of `Done`. The lab
+  refuses on any of `[fail]`, a non-zero exit, no `[ok]` at all, or a missing
+  `Done` line - a half-applied bundle looks exactly like a working one until the
+  feature you are testing is the missing half. Every `[miss]` is printed too,
+  because a missed anchor is the usual reason a patch "does nothing" in a newer
+  bundle.
+- **"Palette did not open" is not a diagnosis.** A modal in the way, a window
+  delivered no input, and focus parked somewhere that swallows the chord need
+  three different answers. The refusal now carries the window state that produced
+  it - `visibility`, `focused`, `activeElement`, `modal` - so the next reader is
+  not left guessing at keybindings.
 
 ## Writing the script for `eval`
 

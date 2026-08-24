@@ -4,4 +4,5 @@ function Write-Head { param([string]$Message) Write-Host "==> $Message" -Foregro
 function Write-Ok   { param([string]$Message) Write-Host "    [ok]   $Message" -ForegroundColor Green }
 function Write-Skip { param([string]$Message) Write-Host "    [skip] $Message" -ForegroundColor Yellow }
 function Write-Miss { param([string]$Message) Write-Host "    [miss] $Message" -ForegroundColor DarkYellow }
+function Write-Fail { param([string]$Message) Write-Host "    [fail] $Message" -ForegroundColor Red }
 function Write-Info { param([string]$Message) Write-Host "    $Message" -ForegroundColor Gray }
