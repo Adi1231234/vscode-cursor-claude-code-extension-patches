@@ -74,7 +74,7 @@ const panels = await claudePanels(PORT).catch(reachable);
 
 if (cmd === 'list') {
   if (!panels.length) console.log('no Claude panels found (open one, or check the port)');
-  for (const p of panels) console.log(`${p.window}\t${p.target.id}`);
+  for (const p of panels) console.log(`${p.window}\t${p.target.id}${p.visible ? '' : '\thidden'}`);
   process.exit(0);
 }
 

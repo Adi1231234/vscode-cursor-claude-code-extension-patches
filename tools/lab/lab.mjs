@@ -16,6 +16,7 @@ import { launch, portOwner, stop, useCodeExe, waitForPort } from './editor.mjs';
 import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
+import { readWidth, setWidth } from './width.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -65,7 +66,7 @@ async function up() {
     log(`starting the editor on port ${port}`);
     launch(lay, port);
     if (!(await waitForPort(port))) fail('the editor never opened its CDP port - see the lab\'s own main.log');
-    report(await ensurePanel(port, log));
+    await report(await ensurePanel(port, log));
 }
 
 async function repatch() {
@@ -78,7 +79,14 @@ async function repatch() {
     if (!r.ok) fail(`reload refused: ${r.reason}`);
     const panel = await waitForPanel(port);
     if (!panel) fail('the panel did not come back after the reload');
-    report(panel);
+    await report(panel);
+}
+
+/* Width is a test parameter: `width 300` puts the panel in the narrow regime
+   where edge-placed UI actually breaks. With no argument it just reports. */
+async function width(px) {
+    if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
+    await report(await ensurePanel(port, log), px ?? flags.width);
 }
 
 async function evaluate(file) {
@@ -99,13 +107,20 @@ async function down() {
 }
 
 /* Every run ends by saying what to do next: this is the tool an agent meets
-   once, and the two commands that follow `up` are the whole working loop. */
-function report(panel) {
-    console.log(JSON.stringify({ port, version, window: panel.window, target: panel.target.id, dir: lay.dir }, null, 1));
-    log('edit a patch, then: lab.mjs repatch   |   inspect it: lab.mjs eval <script.js>');
+   once, and the commands that follow `up` are the whole working loop. The panel
+   width is part of that answer - it decides which bugs can reproduce at all, so
+   it is reported even when nobody asked for one. */
+async function report(panel, want = flags.width) {
+    const asked = want === undefined ? undefined : Number(want);
+    const panelWidth = asked === undefined ? await readWidth(panel) : await setWidth(port, panel, asked);
+    if (asked !== undefined && panelWidth !== asked) {
+        log(`panel is ${panelWidth}px, not the ${asked}px asked for - the editor clamps to what the layout allows`);
+    }
+    console.log(JSON.stringify({ port, version, window: panel.window, panelWidth, target: panel.target.id, dir: lay.dir }, null, 1));
+    log('edit a patch, then: lab.mjs repatch  |  inspect: lab.mjs eval <script.js>  |  narrow it: lab.mjs width 300');
 }
 
-const COMMANDS = { up, repatch, down, eval: () => evaluate(args[0]) };
+const COMMANDS = { up, repatch, down, eval: () => evaluate(args[0]), width: () => width(args[0]) };
 
 try {
     if (!COMMANDS[cmd]) fail(`unknown command "${cmd}" - one of: ${Object.keys(COMMANDS).join(', ')}`);

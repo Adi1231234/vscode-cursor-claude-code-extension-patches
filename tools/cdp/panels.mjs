@@ -18,9 +18,17 @@ import { connect, evaluate, targets, unwrap } from './client.mjs';
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
+/* Visibility travels with the id: the editor keeps a webview alive when its tab
+   goes to the background and only marks it `visibility: hidden`, and a hidden
+   OOPIF is not laid out - so it answers CDP with the size and DOM it had when it
+   was last on screen. Two Claude panels in one window is the normal case (open
+   one in a tab, one in the side bar), and picking the wrong one is silent. */
 const OWNED_WEBVIEWS = `[...document.querySelectorAll('iframe')]
-  .map(f => ((f.getAttribute('src') || '') + ' ' + (f.src || '')).match(/${UUID}/))
-  .filter(Boolean).map(m => m[0])`;
+  .map(f => {
+    const id = (((f.getAttribute('src') || '') + ' ' + (f.src || '')).match(/${UUID}/) || [])[0];
+    return id ? { id, visible: getComputedStyle(f).visibility !== 'hidden' } : null;
+  })
+  .filter(Boolean)`;
 
 const IS_CLAUDE_PANEL = `!!document.querySelector('[aria-label="Message input"][contenteditable]')`;
 
@@ -30,10 +38,10 @@ export async function webviews(port) {
   const frames = all.filter((t) => t.type === 'iframe');
   const out = [];
   for (const page of all.filter((t) => t.type === 'page')) {
-    const ids = await evaluate(page, OWNED_WEBVIEWS);
-    for (const id of Array.isArray(ids) ? ids : []) {
+    const owned = await evaluate(page, OWNED_WEBVIEWS);
+    for (const { id, visible } of Array.isArray(owned) ? owned : []) {
       const target = frames.find((f) => (f.url || '').includes(id));
-      if (target) out.push({ window: page.title, target });
+      if (target) out.push({ window: page.title, target, visible });
     }
   }
   return out;
@@ -84,11 +92,13 @@ export async function waitForPanel(port, windowTitle, tries = 60, waitMs = 1000)
   return null;
 }
 
-/* Only the webviews that are actually a Claude Code panel. */
+/* Only the webviews that are actually a Claude Code panel, the one on screen
+   first - a caller that takes the first hit must not land on a hidden panel
+   answering with the layout it had before it was backgrounded. */
 export async function claudePanels(port) {
   const found = [];
   for (const w of await webviews(port)) {
     if ((await evalInPanel(w.target, IS_CLAUDE_PANEL)) === true) found.push(w);
   }
-  return found;
+  return found.sort((a, b) => Number(b.visible) - Number(a.visible));
 }
