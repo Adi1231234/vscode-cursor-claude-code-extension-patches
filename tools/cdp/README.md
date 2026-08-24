@@ -117,3 +117,14 @@ of using it:
 - `cdp.mjs` - the CLI.
 
 No dependencies: Node 18+ for `fetch`, Node 22 for the global `WebSocket`.
+
+## Two things that waste an hour when driving the panel
+
+- **Enter needs `text: ""`, not `text: "Enter"`.** `Input.dispatchKeyEvent` with
+  the key *name* in `text` is accepted, the app sees the event, and nothing is
+  submitted - the prompt just sits in the composer looking like the send silently
+  failed. The same applies to any key whose character you actually want typed.
+- **`apply.ps1` writes with `Write-Host`, which does not go through the pipeline.**
+  `& ./apply.ps1 | Out-String` captures nothing, so a test that greps that output
+  concludes the run did nothing. Run it as a child process (`powershell.exe -File
+  apply.ps1`) and read *that* process's stdout, which is what `tools/lab` does.

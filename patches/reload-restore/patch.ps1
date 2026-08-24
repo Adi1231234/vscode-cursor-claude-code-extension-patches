@@ -58,22 +58,40 @@ function Invoke-Patch {
     $wc = Read-Text $Ctx.WebJs
     if ($wc -match 'let __ra=function') { Write-Skip 'webview activate-retry already patched'; return }
 
-    # 2.1.222+ added a cleanup call before the fallback createSession and a .catch
-    # tail; both are optional here so the anchor still matches older bundles. When
-    # the cleanup fn is absent __PCALL__ becomes `void 0`, a no-op in both positions.
-    $rxR = 'else if\(([\w$]+)\.initialSession\)([\w$]+)\.activateSessionFromServer\(\1\.initialSession,\1\.initialPrompt\)\.then\(\(([\w$]+)\)=>\{if\(!\3\)(?:([\w$]+)\(\),)?\2\.createSession\(\{isExplicit:!1\}\)\.then\(\(([\w$]+)\)=>\{if\(\5&&\1\.initialPrompt\)\5\.initialPrompt\.value=\1\.initialPrompt\}\)\}\)(?:\.catch\(\(\)=>[\w$]+\(\)\))?;'
-    $m = [regex]::Match($wc, $rxR)
+    # The branch this replaces keeps changing shape around the same three names, so
+    # both known shapes are anchored and the housekeeping statements are captured
+    # whole and threaded back into the replacement rather than re-authored:
+    #   __PRE__   runs once before the first attempt
+    #   __FAIL__  runs when the retries are exhausted, before the new chat
+    #   __CATCH__ runs if the call rejects
+    # 2.1.240+ wraps the branch in a block and turns the old optional `cleanup(),`
+    # into a compound statement; before that the branch was a bare statement with an
+    # optional cleanup call and an optional `.catch`. A shape that matches neither is
+    # a miss, never a guess.
+    $rxBlock = 'else if\(([\w$]+)\.initialSession\)\{(if\([\w$]+!==\1\.initialSession\)[\w$]+\([\w$]*\);)([\w$]+)\.activateSessionFromServer\(\1\.initialSession,\1\.initialPrompt\)\.then\(\(([\w$]+)\)=>\{if\(!\4\)\{(.+?)\3\.createSession\(\{isExplicit:!1\}\)\.then\(\(([\w$]+)\)=>\{if\(\6&&\1\.initialPrompt\)\6\.initialPrompt\.value=\1\.initialPrompt\}\)\}\}\)\.catch\(\(\)=>\{(.+?)\}\)\}'
+    $rxBare  = 'else if\(([\w$]+)\.initialSession\)([\w$]+)\.activateSessionFromServer\(\1\.initialSession,\1\.initialPrompt\)\.then\(\(([\w$]+)\)=>\{if\(!\3\)(?:([\w$]+)\(\),)?\2\.createSession\(\{isExplicit:!1\}\)\.then\(\(([\w$]+)\)=>\{if\(\5&&\1\.initialPrompt\)\5\.initialPrompt\.value=\1\.initialPrompt\}\)\}\)(?:\.catch\(\(\)=>[\w$]+\(\)\))?;'
+
+    $m = [regex]::Match($wc, $rxBlock)
     if ($m.Success) {
-        $pcall = if ($m.Groups[4].Success) { $m.Groups[4].Value + '()' } else { 'void 0' }
-        $rep = Get-InjectedJs (Join-Path $PSScriptRoot 'js/activate-retry.js') ([ordered]@{
+        $tokens = [ordered]@{
+            '__U__' = $m.Groups[1].Value; '__L__' = $m.Groups[3].Value
+            '__G__' = $m.Groups[4].Value; '__V__' = $m.Groups[6].Value
+            '__PRE__' = $m.Groups[2].Value; '__FAIL__' = $m.Groups[5].Value
+            '__CATCH__' = $m.Groups[7].Value
+        }
+    } else {
+        $m = [regex]::Match($wc, $rxBare)
+        if (-not $m.Success) { Write-Miss 'activateSessionFromServer anchor not found'; return }
+        $pcall = if ($m.Groups[4].Success) { $m.Groups[4].Value + '();' } else { '' }
+        $tokens = [ordered]@{
             '__U__' = $m.Groups[1].Value; '__L__' = $m.Groups[2].Value
             '__G__' = $m.Groups[3].Value; '__V__' = $m.Groups[5].Value
-            '__PCALL__' = $pcall
-        })
-        $wc = $wc.Replace($m.Value, $rep)
-        Write-Text $Ctx.WebJs $wc
-        Write-Ok 'webview activate-retry (no more silent new-chat)'
-    } else {
-        Write-Miss 'activateSessionFromServer anchor not found'
+            '__PRE__' = ''; '__FAIL__' = $pcall; '__CATCH__' = $pcall
+        }
     }
+
+    $rep = Get-InjectedJs (Join-Path $PSScriptRoot 'js/activate-retry.js') $tokens
+    $wc = $wc.Replace($m.Value, $rep)
+    Write-Text $Ctx.WebJs $wc
+    Write-Ok 'webview activate-retry (no more silent new-chat)'
 }
