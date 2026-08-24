@@ -16,7 +16,7 @@ function Invoke-Patch {
         'schedule-lib', 'schedule-clock', 'add-button', 'schedule-modal',
         'render-panel', 'row-menu', 'render-rows', 'resize-input', 'stop-pause', 'flush-init'
     )
-    $parts = @(Join-Path $PSScriptRoot 'queue/config-dom.js', (Get-LibJsPath 'ccStore.js')) +
+    $parts = @((Join-Path $PSScriptRoot 'queue/config-dom.js'), (Get-LibJsPath 'ccStore.js')) +
         ($order | ForEach-Object { Join-Path $PSScriptRoot "queue/$_.js" })
     $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce; '__PVHASH__' = $Ctx.PvHash })

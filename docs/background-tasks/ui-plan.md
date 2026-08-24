@@ -136,9 +136,10 @@ Deviations from the plan worth knowing:
 - **The pane got a view toolbar.** Filter (with a `shown/total` count), wrap, and a
   follow toggle that a scroll can also release, plus a "Jump to latest" affordance
   while a live task is scrolled away from its end.
-- The render coalescer is a `setTimeout`, not `requestAnimationFrame`: a hidden
-  panel never gets a frame, so rAF would stall the whole UI while the user is
-  looking at another view.
+- Neither the render coalescer nor the layout decision may depend on a rendering
+  opportunity: a panel that is off screen gets none, which rules out both
+  `requestAnimationFrame` and `ResizeObserver` as the only trigger. See
+  [verified.md](verified.md).
 - The dialog does not force a direction. It follows the document's, and labels carry
   `unicode-bidi: plaintext` so a Hebrew description and a Latin path each read the
   right way round.

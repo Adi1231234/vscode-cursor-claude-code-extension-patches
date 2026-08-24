@@ -103,6 +103,7 @@
 
   function renderDialog() {
     if (!back) return;
+    measureLayout();
     askHistory();
     renderList();
     renderPane(sel ? TASKS[sel] : null);

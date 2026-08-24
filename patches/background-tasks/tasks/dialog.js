@@ -70,22 +70,31 @@
   }
 
   /* Stacking follows the dialog's own width, not the viewport's: the panel is a
-     sidebar whose width the user drags around. */
+     sidebar whose width the user drags around.
+
+     Measured on every render pass, not only from the ResizeObserver. A webview that
+     is not on screen gets no rendering opportunities, and a ResizeObserver only
+     delivers on one - measured in a real panel, a fresh observer saw nothing at all
+     while its element went from 619px to 278px. The observer stays as the
+     low-latency path; the render pass is what makes it correct. */
+  function measureLayout() {
+    if (!modalEl) return false;
+    var w = modalEl.getBoundingClientRect().width;
+    var next = w > 0 && w < NARROW;
+    if (next === stacked) return false;
+    stacked = next;
+    if (!stacked) showDetail = false;
+    syncLayout();
+    return true;
+  }
+
   function observeWidth() {
-    var apply = function (w) {
-      var next = w > 0 && w < NARROW;
-      if (next === stacked) return;
-      stacked = next;
-      if (!stacked) showDetail = false;
-      syncLayout();
-      renderDialog();
-    };
     if (window.ResizeObserver) {
-      sizeObs = new ResizeObserver(function (es) { apply(es[0].contentRect.width); });
+      sizeObs = new ResizeObserver(function () { if (measureLayout()) renderDialog(); });
       sizeObs.observe(modalEl);
     }
-    stacked = !stacked;                                  /* force the first apply */
-    apply(modalEl.getBoundingClientRect().width || window.innerWidth);
+    stacked = !stacked;                                /* force the first measure */
+    measureLayout();
     syncLayout();
   }
 
