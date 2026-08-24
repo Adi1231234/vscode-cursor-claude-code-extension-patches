@@ -34,7 +34,14 @@
    Measured with the editor started this way: zero windows visible from the normal
    desktop, CDP fully working, `document.visibilityState` "visible" - so the
    workbench lays out - and `width 300` / `width 1100` landing exactly, with the
-   panel's own measurement agreeing both times. */
+   panel's own measurement agreeing both times.
+
+   Nothing has to take the desktop away again. It lives only while a handle to it
+   is open or a thread is attached to it, and the launcher's handle dies with the
+   launcher, so the editor is the last thing holding it: enumerating the window
+   station gives `Default` before, `cc-lab-...` and `Default` while the lab runs,
+   and `Default` again both after `down` and after killing the processes outright.
+   The same fact is the trap in the other direction - see desktop.ps1. */
 
 import { join } from 'node:path';
 import { powershell } from './powershell.mjs';

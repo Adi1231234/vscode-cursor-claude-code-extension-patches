@@ -134,7 +134,13 @@ extension" rather than like what it is.
   and not a marshaled string (otherwise ERROR_PATH_NOT_FOUND, which reads as a bad
   exe path), and the desktop object dies with its last handle, so the launcher has
   to stay alive until the editor has attached to it - `WaitForInputIdle`, not a
-  sleep. `lab.mjs down` is the only way to close that editor, since it has no
+  sleep. Nothing has to clean the desktop up afterwards, and nothing does: a
+  desktop object lives only while a handle is open or a thread is attached, and
+  the launcher's handle is gone the moment it exits - so the editor is the last
+  thing holding it, and it goes when the editor does. Measured by enumerating the
+  window station's desktops: `Default` before, `cc-lab-...` and `Default` while
+  the lab runs, `Default` again after `down` *and* after killing the processes
+  outright. `lab.mjs down` is the only way to close that editor, since it has no
   taskbar entry, and it does stop it.
 - **`Page.bringToFront` is focus, not the window.** It is what lets the palette
   chord fire, and on Electron it does nothing else - measured, it leaves a
