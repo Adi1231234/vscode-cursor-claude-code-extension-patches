@@ -69,6 +69,6 @@
 .__bgRowFlag-stopped { color: var(--app-secondary-foreground, #999); }
 
 @media (prefers-reduced-motion: reduce) {
-  .__bgSpin, .__bgDot-running { animation: none; }
+  .__bgRunRing, .__bgDot-running { animation: none; }
   .__bgBackdrop, .__bgModal { animation: none; }
 }

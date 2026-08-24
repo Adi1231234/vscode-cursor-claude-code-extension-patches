@@ -29,11 +29,24 @@
 .__bgInd:hover { color: var(--app-primary-foreground, #ccc); background: var(--app-ghost-button-hover-background, rgba(128,128,128,.16)); }
 .__bgInd:focus-visible { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
 .__bgCount { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.__bgSpin { animation: __bgRotate 1.1s linear infinite; color: var(--app-claude-orange, #d97757); }
+/* The run mark is what the button is - the same prompt chevron the shell rows
+   carry, so the button and the list it opens read as one family. The ring belongs
+   to the running state alone: it fades in, spins, and the mark steps back inside
+   it. Both need view-box coordinates, or an SVG child rotates and scales about its
+   own tight bbox instead of the icon's centre. */
+.__bgRunRing, .__bgRunMark {
+  transform-box: view-box; transform-origin: 12px 12px;
+  transition: opacity .16s ease-out, transform .16s ease-out;
+}
+.__bgRun .__bgRunRing { opacity: 0; }
+.__bgInd:not(.__bgIdle) .__bgRunRing {
+  opacity: 1; color: var(--app-claude-orange, #d97757);
+  animation: __bgRotate 1.1s linear infinite;
+}
+.__bgInd:not(.__bgIdle) .__bgRunMark { transform: scale(.68); }
 @keyframes __bgRotate { to { transform: rotate(360deg); } }
 /* Nothing running: the button stays only so the finished list is reachable. */
 .__bgIdle { opacity: .5; }
-.__bgIdle .__bgSpin { animation: none; color: inherit; }
 
 /* Shared tooltip - never the native title attribute, which renders the delayed
    unstyled OS tooltip. */

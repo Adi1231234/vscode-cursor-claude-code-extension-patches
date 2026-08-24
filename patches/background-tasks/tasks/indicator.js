@@ -25,7 +25,7 @@
     var b = existing;
     if (!b) {
       b = btn("__bgInd __bgRoot", "Background tasks");
-      b.innerHTML = SPINNER + '<span class="__bgCount"></span><span class="__bgTip" aria-hidden="true"></span>';
+      b.innerHTML = RUN_ICON + '<span class="__bgCount"></span><span class="__bgTip" aria-hidden="true"></span>';
       b.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
