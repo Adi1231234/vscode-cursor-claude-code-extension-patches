@@ -1,23 +1,24 @@
-/* Where the panel and the sashes are, in window coordinates.
+/* Where the panel is, and how much of the workbench viewport is not it.
 
    The iframe is matched on the panel's own webview id, not on "the first Claude
    webview": a window can hold several, and the one being measured has to be the
-   one being resized. Shared by the code that measures the width and the code that
-   drags it, so both always mean the same panel. */
+   one being resized.
 
-/* This panel's iframe and every sash still draggable, in window coordinates.
-   The iframe is matched on the panel's own webview id, not on "the first Claude
-   webview": a window can hold several, and the one being measured has to be the
-   one being resized. */
+   `chrome` is everything beside the panel - side bar, activity bar, auxiliary bar,
+   whatever a layout happens to have. It is not enumerated, it is subtracted, so a
+   layout nobody thought of still measures correctly. */
+
 export const LAYOUT = (id) => `(() => {
   const frame = [...document.querySelectorAll('iframe')]
     .find((f) => ((f.getAttribute('src') || '') + (f.src || '')).includes(${JSON.stringify(id)}));
-  const sashes = [...document.querySelectorAll('.monaco-sash.vertical')]
-    .filter((s) => !s.classList.contains('disabled'))
-    .map((s) => { const r = s.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-  if (!frame) return { sashes };
+  if (!frame) return { viewport: window.innerWidth, height: window.innerHeight };
   const r = frame.getBoundingClientRect();
-  return { panel: { left: r.left, right: r.right, width: r.width }, sashes };
+  return {
+    viewport: window.innerWidth,
+    height: window.innerHeight,
+    panel: { left: r.left, right: r.right, width: r.width },
+    chrome: window.innerWidth - r.width,
+  };
 })()`;
 
 export const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;

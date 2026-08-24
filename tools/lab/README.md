@@ -36,25 +36,25 @@ a running lab) puts you in the regime where they show up. The worked example is
 `patches/history-dialog-clip`: at 790px its dialog is exactly where it should
 be, and at 300px the unpatched bundle puts it 157px outside the panel.
 
-The width is set by dragging the sash beside the panel over CDP's Input domain,
-because those events are trusted and the sash's own pointer handling runs;
-`PointerEvent`s dispatched into the DOM are ignored and the drag silently does
-nothing. What comes back is measured *inside* the panel, so it is the number the
-panel's own code sees - and VS Code clamps to what the layout allows, so asking
-for 4000 and being told 1090 is the tool being honest, not failing. A drag that
-never landed is *not* reported that way: the panel is measured before and after,
-so a width that did not change at all says so, and a drag that moved the panel
-*away* from what was asked for says that instead of blaming the layout. That last
-one is real - when the only sash beside the panel is the side bar's, pulling it
-far enough collapses the side bar and hands the space to the editor area, so the
-panel gets *wider* (measured: asked 400, got 1409). `setWidth` makes two passes,
-because a right-edge sash exists after that collapse.
+The width is set by sizing the workbench viewport over CDP, not by dragging the
+sash beside the panel. Dragging is the obvious way and it is a trap: which sash
+governs the panel depends on the layout; pulling the side bar's sash far enough
+*collapses the side bar*, which hands its space to the editor area and makes the
+panel wider instead of narrower (measured: asked 400, got 1409); and once the side
+bar is gone there is no sash beside the panel at all, so the tool has locked itself
+out of its own parameter. That is where an afternoon of testing actually left it.
 
-Both sides of the iframe are read, because a webview that is not on screen gets
-no rendering opportunity and keeps answering with the size it had when it was
-last visible - measured: 643 reported three times running for a panel the window
-had already moved to 300. When the two disagree the report says which is which
-rather than handing you the stale one as fact.
+The panel is the editor area, so its width is the viewport minus whatever chrome
+sits beside it - measure that and the viewport for any panel width is arithmetic.
+One `Emulation.setDeviceMetricsOverride`, no mouse events, nothing to collapse, and
+it comes back down as easily as it goes up. The chrome changes as the side bar hits
+its own minimum, so the arithmetic repeats until it stops making progress rather
+than a fixed number of times (measured: 420 -> 150 landed on 214 with four fixed
+passes, and exactly 150 once it converged instead). Measured exact across 150 / 200
+/ 300 / 420 / 620 / 780 / 1200 / 4000, in both directions, with the panel's own
+`clientWidth` agreeing every time. The override lives on the window's page target,
+so it survives a real `Developer: Reload Window`: 300px before `repatch`, 300px
+after.
 
 A window can hold **more than one** Claude panel (one in a tab, one in the side
 bar), and the editor keeps a backgrounded one alive at `visibility: hidden`. A
