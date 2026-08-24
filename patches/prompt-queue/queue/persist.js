@@ -139,12 +139,3 @@
     if (first && Q.length) { saveQueue(); return; }
     loadQueue(sid);
   }
-
-  /* Diagnostic for the webview devtools console: __ccqDebug() reports whether a
-     session id is being resolved and which queue keys exist in localStorage. */
-  try {
-    window.__ccqDebug = function () {
-      return { curSid: _curSid, found: getSessionId(), keys: Object.keys(localStorage).filter(function (k) { return k.indexOf("ccq:") === 0; }) };
-    };
-  } catch (e) {}
-

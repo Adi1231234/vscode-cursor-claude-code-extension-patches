@@ -12,7 +12,7 @@ function Invoke-Patch {
     # lib/js/ccStore.js is the shared session-store finder, dropped in right after
     # the fragment that opens the IIFE (background-tasks pulls in the same file).
     $order = @(
-        'log', 'session', 'busy-files', 'chips-preview', 'persist', 'model',
+        'log', 'session', 'busy-files', 'chips-preview', 'persist', 'debug', 'model',
         'schedule-lib', 'schedule-clock', 'add-button', 'schedule-modal',
         'render-panel', 'row-menu', 'render-rows', 'resize-input', 'stop-pause', 'flush-init'
     )

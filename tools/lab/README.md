@@ -10,7 +10,17 @@ node tools/lab/lab.mjs eval <script.js> # run a script inside that panel
 node tools/lab/lab.mjs width [px]       # set the panel's width (no argument: report it)
 node tools/lab/lab.mjs repatch          # pristine again -> apply.ps1 -> real reload
 node tools/lab/lab.mjs down [--purge]   # stop it (--purge also deletes the profile)
+
+node tools/lab/selftest/run.mjs         # is the patcher + the lab still sound?
 ```
+
+**If you have just arrived:** `node tools/lab/selftest/run.mjs --fresh` builds a
+lab from nothing and checks the whole chain - every module and patch parses, every
+patch guard landed, the injected scripts survive the template literal they live in,
+the panel width can be set exactly, `apply.ps1` is idempotent and refuses a
+half-applied run, a missing anchor leaves the bundle untouched, and the working
+tree is clean afterwards. It takes a couple of minutes, costs nothing, and leaves
+the lab up for you to work in. Everything below is the detail behind those checks.
 
 `up` prints the port, the window, the panel target id and the panel's width. The
 edit-and-look loop is `repatch` + `eval`; the editor stays up between them.
