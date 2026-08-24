@@ -89,7 +89,19 @@
   var ICON_FOLLOW = SVG + '<path d="M12 4v12"></path><path d="M7 12l5 5 5-5"></path><path d="M5 20h14"></path></svg>';
   var ICON_COPY = SVG + '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>';
   var ICON_OPEN = SVG + '<path d="M14 4h6v6"></path><path d="M20 4l-8 8"></path><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"></path></svg>';
-  var SPINNER = '<svg class="__bgSpin" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity="0.25"></circle><path d="M21 12a9 9 0 0 0-9-9"></path></svg>';
+  /* The composer button. The mark in the middle is what the button IS - a place
+     where things run - and it is the same prompt chevron the shell rows carry, so
+     the button and the rows it opens read as one family. The ring only exists
+     while something is running: it fades in, spins, and the mark steps back to
+     make room for it. Idle, there is no ring at all, because a stopped spinner
+     reads as a load that got stuck rather than as "here is the history". */
+  /* 18px to sit level with the queue button beside it - the app's own footer
+     glyphs are measured at 26, but that is the row above; the cluster this lands
+     in is [runs][queue][send] and reads wrong at anything smaller. */
+  var RUN_ICON = '<svg class="__bgRun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'
+    + '<g class="__bgRunRing" stroke-width="2.2"><circle cx="12" cy="12" r="9.6" opacity="0.25"></circle><path d="M21.6 12a9.6 9.6 0 0 0-9.6-9.6"></path></g>'
+    + '<g class="__bgRunMark" stroke-width="2"><path d="M6 7.5l5 4.5-5 4.5"></path><path d="M13 16.5h5"></path></g>'
+    + '</svg>';
 
   function iconFor(type) {
     if (type === "local_agent" || type === "remote_agent" || type === "in_process_teammate") return ICON_AGENT;

@@ -98,6 +98,19 @@ in two layers: a tight contact shadow and a wide ambient one.
 crisp over whatever is behind them, and hover / active / focus each raise contrast
 rather than merely tinting.
 
+**The composer button is a prompt sign inside the spinner.** It has one job to
+say: things are running here, and how many. So the glyph is `>_` - the same mark
+the shell rows carry inside their frame, which ties the button to the list it
+opens - and the ring is the running state and nothing else. While tasks run the
+ring fades in, spins in the accent, and the mark scales to .68 so it sits clear
+inside it; when the last one finishes the ring goes and the mark returns to full
+size at half opacity. A spinner that is always drawn and merely stops rotating
+reads as a load that got stuck, not as a history you can open. Both groups are
+transformed in `transform-box: view-box` coordinates - an SVG child otherwise
+rotates and scales about its own tight bbox instead of the icon's centre. Sized
+18px to match the queue button beside it: the app's own footer glyphs measure 26,
+but that is the row above, and this cluster is [runs][queue][send].
+
 **One glyph per row.** The task type is the icon and its status is a badge on the
 icon's corner. Two separate columns of dots and icons made every row read as noise.
 
