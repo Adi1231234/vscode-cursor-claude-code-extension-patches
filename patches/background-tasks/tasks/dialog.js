@@ -18,6 +18,13 @@
 
   function openDialog() {
     if (back) return;
+    /* Opening is the refresh point, not closing. The request is latched so the
+       render pass cannot spam the disk, and if that latch is only released on
+       close then whatever runs next consumes it and the dialog opens showing a
+       listing taken before it opened - a file planted while it was shut appeared
+       only on the open after, and a file deleted while it was shut was still
+       listed. Releasing it here means every open reads what is on disk now. */
+    forgetHistoryRequest();
     lastFocus = document.activeElement;
     back = el("div", "__bgBackdrop __bgRoot");
     modalEl = el("div", "__bgModal");
@@ -64,7 +71,6 @@
     back.remove();
     back = null; modalEl = null; bodyEl = null; listEl = null; headSub = null;
     listSig = null; showDetail = false;
-    forgetHistoryRequest();
     resetPane();
     try { if (lastFocus && lastFocus.focus) lastFocus.focus(); } catch (e) {}
   }

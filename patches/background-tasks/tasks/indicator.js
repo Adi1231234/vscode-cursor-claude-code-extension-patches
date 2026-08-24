@@ -64,6 +64,16 @@
     queued = true;
     setTimeout(function () {
       queued = false;
+      /* The history read has to start here and not only when the dialog opens,
+         or it can never start at all: the indicator is only drawn when something
+         is running OR something has finished, "finished" is what the history read
+         fills in, and the dialog is only reachable through the indicator. After a
+         window reload the store is empty while the session's logs are still on
+         disk, so without this the finished tasks from before the reload are
+         unreachable - measured: "1 finished task" before a reload, no indicator at
+         all after one. askHistory is a no-op until the session id is known and
+         after it has asked once. */
+      try { askHistory(); } catch (e) {}
       try { ensureIndicator(); } catch (e) {}
       try { renderDialog(); } catch (e) {}
     }, 0);

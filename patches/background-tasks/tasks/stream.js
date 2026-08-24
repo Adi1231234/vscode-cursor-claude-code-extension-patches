@@ -111,7 +111,16 @@
 
   function onSdk(m) {
     if (!m || typeof m !== "object") return;
-    if (typeof m.session_id === "string" && m.session_id) SID = m.session_id;
+    /* Learning the session id is the moment the history on disk becomes readable,
+       so it is also the moment to go and read it - waiting for a DOM mutation to
+       happen to come along is how a restored session ends up with its finished
+       tasks unreachable. A *different* id means different logs, so the previous
+       answer is forgotten rather than kept. */
+    if (typeof m.session_id === "string" && m.session_id && SID !== m.session_id) {
+      SID = m.session_id;
+      try { forgetHistoryRequest(); } catch (e) {}
+      try { changed(); } catch (e) {}
+    }
     if (m.type === "system") return onSystem(m);
     if (m.parent_tool_use_id && (m.type === "assistant" || m.type === "user")) return onAgentMessage(m);
     if (m.type === "user") return onUserMessage(m);
