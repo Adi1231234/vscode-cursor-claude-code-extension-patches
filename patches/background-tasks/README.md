@@ -37,10 +37,22 @@ survey. In short:
 - **Talking to the host:** `getSession().connection.value.send(...)`, the connection
   object the store already holds. Never by wrapping `window.acquireVsCodeApi`, which
   blanks the whole panel.
-- **Nothing polls.** The stream listener, the signal subscription and `fs.watch` are
-  all push. The one timer is a 1 s clock so elapsed times do not freeze, and the
-  render coalescer is a `setTimeout` rather than `requestAnimationFrame` because a
-  hidden panel never gets a frame.
+- **One thing polls, and it has to.** The stream listener and the signal
+  subscription are push, and `fs.watch` catches a log file being created - but it
+  does **not** report the appends. On Windows `fs.watch` is `ReadDirectoryChangesW`,
+  and a file's size and last-write time only reach the directory entry when the
+  writing handle is closed, which for a running task is when the task ends. Measured
+  directly: a process appending once a second for eight seconds with its handle held
+  grew the file every second (14 -> 70 bytes) while a directory watcher *and* a file
+  watcher each fired exactly once, at 8.4 s, on close. In the panel that was a log
+  frozen at "line 9" for twenty seconds and then jumping straight to the finished
+  output. So `host/tail.js` keeps a 500 ms timer while a log pane is open on a task -
+  one `statSync` a tick, no timer at all when nothing is open, and the read returns
+  immediately when the size has not moved. Verified after the fix: the pane tracked
+  the file byte for byte (56, 79, 103, 119, 143, 167, 191, 215, 231, 239 bytes).
+- **The other timers.** A 1 s clock so elapsed times do not freeze, and the render
+  coalescer is a `setTimeout` rather than `requestAnimationFrame` because a hidden
+  panel never gets a frame.
 
 ## The dialog
 

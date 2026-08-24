@@ -18,6 +18,7 @@ globalThis.__ccBg = globalThis.__ccBg || (function () {
   var INITIAL_TAIL = 262144;    /* bytes of an already-written log sent on open */
   var MAX_DELTA = 1048576;      /* bytes read per change notification */
   var COALESCE_MS = 60;         /* fs.watch fires repeatedly for one append */
+  var POLL_MS = 500;            /* see tail.js: Windows hides appends until close */
   var MAX_HISTORY = 200;
 
   function configRoot() {

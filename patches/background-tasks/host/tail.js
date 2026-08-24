@@ -2,8 +2,22 @@
   /* BGTASKS host runtime - part 2: tailing a log by byte offset.
 
      One fs.watch per directory rather than per file: the file may not exist yet
-     when a task opens, and a directory watcher reports both the creation and every
-     later append. Push only - nothing here polls. */
+     when a task opens, and a directory watcher reports its creation at once.
+
+     It does NOT report the appends, and that is the whole reason there is a timer
+     here. On Windows fs.watch is ReadDirectoryChangesW, and the size and last-write
+     time of a file only reach the directory entry when the writing handle is
+     closed - which for a running task is when the task ends. Measured directly: a
+     process appending once a second for eight seconds with its handle held grew the
+     file every second (14 -> 70 bytes) while both a directory watcher AND a file
+     watcher fired exactly once, at 8.4s, on close. In the panel that looked like a
+     log frozen at "line 9" for twenty seconds and then jumping straight to the
+     finished output - a live log that was not live.
+
+     So this is the one place that polls, deliberately, because the push mechanism
+     genuinely does not deliver here. It costs one statSync per open task per tick,
+     and only while a task is actually open: readFrom returns immediately when the
+     size has not moved, and the timer does not exist when nothing is being read. */
 
   var openTasks = Object.create(null);   /* taskId -> {file, dir, offset, wv} */
   var watchers = Object.create(null);    /* dir -> {watcher, timer, refs} */
@@ -69,6 +83,21 @@
     for (var id in openTasks) if (openTasks[id].dir === dir) pump(id);
   }
 
+  /* One timer for every open task, not one each, and none at all when none are. */
+  var ticker = null;
+
+  function syncTicker() {
+    var any = false;
+    for (var id in openTasks) { any = true; break; }
+    if (any && !ticker) {
+      ticker = setInterval(function () { for (var t in openTasks) pump(t); }, POLL_MS);
+      if (ticker.unref) ticker.unref();
+    } else if (!any && ticker) {
+      clearInterval(ticker);
+      ticker = null;
+    }
+  }
+
   function retainDir(dir) {
     var w = watchers[dir];
     if (w) { w.refs++; return; }
@@ -101,6 +130,7 @@
     var offset = fromStart ? 0 : Math.max(0, size - INITIAL_TAIL);
     openTasks[taskId] = { file: file, dir: dir, offset: offset, wv: wv, seen: size > 0 };
     retainDir(dir);
+    syncTicker();
     post(wv, { type: "__ccbg", op: "reset", taskId: taskId }, taskId);
     pump(taskId);
   }
@@ -110,4 +140,5 @@
     if (!t) return;
     delete openTasks[taskId];
     releaseDir(t.dir);
+    syncTicker();
   }

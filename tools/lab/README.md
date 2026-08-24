@@ -72,6 +72,14 @@ both, so `--port 9556` is a second, independent lab. Your own editor, profile,
 extensions and `argv.json` are never touched. The VSIX cache is kept outside the
 per-version folder, so `--purge` costs you a re-patch, not a 110MB download.
 
+## Testing a patch that needs a live session
+
+Several patches only come alive once a conversation exists - `background-tasks`
+learns its session id from the SDK stream, so an untouched lab shows no indicator
+because there is correctly nothing to show. Send a real prompt from the lab panel
+and let real tasks run; the lab has its own credentials for exactly this. Keep it
+to what the test needs and take the lab down afterwards.
+
 ## What each step is guarding against
 
 All of these were found the hard way; each one looks like "the patch broke the
