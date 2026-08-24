@@ -139,6 +139,23 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   (a negative margin equal to the box, or take it out of flow) and verify by
   measuring `scrollHeight - scrollTop - clientHeight` both after the app's frame
   and after your own pass - it must stay ~0 in both.
+- **...and it must not be a scroll anchor: `overflow-anchor: none`.** Same site,
+  the other axis, and it bites even when the height is already cancelled. The
+  app keys every content block by `hash + lastModifiedTime` (`class jp`,
+  `get key()`), so a streaming reply is **unmounted and re-mounted on every
+  chunk**; a fresh mount is attached with `appendChild`, i.e. *after* any node
+  of ours already sitting at the end of that child list. For one frame our node
+  is above the whole reply body, and our own pass puts it back the frame after.
+  Chromium picks it as the scroll anchor and, holding it visually still, moves
+  `scrollTop` up by the height of the body it leapt over. While the transcript
+  is pinned this is invisible (the app re-pins straight after); past the 50px
+  the user is left where the adjustment put them - a jump to the end of the
+  previous message on the first scroll away from the bottom. The declaration
+  covers descendants, so put it on the node we own, not on its glyph. It shows
+  up nowhere else: anchoring adjustments fire **no scroll event** and leave no
+  JS stack, so read `scrollTop` inside an instrumented setter on the container
+  and compare with `scrollHeight - clientHeight` (healthy is one chunk of
+  growth, ~20px; broken is the whole message height).
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 
 ## Testing a change (without touching your real install)

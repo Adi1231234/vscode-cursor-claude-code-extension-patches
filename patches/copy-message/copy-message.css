@@ -27,6 +27,25 @@
    16px gap the app's own 8px padding already leaves between blocks and never
    changes scrollHeight. z-index keeps it clickable, since the next block is
    painted after it. */
+
+/* AND IT MUST NOT BE A SCROLL ANCHOR - the other half of the same story, on the
+   other axis. The app gives every content block a React key of
+   `hash + lastModifiedTime`, so a streaming reply is unmounted and re-mounted on
+   every chunk; a fresh mount is attached with appendChild, i.e. AFTER our
+   button. For one frame the button therefore sits above the whole reply body
+   instead of below it, and our own pass puts it back the frame after. Chromium
+   picks that button as the scroll anchor and, keeping it visually still,
+   moves scrollTop up by the height of the body it just leapt over. Pinned to
+   the bottom the app hides this by re-pinning; more than 50px away it stops
+   re-pinning and the adjustment lands as a jump to the end of the previous
+   message. Opting the button out of anchor selection is the whole fix, and it
+   covers its <svg> too - the same declaration on the glyph alone does nothing.
+   Measured: 9/9 of the app's pin writes collapsed without it, 0/9 with it, and
+   the same 0/9 for a bare foreign element on an unpatched bundle. */
+.__ccCopy {
+  overflow-anchor: none;
+}
+
 .__ccCopy:not(.__ccCopyAct) {
   align-self: flex-start;
   flex: none;

@@ -69,6 +69,24 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   padding already leaves between blocks. `position:relative; z-index:1` keeps it
   clickable, since the next block is painted after it. Measured: without this,
   6 of 12 agent steps left the view 19px off the bottom; with it, 0 of 12.
+- **The icon must also not be a scroll anchor.** The height rule above is only
+  half of it. The app keys every content block by `hash + lastModifiedTime`
+  (`class jp`, `get key()`) and renders `content.map(c => <Block … key={c.key}>)`,
+  so a streaming reply is unmounted and re-mounted on **every chunk**; a fresh
+  mount is attached with `appendChild`, i.e. after our icon. For one frame the
+  icon therefore sits above the whole reply body, and our own pass puts it back
+  the frame after. Chromium selects it as the scroll anchor and, keeping it
+  visually still, moves `scrollTop` up by the height of the body it leapt over -
+  once per chunk, all day, invisibly, because the app re-pins straight after.
+  The moment the reader scrolls more than 50px from the bottom the app stops
+  re-pinning and the next adjustment lands as a jump to the end of the previous
+  message. `overflow-anchor: none` on the icon is the whole fix; it covers the
+  `<svg>` too, and the same declaration on the glyph alone does nothing.
+  Measured on 2.1.241: 9/9 of the app's pin writes saw a collapsed offset
+  without it and 0/9 with it, and a bare foreign element added to an *unpatched*
+  bundle reproduces it exactly (0/9 → 9/9 → 0/9 as it is added, frozen, moved
+  again). Anchoring adjustments fire no scroll event and leave no JS stack, so
+  measure by reading `scrollTop` inside an instrumented setter on the container.
 - **Normal flow, not absolute positioning, for the non-bubble placement.** The
   `rtl` patch flips the whole panel to `direction: rtl`, which sends an
   `inset-inline-end`-pinned button to the far side of the viewport (the message
