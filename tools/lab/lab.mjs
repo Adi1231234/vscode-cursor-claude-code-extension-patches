@@ -17,6 +17,7 @@ import { ensurePanel, waitForPanel } from './panel.mjs';
 import { applyPatches } from './patches.mjs';
 import { parse, usage } from './args.mjs';
 import { makeReport } from './report.mjs';
+import { pressKey, sendPrompt } from './drive.mjs';
 import * as profile from './profile.mjs';
 import * as vsix from './vsix.mjs';
 
@@ -89,8 +90,7 @@ async function repatch() {
     await report(panel);
 }
 
-/* Width is a test parameter: `width 300` puts the panel in the narrow regime
-   where edge-placed UI actually breaks. With no argument it just reports. */
+/* `width 300` puts the panel in the narrow regime where edge-placed UI breaks. */
 async function width(px) {
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     await report(await ensurePanel(port, log), px ?? flags.width);
@@ -100,15 +100,30 @@ async function evaluate(file) {
     if (!file) fail('eval needs a script file: lab.mjs eval <script.js>');
     if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
     const panel = await ensurePanel(port, log);
-    /* A panel that is not visible is never laid out again, so every rect and every
-       clientWidth answers with the geometry it had when it last was. On its own
-       desktop it stays visible, so this should not fire - but reading a frozen
-       measurement is invisible in the numbers, so it is worth the one call. */
+    /* A panel that is not visible is never laid out again, so every rect answers
+       with the geometry it had when it last was - invisible in the numbers. */
     const hidden = await evalInPanel(panel.target, 'document.visibilityState !== "visible"');
     if (hidden === true) log('the panel is not visible, so its geometry is frozen - whatever it reports is the size it had when it last was');
     const result = await evalInPanel(panel.target, readFileSync(file, 'utf8'));
     console.log(JSON.stringify(result, null, 1));
     process.exit(result && result.__error ? 1 : 0);
+}
+
+/* Some patches do nothing until a session exists - see drive.mjs for the two
+   traps in getting one. `press` answers the numbered confirm a tool call raises. */
+async function prompt(text) {
+    if (!text) fail('prompt needs something to say: lab.mjs prompt "..."');
+    if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
+    const r = await sendPrompt(port, text);
+    if (!r.sent) fail('typed, but the composer did not clear - it was probably not submitted');
+    log('sent');
+}
+
+async function press(k) {
+    if (!k) fail('press needs a key: lab.mjs press 1  (confirm dialogs are numbered)');
+    if ((await claimPort()) !== 'ours') fail('this lab is not running - `lab.mjs up` first');
+    await pressKey(port, k);
+    log(`pressed ${k}`);
 }
 
 async function down() {
@@ -119,7 +134,13 @@ async function down() {
     log(`removed ${lay.dir} (the vsix cache is kept)`);
 }
 
-const COMMANDS = { up, repatch, down, eval: () => evaluate(args[0]), width: () => width(args[0]) };
+const COMMANDS = {
+    up, repatch, down,
+    eval: () => evaluate(args[0]),
+    width: () => width(args[0]),
+    prompt: () => prompt(args.join(' ')),
+    press: () => press(args[0]),
+};
 
 try {
     if (!COMMANDS[cmd]) fail(`unknown command "${cmd}" - one of: ${Object.keys(COMMANDS).join(', ')}`);

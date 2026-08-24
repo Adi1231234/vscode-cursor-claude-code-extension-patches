@@ -86,9 +86,30 @@ per-version folder, so `--purge` costs you a re-patch, not a 110MB download.
 
 Several patches only come alive once a conversation exists - `background-tasks`
 learns its session id from the SDK stream, so an untouched lab shows no indicator
-because there is correctly nothing to show. Send a real prompt from the lab panel
-and let real tasks run; the lab has its own credentials for exactly this. Keep it
-to what the test needs and take the lab down afterwards.
+because there is correctly nothing to show. The lab carries its own credentials
+for exactly this; keep it to what the test needs and take the lab down after.
+
+```
+node tools/lab/lab.mjs prompt "Start a background bash task printing one line per second for 60 seconds."
+node tools/lab/lab.mjs press 1      # the confirm a tool call raises is a numbered list
+node tools/lab/lab.mjs eval look.js # then read the panel
+```
+
+`drive.mjs` carries the two traps behind those, both of which look like nothing
+happening at all: the webview target's **default execution context is the outer
+shell document**, so a `Runtime.evaluate` without the panel frame's context id
+finds no composer and no dialog and it is not that they are missing; and **Enter's
+`text` is a carriage return, not the string "Enter"** - with the key name in there
+the app takes the event and does not submit, and the prompt sits in the composer
+looking like the send failed.
+
+What is worth checking by hand once a task is running, none of which the self-test
+can reach: the indicator appears in the composer footer next to the queue button
+and animates; the dialog lists running above finished with an icon each; the log
+pane grows while the task runs (compare it against the `.output` file on disk -
+that is how the Windows `fs.watch` gap was found); a finished task moves into the
+history group and the indicator goes quiet; Stop actually stops the process; and
+a history row disappears when its log file is deleted.
 
 ## What each step is guarding against
 
