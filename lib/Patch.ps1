@@ -37,6 +37,30 @@ function Add-ScriptAfterRegex {
     Write-Ok "$Label injected"
 }
 
+# Every chat surface in extension.js (editor tab / sidebar / session list)
+# installs the same webview message listener: log the message, hand it to the
+# comms object. A patch that answers messages of its own drops a returning guard
+# at the very top of each of them, ahead of the app's protocol switch - which
+# would otherwise log ours as unknown.
+#
+# The guard is inserted right after the arrow's `{`, and everything already
+# there is carried through untouched, so several patches can hook the same
+# listener and neither the order they run in nor the ones already installed
+# matter. $HookPath is a .js resource with three placeholders: __WV__ (the
+# view), __MSG__ (the message) and __COMMS__ (the comms object).
+#
+# Returns the new text, or $null when the listener shape is not found - callers
+# are expected to Write-Miss and leave the bundle alone.
+function Add-WebviewMessageHook {
+    param([string]$Js, [string]$HookPath)
+    $rx = '((\w+)\.webview\.onDidReceiveMessage\(\((\w+)\)=>\{)(.{0,400}?(\w+)\?\.fromClient\(\3\))'
+    if ($Js -notmatch $rx) { return $null }
+    $hook = (Get-InjectedJs $HookPath ([ordered]@{
+                '__WV__' = '${2}'; '__MSG__' = '${3}'; '__COMMS__' = '${5}'
+            })).Trim()
+    [regex]::Replace($Js, $rx, ('${1}' + $hook + '${4}'))
+}
+
 # Substitute __TOKEN__ placeholders in an injected-JS string. Literal .Replace
 # (not -replace) so substitution values are never treated as regex. Keeps every
 # injected script as real, formatted JS in its own .js file - never a PS string.

@@ -48,6 +48,7 @@ $order = @(
     'reload-restore'
     'remote-control-chip'
     'history-dialog-clip'
+    'panel-restart-button'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to
