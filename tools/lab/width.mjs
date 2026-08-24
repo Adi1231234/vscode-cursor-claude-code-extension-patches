@@ -32,11 +32,18 @@ import { readWidth } from './measure.mjs';
 
 /* The chrome beside the panel changes with the viewport - a side bar has a minimum
    of its own and gives up its space in steps - so one round of arithmetic can
-   undershoot: measured, 420 -> 150 landed on 214 with a fixed four passes and on
-   150 when run again. So the loop runs until it stops making progress rather than
-   a set number of times, and only then reports where the workbench settled. */
-const MAX_PASSES = 10;
-const SETTLE_MS = 400;
+   undershoot and the loop repeats until it stops making progress.
+
+   The settle is the part that had to be measured rather than guessed. At 400ms the
+   big narrowings stalled short and reported it honestly (1200 -> 150 landed on 214,
+   then reached 150 when run again, because the second run started after the layout
+   had finished moving); at 900ms every transition tried lands first time:
+   1200 -> 150, 300 -> 150, 1400 -> 200, 150 -> 1200, 620 -> 300. A slower machine
+   could still stall, and then the report says where the workbench settled instead
+   of pretending the width was delivered. */
+const ROUNDS = 4;
+const PASSES = 5;
+const SETTLE_MS = 900;
 
 export async function setWidth(port, panel, want) {
     if (!Number.isFinite(want) || want < 120) throw new Error(`--width needs a number of pixels, at least 120 (got "${want}")`);
@@ -56,23 +63,28 @@ export async function setWidth(port, panel, want) {
         };
         let view = await look();
         from = Math.round(view.panel.width);
-        let stuck = 0;
-        for (let pass = 0; pass < MAX_PASSES && Math.abs(view.panel.width - want) > 1; pass++) {
-            const before = Math.round(view.panel.width);
-            const r = await client.send('Emulation.setDeviceMetricsOverride', {
-                width: Math.max(1, Math.round(want + view.chrome)),
-                height: Math.round(view.height) || 900,
-                deviceScaleFactor: 0,
-                mobile: false,
-            });
-            if (r && r.error) throw new Error(`the workbench refused a viewport override: ${r.error.message}`);
-            await new Promise((s) => setTimeout(s, SETTLE_MS));
-            view = await look();
-            /* Two passes that change nothing mean the layout will give no more; one
-               is not enough, because the first pass after a side bar collapses
-               reports the old chrome and looks like a standstill. */
-            stuck = Math.round(view.panel.width) === before ? stuck + 1 : 0;
-            if (stuck >= 2) break;
+        /* A round can stall at an intermediate layout that still has a step left in
+           it - the side bar shrinks to its minimum, the arithmetic stops moving, and
+           running the command a second time then lands exactly, because it starts
+           over from there. Measured: 1200 -> 150 stalling at 214, then reaching 150
+           on the next invocation. So the restart happens here instead of being
+           something the caller has to know to do. */
+        for (let round = 0; round < ROUNDS && Math.abs(view.panel.width - want) > 1; round++) {
+            let stuck = 0;
+            for (let pass = 0; pass < PASSES && Math.abs(view.panel.width - want) > 1; pass++) {
+                const before = Math.round(view.panel.width);
+                const r = await client.send('Emulation.setDeviceMetricsOverride', {
+                    width: Math.max(1, Math.round(want + view.chrome)),
+                    height: Math.round(view.height) || 900,
+                    deviceScaleFactor: 0,
+                    mobile: false,
+                });
+                if (r && r.error) throw new Error(`the workbench refused a viewport override: ${r.error.message}`);
+                await new Promise((s) => setTimeout(s, SETTLE_MS));
+                view = await look();
+                stuck = Math.round(view.panel.width) === before ? stuck + 1 : 0;
+                if (stuck >= 2) break;
+            }
         }
     } finally {
         client.close();

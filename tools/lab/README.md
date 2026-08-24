@@ -49,10 +49,13 @@ sits beside it - measure that and the viewport for any panel width is arithmetic
 One `Emulation.setDeviceMetricsOverride`, no mouse events, nothing to collapse, and
 it comes back down as easily as it goes up. The chrome changes as the side bar hits
 its own minimum, so the arithmetic repeats until it stops making progress rather
-than a fixed number of times (measured: 420 -> 150 landed on 214 with four fixed
-passes, and exactly 150 once it converged instead). Measured exact across 150 / 200
-/ 300 / 420 / 620 / 780 / 1200 / 4000, in both directions, with the panel's own
-`clientWidth` agreeing every time. The override lives on the window's page target,
+than a fixed number of times, and it waits 900ms between passes - a measured
+number, not a guess: at 400ms the big narrowings stalled short (1200 -> 150 landed
+on 214 and only reached 150 on a second run), at 900ms every transition lands first
+time. Measured exact across 150 / 200 / 300 / 420 / 620 / 780 / 1200 / 4000 in both
+directions, with the panel's own `clientWidth` agreeing every time; a machine slow
+enough to stall anyway gets told where the workbench settled rather than a silent
+wrong width. The override lives on the window's page target,
 so it survives a real `Developer: Reload Window`: 300px before `repatch`, 300px
 after.
 
