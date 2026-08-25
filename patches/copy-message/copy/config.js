@@ -16,8 +16,26 @@
   var MD = ".__MD__";            /* root_<hash> - a rendered markdown span */
   var NOTTEXT = ".__THINK__,.__TOOLUSE__,.__TOOLRES__";   /* thinking / tool wrappers */
 
-  /* Copy the message's own text: for a user message that is the bubble, which
-     excludes the actions container (and its popup) sitting inside the wrapper. */
+  /* The message's own text lives here: for a user message that is the bubble,
+     which excludes the actions container (and its popup) sitting inside the
+     wrapper. */
+  function bodyOf(m) {
+    return m.querySelector(USERMSG) || m;
+  }
+
+  /* What actually gets copied. innerText, deliberately: it is the rendered text,
+     so the blank lines between blocks survive the trip to the clipboard. */
   function textOf(m) {
-    return ((m.querySelector(USERMSG) || m).innerText || "").trim();
+    return (bodyOf(m).innerText || "").trim();
+  }
+
+  /* Only asks whether there is anything at all to copy, and uses textContent for
+     it. innerText is defined in terms of rendered layout, so every read flushes
+     pending style and layout synchronously; textContent reads the tree and forces
+     nothing. This question is asked from the observer pass about every message
+     that has no button yet - which includes every thinking block and every tool
+     call, on every burst, for as long as the transcript stays open - so on a long
+     conversation those flushes cost more than the rest of the patch together. */
+  function hasText(m) {
+    return !!(bodyOf(m).textContent || "").trim();
   }

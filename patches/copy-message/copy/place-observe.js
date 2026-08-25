@@ -44,7 +44,7 @@
      something you would want to copy, and decorating them buried the chat in
      icons. */
   function wanted(m) {
-    if (!textOf(m)) return false;   /* nothing to copy yet - retry on the next mutation */
+    if (!hasText(m)) return false;  /* nothing to copy yet - retry on the next mutation */
     return !!m.querySelector(USERMSG) || hasReplyText(m);
   }
 

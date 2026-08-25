@@ -62,7 +62,7 @@
       var first = snap.running[0] || snap.finished[0];
       if (first) { sel = first.id; resetPane(); }
     }
-    if (headSub) headSub.textContent = subtitle(snap);
+    setText(headSub, subtitle(snap));
     var sig = signature(snap);
     if (sig === listSig) return;
     listSig = sig;

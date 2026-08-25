@@ -38,12 +38,16 @@
     if (target.previousElementSibling !== b) target.parentNode.insertBefore(b, target);
 
     /* Animated with a count while something runs; a quiet glyph afterwards, so the
-       finished list stays reachable without a permanent fixture in the footer. */
-    b.className = "__bgInd __bgRoot" + (n ? "" : " __bgIdle");
-    var count = b.querySelector(".__bgCount");
-    if (count) count.textContent = n ? String(n) : "";
-    var tip = b.querySelector(".__bgTip");
-    if (tip) tip.textContent = n ? tipText(n) : (done === 1 ? "1 finished task" : done + " finished tasks");
+       finished list stays reachable without a permanent fixture in the footer.
+       Every write below is conditional. This pass is scheduled by the observer in
+       init.js, which watches document.body for childList; writing textContent
+       unconditionally is a childList mutation whatever the value, so it wakes that
+       observer, which schedules this pass again, and the pair spins for as long as
+       the indicator is on screen - measured in the lab at 0% -> 55% of a core. */
+    var cls = "__bgInd __bgRoot" + (n ? "" : " __bgIdle");
+    if (b.className !== cls) b.className = cls;
+    setText(b.querySelector(".__bgCount"), n ? String(n) : "");
+    setText(b.querySelector(".__bgTip"), n ? tipText(n) : (done === 1 ? "1 finished task" : done + " finished tasks"));
   }
 
   function tipText(n) {

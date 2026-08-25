@@ -52,6 +52,16 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   `userMessage_<hash>` keeps that out of the clipboard.
 - **Skips messages with no text yet.** A wrapper still empty mid-stream gets no
   button; the next mutation picks it up.
+- **That "is there text yet" test reads `textContent`, never `innerText`.**
+  `innerText` is defined in terms of *rendered* text, so reading it flushes
+  pending style and layout synchronously. The question is asked from the
+  observer pass about every message that has no button yet - which is every
+  thinking block and every tool call, on every burst, for as long as the
+  transcript stays open - so the forced flushes grow with the conversation and
+  on a long one cost more than the rest of the patch together. `textContent`
+  answers the same question off the tree and forces nothing. The *copy* still
+  reads `innerText`, where the rendering is the point: it is what puts the
+  blank lines between blocks on the clipboard.
 - **The button holds only an `<svg>`,** which `innerText` ignores - so the
   copied text needs no filtering of our own markup.
 - **`clipboard.writeText` with an `execCommand` fallback.** The webview grants

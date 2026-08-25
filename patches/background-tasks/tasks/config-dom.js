@@ -48,6 +48,14 @@
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
+  /* Writes only on a real change. Assigning textContent replaces the node's
+     children even when the string is identical, and that replacement is itself a
+     childList mutation - with a MutationObserver on document.body driving the
+     render pass, an unconditional write re-triggers the pass that wrote it. */
+  function setText(node, s) {
+    if (node && node.textContent !== s) node.textContent = s;
+  }
+
   function ago(ms) {
     var s = Math.max(0, Math.round(ms / 1000));
     if (s < 60) return s + "s";
