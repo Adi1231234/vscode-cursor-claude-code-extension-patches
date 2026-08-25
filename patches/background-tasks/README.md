@@ -129,6 +129,19 @@ failed task says so in words). Scroll containers set `overscroll-behavior: conta
 and are styled off the same variables Monaco uses for its own sliders, so they do not
 fall back to the platform's bright slab with stepper arrows.
 
+**Every render write is conditional.** The indicator and the dialog are redrawn
+from a `MutationObserver` on `document.body` watching `childList` (React
+re-renders the composer footer, so a timer would either lag or spin). Assigning
+`textContent` replaces the node's children *whatever the value*, and that
+replacement is itself a childList mutation - so an unconditional write wakes the
+observer that scheduled the pass, which schedules the pass again, and the two
+feed each other for as long as the indicator is on screen. It costs nothing
+visible, which is why it hid: no layout, no paint, no network, just a renderer
+pinned at 55% of a core (measured in the lab, 0% -> 55% -> 0% as the guard is
+removed and put back). Writes go through `setText` in `config-dom.js`, which
+compares before it writes; `className` is guarded the same way inline. Any new
+per-pass write must do the same.
+
 **RTL.** Layout is logical-property only, so the panes mirror under the `rtl` patch.
 Latin phrases and tool-call rows are pinned so bidi cannot reorder them, and code
 blocks stay LTR.
