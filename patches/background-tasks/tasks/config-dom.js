@@ -19,8 +19,6 @@
   var NARROW = 560;             /* below this the two panes stack (see README) */
 
   /* ---------- DOM utilities ---------- */
-  function qs(sel, root) { return (root || document).querySelector(sel); }
-
   function el(tag, cls, text) {
     var x = document.createElement(tag);
     if (cls) x.className = cls;
@@ -44,7 +42,7 @@
     return b;
   }
 
-  function inp() { return qs('[aria-label="Message input"][contenteditable]'); }
+  function inp() { return globalThis.__ccInput(); }   /* cached in lib/js/ccStore.js */
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 

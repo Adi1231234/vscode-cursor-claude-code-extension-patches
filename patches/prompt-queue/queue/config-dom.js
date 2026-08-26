@@ -35,7 +35,7 @@
   }
 
   function inp() {
-    return qs('[aria-label="Message input"][contenteditable]');
+    return globalThis.__ccInput();                     /* cached in lib/js/ccStore.js */
   }
 
   function setText(e, t) {
