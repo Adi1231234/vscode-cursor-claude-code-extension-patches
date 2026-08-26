@@ -9,7 +9,7 @@ function Invoke-Patch {
     $js = Read-Text $Ctx.Js
     if ($js.Contains('/* WTTITLEFIX */')) { Write-Skip 'already patched'; return }
 
-    $rx = 'async renameSession\((\w+),(\w+),(\w+)\)\{let (\w+)=(\w+)\(this\.projectRoot\),(\w+)=(\w+)\.join\(\4,`\$\{\1\}\.jsonl`\);'
+    $rx = 'async renameSession\(([\w$]+),([\w$]+),([\w$]+)\)\{let ([\w$]+)=([\w$]+)\(this\.projectRoot\),([\w$]+)=([\w$]+)\.join\(\4,`\$\{\1\}\.jsonl`\);'
     if ($js -notmatch $rx) { Write-Miss 'renameSession anchor not found'; return }
 
     $new = Get-InjectedJs (Join-Path $PSScriptRoot 'resolve-title.js') ([ordered]@{ '__PATH__' = '${6}'; '__SID__' = '${1}' })

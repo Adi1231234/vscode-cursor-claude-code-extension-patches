@@ -53,7 +53,7 @@ function Add-ScriptAfterRegex {
 # are expected to Write-Miss and leave the bundle alone.
 function Add-WebviewMessageHook {
     param([string]$Js, [string]$HookPath)
-    $rx = '((\w+)\.webview\.onDidReceiveMessage\(\((\w+)\)=>\{)(.{0,400}?(\w+)\?\.fromClient\(\3\))'
+    $rx = '(([\w$]+)\.webview\.onDidReceiveMessage\(\(([\w$]+)\)=>\{)(.{0,400}?([\w$]+)\?\.fromClient\(\3\))'
     if ($Js -notmatch $rx) { return $null }
     $hook = (Get-InjectedJs $HookPath ([ordered]@{
                 '__WV__' = '${2}'; '__MSG__' = '${3}'; '__COMMS__' = '${5}'

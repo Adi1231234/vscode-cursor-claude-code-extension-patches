@@ -16,8 +16,8 @@ function Invoke-Patch {
     if ($wc.Contains('/* HISTDLGFIX */')) { Write-Skip 'already patched'; return }
 
     # let <rect>=<ref>.current?.getBoundingClientRect(),<view>=document.documentElement.clientWidth,<style>=<rect>?{top:...}:{};
-    $rx = 'let (\w+)=(\w+)\.current\?\.getBoundingClientRect\(\),' +
-          '(\w+)=document\.documentElement\.clientWidth,(\w+)=\1\?\{top:.{0,220}?\}:\{\};'
+    $rx = 'let ([\w$]+)=([\w$]+)\.current\?\.getBoundingClientRect\(\),' +
+          '([\w$]+)=document\.documentElement\.clientWidth,([\w$]+)=\1\?\{top:.{0,220}?\}:\{\};'
     $hits = [regex]::Matches($wc, $rx)
     if ($hits.Count -ne 1) {
         Write-Miss "history dialog placement anchor not found ($($hits.Count) matches)"

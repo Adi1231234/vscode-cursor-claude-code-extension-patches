@@ -18,13 +18,13 @@ function Invoke-Patch {
 
     # (1) the banner component: anchored on its props shape plus the close
     # tooltip that identifies it (the body between them may be reworded).
-    $rxBanner = 'function \w+\(\{state:\w+,onClose:\w+,otherPopupsVisible:\w+\}\)\{(?=[\s\S]{0,400}?closeTooltip:"Disconnect Remote Control")'
+    $rxBanner = 'function [\w$]+\(\{state:[\w$]+,onClose:[\w$]+,otherPopupsVisible:[\w$]+\}\)\{(?=[\s\S]{0,400}?closeTooltip:"Disconnect Remote Control")'
     if ($wc -notmatch $rxBanner) { Write-Miss 'Remote Control banner anchor not found'; return }
 
     # (2) the input footer: from the footer component's signature (semantic prop
     # names) to the flex spacer inside it, which yields the minified jsx factory
     # and the CSS-module map without hardcoding either.
-    $rxFooter = 'function \w+\(\{session:(\w+),mode:\w+,availablePermissionModes:[\s\S]{0,6000}?(\w+)\("div",\{className:(\w+)\.spacer\}\),'
+    $rxFooter = 'function [\w$]+\(\{session:([\w$]+),mode:[\w$]+,availablePermissionModes:[\s\S]{0,6000}?([\w$]+)\("div",\{className:([\w$]+)\.spacer\}\),'
     $m = [regex]::Match($wc, $rxFooter)
     if (-not $m.Success) { Write-Miss 'input-footer spacer anchor not found'; return }
 

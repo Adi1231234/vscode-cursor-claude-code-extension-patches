@@ -18,7 +18,7 @@ function Invoke-Patch {
         $applied = $false
 
         # (1) session id through deserialize (runtime: js/session-id.js, __STATE__ -> ${3})
-        $rx1 = '(deserializeWebviewPanel\((\w+),(\w+)\)\{[\s\S]{0,200}?\w+\.setupPanel\(\2,)void 0(,void 0,\w+\))'
+        $rx1 = '(deserializeWebviewPanel\(([\w$]+),([\w$]+)\)\{[\s\S]{0,200}?[\w$]+\.setupPanel\(\2,)void 0(,void 0,[\w$]+\))'
         if ($js -match $rx1) {
             $sid = Get-InjectedJs (Join-Path $PSScriptRoot 'js/session-id.js') @{ '__STATE__' = '${3}' }
             $js = [regex]::Replace($js, $rx1, ('${1}' + $sid + '${4}'))
@@ -29,9 +29,14 @@ function Invoke-Patch {
         # The trailing `{` is what separates the definition from the call sites,
         # which pass expressions rather than four bare identifiers; matching the
         # body's first statement instead would break on every refactor of it.
-        $sig = [regex]::Match($js, 'setupPanel\((\w),(\w),(\w),(\w)\)\{')
+        $sig = [regex]::Match($js, 'setupPanel\(([\w$]),([\w$]),([\w$]),([\w$])\)\{')
         if ($sig.Success) {
-            $rx2 = '(\w\?\.fromClient\(\w\)\},null,this\.disposables\);)(let \w=\w\?[A-Za-z]+\.ViewColumn\.Active:' + $sig.Groups[1].Value + '\.viewColumn;' + $sig.Groups[1].Value + '\.onDidChangeViewState)'
+            # The captured name is spliced back into a regex, so it must be escaped:
+            # the minifier uses `$` as an identifier, and an unescaped `$` is an
+            # end-of-string anchor. `[\w$]+` for the vscode alias too - it is `f0`
+            # here, and a letters-only class cannot match a name carrying a digit.
+            $pe = [regex]::Escape($sig.Groups[1].Value)
+            $rx2 = '([\w$]\?\.fromClient\([\w$]\)\},null,this\.disposables\);)(let [\w$]=[\w$]\?[\w$]+\.ViewColumn\.Active:' + $pe + '\.viewColumn;' + $pe + '\.onDidChangeViewState)'
             if ($js -match $rx2) {
                 $rec = Get-InjectedJs (Join-Path $PSScriptRoot 'js/blank-iframe-recovery.js') ([ordered]@{
                     '__PE__' = $sig.Groups[1].Value; '__PT__' = $sig.Groups[2].Value
@@ -43,7 +48,7 @@ function Invoke-Patch {
         } else { Write-Miss 'setupPanel signature not found' }
 
         # (3) git worktree list timeout 5s -> 20s (runtime value: js/timeout.js)
-        $rxT = '("worktree","list","--porcelain"\],\{cwd:\w+,timeout:)5000(,windowsHide)'
+        $rxT = '("worktree","list","--porcelain"\],\{cwd:[\w$]+,timeout:)5000(,windowsHide)'
         if ($js -match $rxT) {
             $timeout = Get-InjectedJs (Join-Path $PSScriptRoot 'js/timeout.js')
             $js = [regex]::Replace($js, $rxT, ('${1}' + $timeout + '${2}'))

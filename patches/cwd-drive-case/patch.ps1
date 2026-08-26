@@ -13,7 +13,7 @@ function Invoke-Patch {
     $js = Read-Text $Ctx.Js
     if ($js.Contains('/* CWDDRIVECASE */')) { Write-Skip 'already patched'; return }
 
-    $rx = 'cwd:(\w+)\|\|this\.cwd,'
+    $rx = 'cwd:([\w$]+)\|\|this\.cwd,'
     if ($js -notmatch $rx) { Write-Miss 'launch cwd anchor not found'; return }
     $sites = ([regex]$rx).Matches($js).Count
 
