@@ -14,8 +14,8 @@ function Invoke-Patch {
     if ($wc.Contains('/* BIDIMARKS */')) { Write-Skip 'already patched'; return }
 
     # var <rx>=/[...]/g;function <fn>(<arg>){if(typeof <arg>==="string")return <arg>.replace(<rx>,(t)=>`...codePointAt...`
-    $rx = 'var (\w+)=(/\[[^\]]*\]/g);function (\w+)\((\w+)\)\{if\(typeof \4==="string"\)' +
-          'return \4\.replace\(\1,(?=\(\w+\)=>.{0,40}codePointAt)'
+    $rx = 'var ([\w$]+)=(/\[[^\]]*\]/g);function ([\w$]+)\(([\w$]+)\)\{if\(typeof \4==="string"\)' +
+          'return \4\.replace\(\1,(?=\([\w$]+\)=>.{0,40}codePointAt)'
     if ($wc -notmatch $rx) { Write-Miss 'bidi sanitiser not found (older extension?)'; return }
 
     $new = Get-InjectedJs (Join-Path $PSScriptRoot 'js\strip-marks.js') ([ordered]@{

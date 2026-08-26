@@ -23,15 +23,17 @@ function Invoke-Patch {
         Write-Skip 'already patched'; return
     }
 
-    # b(<icon button>,{ref:<r>,ariaLabel:"Session history",...}),b(<same>,{ariaLabel:"New session",...
+    # <j>(<icon button>,{ref:<r>,ariaLabel:"Session history",...}),<j>(<same>,{ariaLabel:"New session",...
     # Zero-width: the lookahead only identifies the header group and captures the
-    # minified component / context / store names - nothing is consumed or retyped.
-    $rxBtn = '(?=b\((\w+),\{ref:\w+,ariaLabel:"Session history",iconSize:20,.{0,60}?\}\),' +
-             'b\(\1,\{ariaLabel:"New session",iconSize:20,onClick:\(\)=>\{' +
-             'if\(!(\w+)\.startNewConversationTab\(\)\)(\w+)\.createSession\(\)\})'
+    # minified element factory / component / context / store names - nothing is
+    # consumed or retyped. The factory is captured rather than written: it was `b`
+    # when this was authored and is `j` now, and the name carries no meaning.
+    $rxBtn = '(?=([\w$]+)\(([\w$]+),\{ref:[\w$]+,ariaLabel:"Session history",iconSize:20,.{0,60}?\}\),' +
+             '\1\(\2,\{ariaLabel:"New session",iconSize:20,onClick:\(\)=>\{' +
+             'if\(!([\w$]+)\.startNewConversationTab\(\)\)([\w$]+)\.createSession\(\)\})'
     # getHtmlForWebview(<webview>,<session>,<prompt>,<sidebar>,<fullEditor>,<listOnly>){
     # - the definition; every call site carries a `this.` prefix and real arguments.
-    $rxHtml = '(getHtmlForWebview\((\w+),(\w+),(\w+),(\w+),(\w+),(\w+)\)\{)'
+    $rxHtml = '(getHtmlForWebview\(([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+)\)\{)'
 
     $nBtn = [regex]::Matches($wc, $rxBtn).Count
     $nHtml = [regex]::Matches($xc, $rxHtml).Count
@@ -42,9 +44,10 @@ function Invoke-Patch {
     if (-not $hooked) { Write-Miss 'webview message-listener anchor not found'; return }
 
     $button = Get-InjectedJs (Join-Path $PSScriptRoot 'js\restart-button.js') ([ordered]@{
-            '__BUTTON__'  = '${1}'
-            '__CONTEXT__' = '${2}'
-            '__STORE__'   = '${3}'
+            '__FACTORY__' = '${1}'
+            '__BUTTON__'  = '${2}'
+            '__CONTEXT__' = '${3}'
+            '__STORE__'   = '${4}'
         })
     $reload = Get-InjectedJs (Join-Path $PSScriptRoot 'js\host-reload.js') ([ordered]@{
             '__SIGNATURE__'   = '${1}'
