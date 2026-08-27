@@ -23,7 +23,7 @@ function Add-ScriptAfterMarker {
     # outside it, and the browser renders the source on the page for the user to
     # read - which is how a shared lib file, prepended instead of inserted after
     # the opening fragment, ended up printed across a live panel.
-    if (-not $Script.TrimStart().StartsWith(<script)) {
+    if (-not $Script.TrimStart().StartsWith('<script')) {
         Write-Miss "$Label does not open with <script> - something is concatenated before the fragment that opens it, and it would render as page text"
         return
     }
