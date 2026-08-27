@@ -8,7 +8,8 @@ const B=path.resolve(__dirname,'..','af')+'/';
 const order=JSON.parse(require('fs').readFileSync(B+'order.json','utf8'));
 const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
 eval(fs.readFileSync(LIBROW,'utf8'));
-let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
+let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('')
+  .split(String.fromCharCode(13)+String.fromCharCode(10)).join(String.fromCharCode(10));
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
 src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
 src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
