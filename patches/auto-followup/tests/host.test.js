@@ -85,7 +85,13 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(back.rules==='be brief'&&back.stop==='done','once: round trip leaves rules and stop alone');
 
   const ps=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text);
-  ok(ps.once.length===2,'once: shipped perf responder carries both questions, got '+ps.once.length);
+  ok(ps.once.length===3,'once: shipped perf responder carries the whole chain, got '+ps.once.length);
+  // what is this a number of -> show me what produced it -> by what factor.
+  // Each waits for the one before, and nothing names itself: an entry whose
+  // 'after' is its own name can never fire, which is a deadlock that reads as
+  // a question that simply never comes up.
+  ok(ps.once.map(e=>e.name).join('>')==='frame>code>factor','once: the chain is frame, code, factor');
+  ok(ps.once.every(e=>e.after!==e.name),'once: no entry waits for itself');
   ok(new RegExp(ps.once[0].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
   // asserting only the English form is how the frame question came to be dead on
   // every one of twelve real turning points while the suite stayed green
@@ -94,7 +100,13 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(!new RegExp(ps.once[0].when,'i').test('18 shared layers'),'once: a bare count is not a duration');
   ok(new RegExp(ps.once[1].when,'i').test('that is 12% faster'),'once: factor question triggers on a percent');
   // or it takes the turn the frame question exists for
-  ok(!new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: a bare duration does not reach the factor question');
+  ok(new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: any figure at all reaches the request for the code');
+  ok(new RegExp(ps.once[2].when,'i').test('that is 12% faster'),'once: the factor question still triggers on a percent');
+  // '31 percent' spelled out in Hebrew is the same claim as '31%', and the
+  // English-only form of this pattern is what left the framing question dead on
+  // twelve real turning points
+  ok(new RegExp(ps.once[2].when,'i').test('משפר ב-31 אחוז'),'once: the factor question triggers on a percent written in Hebrew');
+  ok(!new RegExp(ps.once[2].when,'i').test('18 שכבות'),'once: a bare count in Hebrew is not a percent');
   ok(!(ps.first_question||'').trim(),'once: the shipped responder no longer relies on first_question');
 }
 console.log(`\n  ${pass} passed, ${fail} failed`);
