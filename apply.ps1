@@ -66,6 +66,15 @@ foreach ($Ctx in $installs) {
         Write-Miss "extension $($Ctx.Version) is older than the anchored $minTested - expect [miss] lines; update it in $($Ctx.Editor) and re-run"
     }
 
+    # Restore the original before applying anything. Without this every patch
+    # sees its own guard from the last run and skips, so an install patched
+    # yesterday never gets today version of a patch - and the run says [skip] on
+    # every line and exits 0, which reads exactly like success. See lib/Pristine.ps1.
+    if (-not (Restore-Pristine -Ctx $Ctx -PatchesDir (Join-Path $here "patches"))) {
+        $script:failures += "$($Ctx.Editor) : no unpatched copy of the bundle to apply to"
+        continue
+    }
+
     foreach ($name in $order) {
         $patchFile = Join-Path $here "patches\$name\patch.ps1"
         if (-not (Test-Path $patchFile)) { Write-Miss "patch '$name' not found"; continue }

@@ -41,6 +41,15 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 - **`lib/`** — reusable helpers: `Io` (UTF-8 read/write), `Ui` (output), `Editors` (where each editor keeps its extensions), `Extension` (locate + detect minified names into a shared `$Ctx`), `Patch` (css/script injectors + the shared worktree resolver).
 - **`patches/<name>/`** — one folder per patch: a `patch.ps1` exposing a single `Invoke-Patch $Ctx` (fail-safe, idempotent), its own `README.md`, and any resource files (`*.css`, `queue/*.js`, `cleanup.js`).
 
+- **`lib/Pristine.ps1`** — keeps an unpatched copy of each bundle file as
+  `extension.js.pristine` (and the two webview files) and restores it before every
+  run, so a second run applies the *current* patches instead of skipping the ones
+  it recognises. Without it an install patched last week never received this
+  week's version of a patch: every line said `[skip]`, the run exited 0, and the
+  bundle did not change. If a bundle is already patched and no `.pristine` sits
+  beside it, nothing here can undo that - reinstall the extension in the editor
+  (or delete its folder and let the editor download it again) and run once more.
+
 *Add a patch* = drop `patches/<name>/patch.ps1` defining `Invoke-Patch`, add its name to the list in `apply.ps1`. Nothing else.
 
 ## ✨ Features

@@ -35,10 +35,27 @@ function withBrokenPatch(rel, edit, body) {
     try { return body(); } finally { writeFileSync(file, original); }
 }
 
+/* What "idempotent" means here changed, and this is the check that says so.
+
+   It used to mean a second run skips everything: every patch guards itself and
+   returns when its marker is already in the bundle. That is idempotent and it is
+   also why an install patched last week never received this week version of a
+   patch - every line said [skip], the run exited 0, and nothing changed.
+
+   It now means a second run applies the whole set again, to a restored copy of
+   the original, and lands on the same bytes. Same patches in, same bundle out -
+   which is the property that was actually wanted, and unlike the old one it does
+   not stop an edited patch from arriving. */
 export function idempotency(check, lay) {
+    /* the same way the checks below find it: the one claude-code dir in there */
+    const bundle = join(lay.extensions,
+        readdirSync(lay.extensions).find((d) => d.includes('claude-code')), 'extension.js');
+    const before = readFileSync(bundle);
     const r = runApply(lay.extensions);
-    check('a second apply re-patches nothing', count(r.out, 'ok') === 0, `${count(r.out, 'ok')} sites`);
-    check('a second apply skips everything', count(r.out, 'skip') >= 20, `${count(r.out, 'skip')} skips`);
+    check('a second apply re-applies every patch', count(r.out, 'ok') >= 20, `${count(r.out, 'ok')} sites`);
+    check('a second apply skips nothing', count(r.out, 'skip') === 0, `${count(r.out, 'skip')} skips`);
+    check('a second apply lands on the same bytes', readFileSync(bundle).equals(before),
+        `${before.length} -> ${readFileSync(bundle).length}`);
     check('a second apply reports no failure', count(r.out, 'fail') === 0);
     check('a second apply reaches Done and exits 0', /\nDone \(/.test(r.out) && r.code === 0, `exit ${r.code}`);
     check('a second apply misses no anchor', count(r.out, 'miss') === 0,
