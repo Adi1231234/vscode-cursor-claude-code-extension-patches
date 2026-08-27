@@ -108,6 +108,42 @@ T.disarm('stopped by hand');
 resolveSend(false);
 globalThis.setTimeout(function(){
   ok(S().slot===null,'a failed send does not resurrect the slot after a disarm');
+
+// Layering and the keyboard. Both of these were found by driving a real panel:
+// every control in the dialog was a div with a click handler, so none of it was
+// reachable without a mouse, and Escape took the dialog out from under an open
+// dropdown - discarding the edits and leaving the dropdown on screen with
+// nothing behind it.
+try{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const q=(s)=>document.querySelector(s);
+  const keys=(el,key)=>el.dispatchEvent(new globalThis.KeyboardEvent('keydown',{key:key,bubbles:true}));
+
+  const setting=q('.__afF');
+  ok(!!setting,'keys: a setting is rendered');
+  ok(setting.getAttribute('tabindex')==='0','keys: a setting is a tab stop');
+  ok(setting.getAttribute('role')==='button','keys: and announces itself as a control');
+  keys(setting,'Enter');
+  ok(!!q('.__afDrop'),'keys: Enter opens the dropdown');
+
+  keys(document,'Escape');
+  ok(!q('.__afDrop'),'layer: Escape closes the dropdown');
+  ok(!!T.dlg(),'layer: and leaves the dialog open, with the edits still in it');
+
+  keys(document,'Escape');
+  ok(!T.dlg(),'layer: a second Escape closes the dialog');
+  ok(!q('.__afDrop'),'layer: closing the dialog never leaves a dropdown behind it');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const item=q('.__afLItem');
+  ok(item.getAttribute('tabindex')==='0','keys: a responder in the rail is a tab stop');
+  const add=[...document.querySelectorAll('.__afNew')][0];
+  ok(add && add.getAttribute('tabindex')==='0','keys: so is + New responder');
+  ok(q('.__afX').getAttribute('aria-label')==='Close','keys: the close control has a name');
+  const stops=document.querySelectorAll('.__afDlg [tabindex="0"], .__afDlg button, .__afDlg textarea, .__afDlg input');
+  ok(stops.length>=12,'keys: every control is reachable, got '+stops.length);
+  T.openDialog();
+}catch(e){ fail++; console.log('  THREW in keyboard block: '+e.message); }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

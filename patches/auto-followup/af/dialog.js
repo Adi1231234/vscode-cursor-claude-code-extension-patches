@@ -10,13 +10,24 @@
   var dlg = null, draft = null, dirty = false;
 
   function closeDialog() {
+    /* The dropdown is appended to the body, not to the dialog, so removing the
+       dialog leaves it behind - a menu floating over the panel with nothing
+       under it and no way to dismiss it but clicking somewhere. */
+    closeDrop();
     if (dlg && dlg.parentNode) dlg.parentNode.removeChild(dlg);
     dlg = null; draft = null; dirty = false;
     document.removeEventListener("keydown", onDialogKey, true);
   }
 
+  /* Escape takes the innermost layer, which is the one the person is looking at.
+     It used to take the dialog from under an open dropdown and discard the edits
+     with it, which is a lot to lose for a keypress that meant "close this menu". */
   function onDialogKey(ev) {
-    if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); closeDialog(); }
+    if (ev.key !== "Escape") return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (dropOpen()) { closeDrop(); return; }
+    closeDialog();
   }
 
   function openDialog() {
@@ -54,10 +65,11 @@
       var it = el("div", "__afLItem" + (draft && draft.id === r.id ? " __afSel" : ""));
       var dot = el("span", "__afDot" + (armed === r.id ? "" : " __afDotOff"));
       var t = el("span", "__afT");
+    t.dir = "auto";
       var nm = el("b"); txt(nm, r.name || r.id); t.appendChild(nm);
       if (r.description) { var d = el("span"); txt(d, r.description); t.appendChild(d); }
       it.appendChild(dot); it.appendChild(t);
-      on(it, "click", function () {
+      press(it, function () {
         if (dirty && !confirm("Discard the unsaved changes?")) return;
         selectDraft(r.id);
       });
@@ -72,7 +84,7 @@
     }
     var add = el("div", "__afNew");
     txt(add, "+ New responder");
-    on(add, "click", function () {
+    press(add, function () {
       if (dirty && !confirm("Discard the unsaved changes?")) return;
       selectDraft(null);
     });
@@ -86,7 +98,9 @@
     var box = el("div", "__afDlg");
     var head = el("div", "__afDlgHead");
     var h = el("h3"); txt(h, "Responders"); head.appendChild(h);
-    var x = el("span", "__afX"); txt(x, "✕"); on(x, "click", closeDialog);
+    var x = el("span", "__afX"); txt(x, "✕");
+    x.setAttribute("aria-label", "Close");
+    press(x, closeDialog);
     head.appendChild(x);
     box.appendChild(head);
 

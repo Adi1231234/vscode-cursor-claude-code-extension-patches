@@ -25,16 +25,26 @@
   function field(label, value, opts, set) {
     var f = el("span", "__afF");
     var l = el("label"); txt(l, label); f.appendChild(l);
-    var b = el("b"); txt(b, value); f.appendChild(b);
-    f.insertAdjacentHTML("beforeend",
+    /* Label over value, and the chevron beside the value rather than at the far
+       end of the row. It used to be one flex row with space-between, which put a
+       wide and uneven gutter between a label and the thing it labels - the case
+       NN/G names as the one where a side label stops being read in a single
+       fixation. */
+    var v = el("span", "__afFVal"); f.appendChild(v);
+    var b = el("b"); txt(b, value); v.appendChild(b);
+    v.insertAdjacentHTML("beforeend",
       '<svg class="__afChev" width="9" height="9" viewBox="0 0 12 12" fill="none" ' +
       'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
       'stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg>');
-    on(f, "click", function (ev) { openDrop(ev.currentTarget, opts, value, set); });
+    f.setAttribute("aria-haspopup", "listbox");
+    f.setAttribute("aria-label", label + ": " + value);
+    press(f, function (ev) { openDrop(f, opts, value, set); });
     return f;
   }
 
   var dropNode = null;
+
+  function dropOpen() { return !!dropNode; }
 
   function closeDrop() {
     if (dropNode && dropNode.parentNode) dropNode.parentNode.removeChild(dropNode);
@@ -53,7 +63,7 @@
       var it = el("div", "__afDItem" + (o[0] === current ? " __afDOn" : ""));
       txt(it, o[0]);
       if (o[1]) { var s = el("span"); txt(s, o[1]); it.appendChild(s); }
-      on(it, "click", function () { closeDrop(); set(o[0]); markDirty(); renderDialog(); });
+      press(it, function () { closeDrop(); set(o[0]); markDirty(); renderDialog(); }, "option");
       d.appendChild(it);
     });
     document.body.appendChild(d);
@@ -75,10 +85,12 @@
   function box(title, hint, value, set, cls) {
     var wrap = el("div", "__afBox" + (cls ? " " + cls : ""));
     var head = el("div", "__afBoxHead");
+    head.dir = "auto";
     txt(head, title);
     if (hint) { var s = el("span"); txt(s, hint); head.appendChild(s); }
     wrap.appendChild(head);
     var ta = el("textarea", "__afTa");
+    ta.dir = "auto";
     ta.value = value || "";
     ta.spellcheck = false;
     ta.addEventListener("input", function () { set(ta.value); markDirty(); });
