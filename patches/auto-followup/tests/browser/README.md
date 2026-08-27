@@ -50,3 +50,34 @@ Driven over CDP, in Chrome:
   lane is not a queue item.
 - a CLI-level failure comes back as `STOP — Not logged in · Please run /login` on
   the button, sends nothing to Claude, and renders no lane
+
+## fit.html - does the dialog stay inside the screen
+
+    # served from this folder, then open http://127.0.0.1:8791/fit.html
+
+Eight viewports crossed with four zoom levels, 32 real layouts. A row fails if
+any edge of the dialog leaves the viewport, if the header is clipped, if any
+footer button cannot be scrolled into view, or if the body collapses.
+
+The trick that makes it cheap: the dialog is `position: fixed`, and **an iframe
+has a viewport of whatever size it is given**. No emulation, no CDP, no editor -
+just an iframe that is resized between rows, with `body.style.zoom` set inside it
+the way `patches/zoom` sets it.
+
+The zoom axis is the one that matters, and it is the one a fixed-size check would
+have missed. Run against the build from before the zoom fix, 24 of the 32 rows
+fail - **every row with zoom above 1, at every size from 1400x900 down to
+340x620**, the header off the top and the buttons off the bottom by as much as
+347px. All eight rows that pass are the zoom-1 ones. It is not the screen size.
+
+It also found the case the zoom fix does not cover: at 510x300 under zoom 2 the
+body flexed to 0 and the footer, 219px of wrapped buttons, was pushed out of a
+247px dialog and clipped away. Hence the floor on the body and the dialog
+scrolling as a whole - see the comment above `.__afDlgBody` in followup.css.
+
+Two things it does not cover. The live view never opens here (it needs a run), so
+that its own box is unaffected is read off the classes - it uses `__afLiveBody`,
+not `__afDlgBody`, and its height is fixed - and not measured. And the probe
+itself was wrong once: it scrolled to the bottom to find the footer and then read
+the header, and reported ten clipped headers that were the probe scrolling them
+away.
