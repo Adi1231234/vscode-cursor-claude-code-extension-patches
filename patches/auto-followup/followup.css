@@ -64,7 +64,43 @@
    is the type ramp doing the work - 10px tracked uppercase at .40 for a label,
    12px at full for a value. Before, both sat at .45 and read as one thing. */
 .__afOverlay{position:fixed;inset:0;box-sizing:border-box;padding:14px;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
-.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+/* ---- the three surfaces ----
+   They were derived by mixing the theme's foreground into its background at 1%
+   and 5%, which separated them and no more: the whole dialog read as one grey.
+
+   Depth now comes from darkening rather than from tinting, because a surface a
+   person is meant to type into should look cut into the panel and not painted on
+   it. VS Code puts its theme kind on <body>, so the direction can differ where it
+   has to: in a dark theme the sunken surfaces mix toward black, and in a light one
+   they use the theme's own input background, which is what every other field in
+   the editor already sits on. Nothing here invents a colour.
+
+   A few percent of the accent goes into both of them, so the sunken surfaces
+   read as a colour rather than as dead grey - too little to fight the theme, and
+   enough that the panel is not five shades of the same thing.
+
+   The edges went up with them - a 16% border against a 1% fill was a line nobody
+   could see, and the borders are what say a box is a box. */
+.__afDlg{
+  --afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));
+  --afPaper:color-mix(in srgb,var(--afAcc) 5%,color-mix(in srgb,#000 26%,var(--app-menu-background,#252526)));
+  --afField:color-mix(in srgb,var(--afAcc) 7%,color-mix(in srgb,#000 52%,var(--app-menu-background,#252526)));
+  --afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 20%,transparent);
+  --afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 30%,transparent);
+  --afAcc:var(--app-claude-orange,#d97757);
+}
+body.vscode-light .__afDlg,body.vscode-high-contrast-light .__afDlg{
+  --afPaper:color-mix(in srgb,var(--afAcc) 5%,color-mix(in srgb,var(--vscode-foreground,#333) 7%,var(--app-menu-background,#f3f3f3)));
+  --afField:var(--vscode-input-background,#fff);
+  --afLine:color-mix(in srgb,var(--vscode-foreground,#333) 18%,transparent);
+  --afEdge:color-mix(in srgb,var(--vscode-foreground,#333) 32%,transparent);
+}
+/* A high-contrast theme asks for borders, not for tints. */
+body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
+  --afLine:var(--vscode-contrastBorder,currentColor);
+  --afEdge:var(--vscode-contrastBorder,currentColor);
+}
+.__afDlg{display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
 .__afDlgHead{display:flex;align-items:center;gap:10px;padding:12px 15px 11px;border-bottom:1px solid var(--afLine)}
 .__afDlgHead h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em;flex:1;direction:ltr;text-align:start}
 .__afX{opacity:.42;font-size:13px;line-height:1;cursor:pointer;padding:3px 5px;border-radius:4px}
