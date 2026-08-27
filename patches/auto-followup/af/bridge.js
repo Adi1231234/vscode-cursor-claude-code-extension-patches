@@ -75,6 +75,12 @@
       try { refreshMenu(); } catch (e) {}
       return;
     }
+    if (m.op === "chunk") {
+      /* Purely a view update. The loop never reads these; the result message
+         stays the only thing it acts on. */
+      try { liveAppend(m.rid, m.kind, m.text); } catch (e) {}
+      return;
+    }
     if (m.op === "result") {
       if (m.rid !== inflight) return;          /* another panel's run, or a cancelled one */
       inflight = "";

@@ -24,6 +24,38 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
   var MAX_OUT = 1048576;
 
   /* Outermost braces, so a fenced or prefaced object still parses. */
+  var NL = String.fromCharCode(10);
+
+  /* One NDJSON line at a time, so the panel can show the answer being written.
+
+     --output-format stream-json prints one JSON object per line: a system init,
+     then a stream_event per delta, then the same result envelope that
+     --output-format json would have given on its own. Only the last of those is
+     the contract; the deltas exist so a person can watch and decide to stop.
+
+     Checked against the CLI rather than the docs: text arrives as
+     event.content_block_delta with delta.type "text_delta" and the words in
+     delta.text, and thinking as the same event with "thinking_delta" and the
+     words in delta.thinking. */
+  function feed(state, text, onChunk) {
+    state.buf += text;
+    var i;
+    while ((i = state.buf.indexOf(NL)) >= 0) {
+      var line = state.buf.slice(0, i).trim();
+      state.buf = state.buf.slice(i + 1);
+      if (!line || line.charAt(0) !== "{") continue;
+      var o;
+      try { o = JSON.parse(line); } catch (e) { continue; }
+      if (o.type === "result") { state.result = line; continue; }
+      if (o.type !== "stream_event" || !o.event) continue;
+      var ev = o.event;
+      if (ev.type !== "content_block_delta" || !ev.delta) continue;
+      var d = ev.delta;
+      if (typeof d.text === "string" && d.text) onChunk("text", d.text);
+      else if (typeof d.thinking === "string" && d.thinking) onChunk("thinking", d.thinking);
+    }
+  }
+
   function extract(out) {
     var a = out.indexOf("{"), b = out.lastIndexOf("}");
     if (a < 0 || b <= a) return null;
@@ -77,8 +109,11 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
     return os.homedir();
   }
 
-  function run(r, ctx, done) {
-    var args = ["-p", "--output-format", "json"];
+  function run(r, ctx, done, onChunk) {
+    /* stream-json so the deltas arrive while they are written; the last line
+       is the same envelope --output-format json would have printed alone, and
+       it is still the only thing the contract is read from. */
+    var args = ["-p", "--output-format", "stream-json", "--include-partial-messages", "--verbose"];
     if (r.model) args.push("--model", r.model);
     var child;
     try {
@@ -91,9 +126,15 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
       return null;
     }
     var out = "", err = "", finished = false;
+    var state = { buf: "", result: "" };
+    var emit = typeof onChunk === "function" ? onChunk : function () {};
     var timer = setTimeout(function () { try { child.kill(); } catch (e) {} }, TIMEOUT_MS);
 
-    child.stdout.on("data", function (d) { if (out.length < MAX_OUT) out += d.toString(); });
+    child.stdout.on("data", function (d) {
+      var t = d.toString();
+      if (out.length < MAX_OUT) out += t;
+      try { feed(state, t, emit); } catch (e) {}
+    });
     child.stderr.on("data", function (d) { if (err.length < 8192) err += d.toString(); });
     child.on("error", function (e) {
       if (finished) return;
@@ -108,7 +149,10 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
                       (err.trim() ? ": " + err.trim().slice(0, 300) : "") });
         return;
       }
-      var u = unwrap(out);
+      /* The envelope is the result line when streaming, and the whole of stdout
+         when it is not - a bundle patched before this change, or a CLI too old
+         for stream-json, still answers the old way and still works. */
+      var u = unwrap(state.result || out);
       /* A CLI-level failure is an error, never a message. It ends the arming with
          the reason on the button, which is the honest outcome: nothing is typed
          into the conversation on the strength of a string nobody can vouch for. */
@@ -120,6 +164,6 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
     return child;
   }
 
-  return { run: run, unwrap: unwrap, extract: extract, shape: shape,
+  return { run: run, unwrap: unwrap, extract: extract, shape: shape, feed: feed,
            compose: function (r, c) { return globalThis.__ccAfPrompt.compose(r, c); } };
 })();

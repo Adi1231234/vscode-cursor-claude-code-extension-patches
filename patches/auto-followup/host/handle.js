@@ -47,11 +47,21 @@ globalThis.__ccAf = globalThis.__ccAf || (function () {
     var rid = msg.rid;
     var r = globalThis.__ccAfStore.read(msg.id);
     if (!r) { post(wv, { type: "__ccaf", op: "result", rid: rid, error: "responder not found" }); return; }
+    /* Deltas are forwarded as they arrive so the panel can show the answer being
+       written. They are for looking at only: nothing is ever built from them, and
+       the result message remains the only thing the loop acts on. Dropped if the
+       webview has gone, and capped so a runaway cannot flood it. */
+    var sent = 0;
+    function onChunk(kind, text) {
+      if (sent > 262144) return;
+      sent += text.length;
+      try { post(wv, { type: "__ccaf", op: "chunk", rid: rid, kind: kind, text: text }); } catch (e) {}
+    }
     var child = globalThis.__ccAfRun.run(r, msg.ctx || {}, function (res) {
       delete running[rid];
       res.type = "__ccaf"; res.op = "result"; res.rid = rid;
       post(wv, res);
-    });
+    }, onChunk);
     if (child) running[rid] = child;
   }
 

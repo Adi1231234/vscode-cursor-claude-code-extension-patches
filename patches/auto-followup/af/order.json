@@ -1,2 +1,1 @@
-["config", "bridge", "once", "claims", "button", "menu", "lane", "transcript",
- "dialog", "dialog-form", "dialog-foot", "loop", "runtime"]
+["config", "bridge", "once", "claims", "button", "menu", "lane", "transcript", "dialog", "dialog-form", "dialog-foot", "live", "loop", "runtime"]
