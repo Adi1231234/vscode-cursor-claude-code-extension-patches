@@ -51,8 +51,8 @@
     liveNode = el("div", "__afOverlay __afLiveOverlay");
     on(liveNode, "mousedown", function (ev) { if (ev.target === liveNode) closeLive(); });
     document.body.appendChild(liveNode);
-    fitLive();
-    window.addEventListener("resize", fitLive);
+    fitOverlay(liveNode);
+    window.addEventListener("resize", fitLiveNow);
     /* Measured against the real CLI: the first delta arrived 16.2 s into an 18.1 s
        run, and the whole answer was written in the 1.1 s after it. Most of what
        this view shows is a wait, and a wait with no number on it reads as nothing
@@ -67,7 +67,7 @@
     if (liveNode && liveNode.parentNode) liveNode.parentNode.removeChild(liveNode);
     liveNode = null;
     if (liveTimer) { clearInterval(liveTimer); liveTimer = 0; }
-    window.removeEventListener("resize", fitLive);
+    window.removeEventListener("resize", fitLiveNow);
     document.removeEventListener("keydown", onLiveKey, true);
   }
 
@@ -79,22 +79,14 @@
     closeLive();
   }
 
-  /* Same reason as the responders dialog: the zoom patch makes <body> the
-     containing block for a fixed element, so inset:0 is the body box and not the
-     screen. The ratio is measured rather than read, because CSS cannot see zoom. */
-  function fitLive() {
-    if (!liveNode) return;
-    var ref = document.body;
-    var seen = ref.getBoundingClientRect().height;
-    var own = ref.offsetHeight;
-    var scale = (own > 0 && seen > 0) ? (seen / own) : 1;
-    if (!isFinite(scale) || scale <= 0) scale = 1;
-    var h = document.documentElement.clientHeight || window.innerHeight || 0;
-    var w = document.documentElement.clientWidth || window.innerWidth || 0;
-    if (!h) return;
-    liveNode.style.height = (h / scale) + "px";
-    liveNode.style.width = (w / scale) + "px";
-  }
+  /* A named function so it can be removed again: the resize listener has to be
+     the same reference on both sides, and fitOverlay takes an argument. */
+  function fitLiveNow() { fitOverlay(liveNode); }
+
+  /* The size comes from the same function the responders dialog uses. It had a
+     copy of it, and the copy was the version from before the zoom was measured
+     rather than inferred - so the dialog fitted and this one hung out of the tab,
+     which is exactly what two copies of one calculation buy. */
 
   function liveState() {
     if (pending) return "writing";

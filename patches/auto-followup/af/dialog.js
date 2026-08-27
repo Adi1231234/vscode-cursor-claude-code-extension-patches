@@ -74,9 +74,10 @@
     return z;
   }
 
-  function fitOverlay() {
-    if (!dlg) return;
-    var ref = dlg.parentNode && dlg.parentNode.nodeType === 1 ? dlg.parentNode : document.body;
+  function fitOverlay(node) {
+    var ov = node || dlg;
+    if (!ov) return;
+    var ref = ov.parentNode && ov.parentNode.nodeType === 1 ? ov.parentNode : document.body;
     var scale = zoomAbove(ref);
     if (!isFinite(scale) || scale <= 0) scale = 1;
     if (scale === 1) {
@@ -90,8 +91,8 @@
     var screenH = document.documentElement.clientHeight || window.innerHeight || 0;
     var screenW = document.documentElement.clientWidth || window.innerWidth || 0;
     if (!screenH) return;
-    dlg.style.height = (screenH / scale) + "px";
-    dlg.style.width = (screenW / scale) + "px";
+    ov.style.height = (screenH / scale) + "px";
+    ov.style.width = (screenW / scale) + "px";
   }
 
   function openDialog() {
