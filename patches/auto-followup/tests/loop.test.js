@@ -8,7 +8,7 @@ src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src
 src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
          .split('__THINK__').join('thinking_X').split('__TOOLUSE__').join('toolUse_X')
          .split('__TOOLRES__').join('toolResult_X');
-src=src.replace('  requestList();\n  setInterval(', '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})};\n  requestList();\n  setInterval(');
+src=src.replace('  requestList();\n  setInterval(', '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})};\n  requestList();\n  setInterval(');
 eval(src);
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
@@ -144,5 +144,31 @@ var before=S().claims.length;
 globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:r6.rid,message:'m',claims:['98.7 s prefill','98.7 s prefill','brand new'],stop:null}});
 ok(S().claims.length===before+1,'repeated claim not recorded twice (added '+(S().claims.length-before)+')');
 
+
+// '## once' - the panel decides WHEN, the responder file decides on what.
+// Every one of these is a way the gate was got wrong at least once.
+{
+  const R={once:[{when:'[0-9]+ ?s([^a-z]|$)',ask:'ASK-DURATION'},
+                 {when:'[0-9]+ ?%',ask:'ASK-FACTOR'}]};
+  const P=T.pendingOnce;
+  ok(P(R,'no numbers here')===null,'once: a message matching nothing pends nothing');
+  ok(P(R,'prefill is 21 s').ask==='ASK-DURATION','once: fires on the pattern, not on the turn number');
+  ok(P(R,'that is 12% faster').ask==='ASK-FACTOR','once: a later entry can fire first if it is what matched');
+  // file order breaks a tie, so the entry a responder puts first is the one it gets
+  ok(P(R,'21 s, which is 12% better').ask==='ASK-DURATION','once: file order breaks a tie');
+  T.markOnceAsked(P(R,'21 s').id);
+  ok(P(R,'still 21 s')===null,'once: an entry that has fired never fires again');
+  ok(P(R,'21 s, which is 12% better').ask==='ASK-FACTOR','once: the next entry is still live after the first has fired');
+  T.markOnceAsked(P(R,'12%').id);
+  ok(P(R,'21 s and 12%')===null,'once: an exhausted list pends nothing');
+  ok(P(null,'21 s')===null,'once: no responder pends nothing');
+  ok(P({},'21 s')===null,'once: a responder with no once section pends nothing');
+  // a bad pattern in one entry must not take the responder down with it
+  ok(P({once:[{when:'([',ask:'bad'},{when:'21',ask:'good'}]},'21 s').ask==='good','once: an uncompilable pattern is skipped, not thrown');
+  // the ledger is keyed by the question, so a different responder is not gagged by it
+  ok(P({once:[{when:'21',ask:'ASK-DURATION'}]},'21 s')===null,'once: the same question stays asked across responders');
+  ok(P({once:[{when:'21',ask:'ASK-DURATION, reworded'}]},'21 s')!==null,'once: editing a question re-arms it');
+  ok(P({first_question:'FQ',once:[]},'anything').ask==='FQ','once: first_question still works for the simple case');
+}
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -33,8 +33,16 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
 
      So the panel decides when, and the model is left only the wording. Same
      principle as the sent-message ledger: whatever the mechanism can decide, the
-     mechanism decides. */
+     mechanism decides.
+
+     Gating it on the first armed turn was still the model's problem wearing a
+     mechanism's clothes. The turn it is needed on is not turn one - across eight
+     real turning points it came around turn forty - so the trigger is a pattern
+     in the responder file ('## once'), and the question fires the turn that
+     pattern first matches. Measured on the moment that reframed the whole
+     project: 0 of 4 on the turn gate, 4 of 4 on the pattern. */
   function firstQuestion(r, ctx) {
+    if (ctx.once && (ctx.once.ask || "").trim()) return ctx.once.ask.trim();
     return (ctx.needFirst && (r.first_question || "").trim()) || "";
   }
 

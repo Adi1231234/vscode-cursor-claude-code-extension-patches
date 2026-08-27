@@ -28,6 +28,7 @@
    the rules. Someone writing their first responder should not have to know the
    section names to get one running. */
 globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
+  var NL = String.fromCharCode(10);
   var DEFAULTS = {
     first_question: "",
     context: "last-message+claims",
@@ -43,6 +44,38 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     var rest = body.slice(m.index + m[0].length);
     var next = /^##[ \t]/m.exec(rest);
     return (next ? rest.slice(0, next.index) : rest).trim();
+  }
+
+  /* '## once' - questions the panel asks at most once each, on the turn a
+     pattern first matches Claude's message:
+
+         when: [0-9]+ ?(s|sec|seconds)
+         ask: what real input was that measured on?
+
+     This exists because the highest-value question in a conversation is usually
+     one that has to be asked at a particular moment and then never again, and a
+     rule in '## rules' cannot express either half: the model decides when, and
+     it will ask again next turn. Measured on eight real turning points, the same
+     question moved from 0 of 4 to 4 of 4 once its trigger moved out of the
+     model's hands and into a pattern.
+
+     A pattern that does not compile is skipped rather than throwing - a bad
+     regex in one entry must not take the responder down with it. */
+  function parseOnce(text) {
+    var out = [], cur = {}, last = "";
+    function flush() { if (cur.when && cur.ask) out.push(cur); cur = {}; last = ""; }
+    String(text || "").split(NL).forEach(function (raw) {
+      var line = raw.trim();
+      if (!line) return flush();
+      var c = line.indexOf(":");
+      var k = c > 0 ? line.slice(0, c).trim().toLowerCase() : "";
+      if (k === "when" || k === "ask") { cur[k] = line.slice(c + 1).trim(); last = k; return; }
+      /* Anything else continues the field above it, so a question long enough to
+         be worth asking can be wrapped rather than run off the edge of the file. */
+      if (last) cur[last] += " " + line;
+    });
+    flush();
+    return out;
   }
 
   function parse(id, text) {
@@ -65,9 +98,18 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     r.description = meta.description || "";
     Object.keys(DEFAULTS).forEach(function (k) { r[k] = meta[k] || DEFAULTS[k]; });
     r.rules = section(body, "rules");
+    r.once = parseOnce(section(body, "once"));
     r.stop = section(body, "stop");
     if (!r.rules && !r.stop) r.rules = body.trim();
     return r;
+  }
+
+  function onceText(r) {
+    if (!r.once || !r.once.length) return "";
+    var body = r.once.map(function (e) {
+      return "when: " + e.when + NL + "ask: " + e.ask;
+    }).join(NL + NL);
+    return NL + NL + "## once" + NL + body;
   }
 
   function serialize(r) {
@@ -76,6 +118,7 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     Object.keys(r.extra || {}).forEach(function (k) { head.push(k + ": " + r.extra[k]); });
     head.push("---", "");
     return head.join("\n") + "\n## rules\n" + (r.rules || "").trim() +
+           onceText(r) +
            "\n\n## stop\n" + (r.stop || "").trim() + "\n";
   }
 

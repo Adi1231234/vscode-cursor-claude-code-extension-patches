@@ -43,21 +43,62 @@ written back, and a file with no `##` headings at all still works - the whole bo
 becomes the rules. Three examples are written on first use and are yours to
 delete; nothing recreates them.
 
-## `first_question`
+## `## once` - a question the panel asks at the moment it is needed
 
-One question the responder must put before anything else, on the first turn it is
-armed. The **panel** decides when - it records that it was asked and never asks
-again in that arming - and the responder is left only the wording.
+The most valuable question in a conversation is usually one that has to be asked
+at a particular moment and then never again. A line in `## rules` cannot express
+either half: the model decides whether this is the moment, and next turn it will
+decide again.
 
-It began as the first paragraph of the rules, as prose competing with four other
-rules for attention. Measured against the real message where it mattered most in
-this project, it fired **3 times out of 6**: a coin flip on the highest-value move
-there is, and when it lost, the same message read as "a finding, then a stop" and
-produced "what is the next axis" instead. Moved into the mechanism, **6 of 6**.
+So the responder file says *when*, as a pattern, and the panel does the deciding:
+
+```markdown
+## once
+when: [0-9]+([.][0-9]+)? ?(ms|sec[a-z]*|min[a-z]*|s)([^a-z]|$)
+ask: what real input was that measured on, and how many seconds does a person
+  actually wait for it?
+
+when: [0-9]+([.][0-9]+)? ?%
+ask: by what FACTOR can this be cut, not by what percent - and what would have
+  to stop being computed at all for that to happen?
+```
+
+Entries are `when` / `ask` pairs separated by a blank line; a line that is neither
+continues the field above it, so a question can be wrapped. `when` is a JavaScript
+regular expression, matched case-insensitively against Claude's message. The first
+entry that matches and has not fired yet takes the turn: the panel puts that
+question, records it, and never puts it again in that arming.
+
+The ledger is keyed by the **text of the question**, not by its position. Keyed by
+position, switching responder mid-session made the new one's first question count
+as already asked, and so did editing the list. Keyed by content, a question you
+have reworded is a question that has not been asked - which is what someone
+editing the file expects.
+
+`first_question:` in the front matter is the simple case of the same thing: asked
+once, on the first armed turn, with no pattern. A responder can use either.
+
+### What this is worth, measured
+
+Eight moments were taken from a real project's transcripts - the turns where the
+human's message is followed by the work actually changing direction - and each was
+replayed four times, walking them in order so the ledger carries across them the
+way it would in a working session.
+
+The question began as the first paragraph of `## rules`, prose competing with four
+other rules for attention. On the message where it mattered most it fired **3 times
+out of 6**. Moved into the mechanism and gated on the first armed turn: **6 of 6** -
+and that number was worth nothing, because the turn it is needed on is not turn
+one. In the real session it came around turn forty, and measured there the turn
+gate fired it **0 times out of 4**. Gated on the pattern instead: **4 of 4**.
+
+That is the correction worth keeping. "It works when I try it" measured the
+harness, not the responder - a turn gate can only be right if the harness hands it
+turn one, and the harness did.
 
 That is the rule this patch keeps rediscovering: whatever the mechanism can
-decide, the mechanism decides. The claims ledger, the record of what was sent, and
-this are all the same lesson.
+decide, the mechanism decides. The claims ledger, the record of what was sent,
+and this are all the same lesson.
 
 ## The four settings
 

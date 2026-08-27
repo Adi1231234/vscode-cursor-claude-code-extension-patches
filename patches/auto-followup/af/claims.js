@@ -98,12 +98,48 @@
      Kept by the panel, not judged by the model: asked once, then never again.
      Whether the answer was any good is a separate matter and belongs to the
      ordinary rules, which is why this is a flag and not a judgement. */
-  function needFirst() {
-    try { return localStorage.getItem(keyFor(FIRST_KEY)) !== "1"; } catch (e) { return true; }
+  /* Which of them have been put, in this arming. The panel keeps the record and
+     the responder file supplies the trigger, so nothing here knows or cares what
+     kind of conversation this is. Whether the answer was any good is a separate
+     matter and belongs to the ordinary rules - this is a flag, not a judgement. */
+  function fired() {
+    try { return JSON.parse(localStorage.getItem(keyFor(FIRST_KEY)) || "[]") || []; }
+    catch (e) { return []; }
   }
 
-  function markFirstAsked() {
-    try { localStorage.setItem(keyFor(FIRST_KEY), "1"); } catch (e) {}
+  function pendingOnce(r, text) {
+    if (!r) return null;
+    var done = fired(), t = String(text || "");
+    var fq = (r.first_question || "").trim();
+    if (fq && done.indexOf(idFor(fq)) < 0) return { id: idFor(fq), ask: fq };
+    var list = r.once || [];
+    for (var i = 0; i < list.length; i++) {
+      var ask = String(list[i].ask || "").trim();
+      if (!ask || done.indexOf(idFor(ask)) >= 0) continue;
+      var re;
+      try { re = new RegExp(list[i].when, "i"); } catch (e) { continue; }
+      if (re.test(t)) return { id: idFor(ask), ask: ask };
+    }
+    return null;
+  }
+
+  /* Keyed by the question, not by its position in the list.
+
+     By position, switching responder mid-session made the new one's first
+     question count as already asked - and so did editing the list, because
+     entry 0 is entry 0 whatever it now says. By content, a question that has
+     changed is a question that has not been asked, which is the behaviour a
+     person editing the file expects. */
+  function idFor(ask) {
+    var h = 5381, s = String(ask);
+    for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return "q" + h.toString(36);
+  }
+
+  function markOnceAsked(id) {
+    var done = fired();
+    if (done.indexOf(id) < 0) done.push(id);
+    try { localStorage.setItem(keyFor(FIRST_KEY), JSON.stringify(done)); } catch (e) {}
   }
 
   function clearFirst() {

@@ -42,8 +42,10 @@
 
   function contextFor() {
     var mode = (meta && meta.context) || "last-message+claims";
-    var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [], asked: readAsked(),
-                needFirst: !!(meta && (meta.first_question || "").trim()) && needFirst() };
+    var reply = lastAssistant();
+    var ctx = { text: reply, cwd: cwdHint(), claims: [], asked: readAsked(),
+                once: pendingOnce(meta, reply) };
+    ctx.needFirst = !!ctx.once;
     if (mode === "last-message+claims") ctx.claims = readClaims();
     else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
     return ctx;
@@ -75,7 +77,7 @@
     if (!text || text === lastSeen) return;    /* nothing new to answer */
     lastSeen = text;
     var ctx = contextFor();
-    if (ctx.needFirst) markFirstAsked();   /* asked once, whatever comes back */
+    if (ctx.once) markOnceAsked(ctx.once.id);   /* asked once, whatever comes back */
     inflight = requestRun(armed, ctx);
     renderAll();
   }

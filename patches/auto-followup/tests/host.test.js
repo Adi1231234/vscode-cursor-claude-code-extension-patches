@@ -1,4 +1,5 @@
 const fs=require('fs'),path=require('path'),os=require('os'),vm=require('vm');
+const NL = String.fromCharCode(10);
 const base=require('path').resolve(__dirname,'..','host')+'/';
 // isolated responders dir
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'afcfg-'));
@@ -61,6 +62,36 @@ ok(bc.name==='n' && bc.rules==='RULE','BOM and CRLF together');
 ok(F.parse('x', LFfile.replace('max_turns: 5','max_turns: 5   ')).max_turns==='5','a trailing space on a value is trimmed');
 ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).description==='a: b: c','a colon inside a value survives');
 
+
+// 8. '## once' - the trigger lives in the responder file, not in panel code.
+// A perf-specific pattern sitting in af/claims.js is what this replaced.
+{
+  const p1=F.parse('x',['## once','when: [0-9]+s','ask: how long?','','when: %','ask: by what factor?'].join(NL));
+  ok(p1.once.length===2,'once: two entries, got '+p1.once.length);
+  ok(p1.once[0].when==='[0-9]+s','once: when kept verbatim');
+  ok(p1.once[1].ask==='by what factor?','once: second ask');
+
+  const p2=F.parse('x',['## once','when: a','ask: first line','  second line'].join(NL));
+  ok(p2.once[0].ask==='first line second line','once: wrapped ask keeps its tail, got '+JSON.stringify(p2.once[0].ask));
+
+  const p3=F.parse('x',['## once','when: a','','ask: orphan','','when: b','ask: good'].join(NL));
+  ok(p3.once.length===1&&p3.once[0].ask==='good','once: half an entry is dropped, got '+JSON.stringify(p3.once));
+
+  ok(F.parse('x','## rules'+NL+'do a thing').once.length===0,'once: absent section is [] not undefined');
+
+  const p4=F.parse('x',['## once','when: [0-9]+ ?%','ask: by what factor?','','## rules','be brief','','## stop','done'].join(NL));
+  const back=F.parse('x',F.serialize(p4));
+  ok(JSON.stringify(back.once)===JSON.stringify(p4.once),'once: survives a save/load round trip');
+  ok(back.rules==='be brief'&&back.stop==='done','once: round trip leaves rules and stop alone');
+
+  const ps=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text);
+  ok(ps.once.length===2,'once: shipped perf responder carries both questions, got '+ps.once.length);
+  ok(new RegExp(ps.once[0].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
+  ok(new RegExp(ps.once[1].when,'i').test('that is 12% faster'),'once: factor question triggers on a percent');
+  // or it takes the turn the frame question exists for
+  ok(!new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: a bare duration does not reach the factor question');
+  ok(!(ps.first_question||'').trim(),'once: the shipped responder no longer relies on first_question');
+}
 console.log(`\n  ${pass} passed, ${fail} failed`);
 fs.rmSync(dir,{recursive:true,force:true});
 process.exit(fail?1:0);
