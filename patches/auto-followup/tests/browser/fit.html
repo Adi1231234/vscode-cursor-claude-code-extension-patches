@@ -71,6 +71,13 @@ function probe(win, zoom) {
 
 (async () => {
   const f = document.getElementById('f'), rows = [];
+  /* The first row used to run before the iframe had a document, and reported
+     one failure that was the harness racing the load, not the layout. */
+  if (!f.contentWindow || !f.contentWindow.document.querySelector('button.__afBtn')) {
+    await new Promise((res) => { f.addEventListener('load', res, { once: true });
+                                 setTimeout(res, 5000); });
+  }
+  await wait(150);
   for (const [w, h] of SIZES) {
     f.width = w; f.height = h;
     await wait(90);

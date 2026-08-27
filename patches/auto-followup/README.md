@@ -25,6 +25,7 @@ context: last-message+claims
 max_turns: 20
 autosend: false
 model: sonnet
+effort: default
 ---
 
 ## rules
@@ -206,6 +207,14 @@ event, so the layer nobody was looking at was the one that went.
 - **`autosend`** `false` holds the *first* message for review; releasing it lets
   the rest of that arming flow. `true` never stops.
 - **`model`** which model runs the responder, through the Claude CLI.
+- **`effort`** how hard that model is asked to think - `low`, `medium`, `high`,
+  `xhigh`, `max`, or `default` to pass no flag and leave the CLI's own setting
+  alone. It is not the same axis as the model: a cheap model thinking hard and
+  an expensive one glancing are both sensible answers to "this responder only
+  has to notice a number". Measured through the real runner on one turn of
+  `perf-skeptic` at sonnet: `low` answered in 125 output tokens and 8.7 s, `max`
+  in 3043 and 44.5 s. The CLI does not validate the level - `--effort banana` is
+  accepted in silence - so set it from the dialog rather than by hand.
 
 ## The two ledgers
 

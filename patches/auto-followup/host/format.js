@@ -35,7 +35,11 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     context: "last-message+claims",
     max_turns: "20",
     autosend: "false",
-    model: "sonnet"
+    model: "sonnet",
+    /* "default" means the flag is not passed at all, so every responder written
+       before this key existed keeps running exactly as it did - on whatever
+       effort the CLI is configured for. */
+    effort: "default"
   };
 
   function section(body, tag) {

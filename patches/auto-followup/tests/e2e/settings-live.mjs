@@ -136,6 +136,16 @@ edit(() => pick('model', 'opus'));
 ok((nextRun().spawn || {}).argv.join(' ').indexOf('--model opus') >= 0,
    'model: the next run is spawned with --model opus');
 
+edit(() => pick('effort', 'xhigh'));
+ok((nextRun().spawn || {}).argv.join(' ').indexOf('--effort xhigh') >= 0,
+   'effort: the next run is spawned with --effort xhigh');
+
+/* default is not a level - it means say nothing and leave the CLI's own
+   setting alone, which is what every responder written before this key does. */
+edit(() => pick('effort', 'default'));
+ok((nextRun().spawn || {}).argv.join(' ').indexOf('--effort') < 0,
+   'effort: default passes no flag at all');
+
 edit(() => type('What to type', 'RULE-MARKER-42: ask for the input count.'));
 ok(((nextRun().spawn || {}).prompt || '').indexOf('RULE-MARKER-42') >= 0,
    'rules: the new text is in the prompt of the next run');

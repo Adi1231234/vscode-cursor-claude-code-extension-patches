@@ -147,6 +147,18 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(got.a.some((m) => m.op === 'list'), 'save: a disposed panel does not stop the others being told');
 }
 
+
+// effort: a level the CLI accepts without validating it - --effort banana is
+// taken in silence - so the only way in is the dialog's list, and a file that
+// predates the key has to keep behaving exactly as it did.
+{
+  const bare = F.parse('x', ['---', 'name: x', '---', '## rules', 'r'].join(NL));
+  ok(bare.effort === 'default', 'effort: a file without the key reads as default, got ' + bare.effort);
+  const round = F.parse('x', F.serialize(Object.assign({}, bare, { effort: 'xhigh' })));
+  ok(round.effort === 'xhigh', 'effort: it survives a save and a re-read, got ' + round.effort);
+  ok(F.serialize(bare).indexOf('effort: default') > 0, 'effort: and it is written into the front matter');
+}
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 fs.rmSync(dir,{recursive:true,force:true});
 process.exit(fail?1:0);
