@@ -159,6 +159,36 @@ try{
   ok(!q('.__afDrop'),'layer: closing the dialog never leaves a dropdown behind it');
 
   T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  // max_turns takes any positive integer - maxTurns() has always parsed one -
+  // so the list offers a row to type in rather than three presets and nothing else.
+  {
+    // the stub's textContent does not walk children, so ask the label itself
+    const mt = () => [...document.querySelectorAll('.__afF')].find((n) =>
+      [...n.children].some((c) => String(c.tagName).toLowerCase() === 'label' && c.textContent === 'max_turns'));
+    ok(!!mt(), 'custom: the max_turns field is on the form');
+    mt().click();
+    const inp = q('.__afDCustom .__afDCIn');
+    ok(!!inp, 'custom: max_turns offers a row to type a number into');
+    ok(inp.value === '', 'custom: empty while one of the presets is the value');
+    inp.value = 'abc';
+    inp.dispatchEvent(new globalThis.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+    ok(!!q('.__afDrop'), 'custom: a number that is not one does not close the list');
+    inp.value = '7';
+    inp.dispatchEvent(new globalThis.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+    ok(T.draft().max_turns === '7',
+       'custom: Enter sets the typed number, got ' + T.draft().max_turns);
+    ok(!q('.__afDrop'), 'custom: and closes the list');
+
+    mt().click();
+    const back = q('.__afDCustom .__afDCIn');
+    ok(back && back.value === '7',
+       'custom: a number that is not a preset comes back in the row, got ' + (back || {}).value);
+    ok(q('.__afDCustom').className.indexOf('__afDOn') > 0,
+       'custom: and the row is the one marked as chosen');
+    keys(document,'Escape');
+  }
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
   const item=q('.__afLItem');
   ok(item.getAttribute('tabindex')==='0','keys: a responder in the rail is a tab stop');
   const add=[...document.querySelectorAll('.__afNew')][0];

@@ -170,6 +170,15 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afDItem:hover{background:rgba(128,128,128,.18)}
 .__afDOn{background:color-mix(in srgb,var(--app-claude-orange,#d97757) 13%,transparent);color:var(--app-claude-orange,#d97757)}
 .__afDItem span{display:block;font-family:inherit;opacity:.5;font-size:10.5px;margin-top:2px;color:var(--vscode-foreground,#ccc);unicode-bidi:plaintext;text-align:start}
+/* The row you type in. It keeps the shape of the rows above it - same height,
+   same padding, same hover - so the list reads as one list, and the input
+   carries no chrome of its own: the row is the control. */
+.__afDCustom{display:flex;align-items:center;gap:8px}
+.__afDCustom b{font-weight:400;flex:none}
+.__afDCIn{flex:1;min-width:0;width:100%;background:transparent;border:0;border-bottom:1px solid rgba(128,128,128,.35);
+  color:inherit;font:inherit;font-family:inherit;padding:1px 2px;outline:none;direction:ltr;text-align:start}
+.__afDCIn::placeholder{opacity:.35}
+.__afDCIn:focus{border-bottom-color:var(--afAcc,#d97757)}
 
 /* a section of the file, and the accent rule that says so */
 .__afBox{display:flex;flex-direction:column;gap:6px;min-height:0}
