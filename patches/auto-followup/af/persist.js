@@ -36,7 +36,7 @@
     var snap, payload;
     try {
       payload = { turns: turns, slot: slot, slotFor: slot ? lastSeen : "",
-                  stopped: stopped, approved: approved, lastSeen: lastSeen,
+                  stopped: stopped, approved: approved, paused: paused, lastSeen: lastSeen,
                   fp: fingerprint() };
       snap = JSON.stringify(payload);
     } catch (e) { return; }
@@ -62,6 +62,7 @@
     if (typeof o.turns === "number" && o.turns >= 0) turns = o.turns;
     if (typeof o.stopped === "string" && o.stopped) stopped = o.stopped;
     approved = o.approved === true;
+    paused = o.paused === true;
     if (typeof o.lastSeen === "string") lastSeen = o.lastSeen;
 
     if (o.slot && typeof o.slot === "object" && typeof o.slot.message === "string") {

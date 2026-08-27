@@ -23,7 +23,7 @@
   function arm(id) {
     armed = id;
     meta = findResponder(id);
-    turns = 0; slot = null; stopped = null; approved = false;
+    turns = 0; slot = null; stopped = null; approved = false; paused = false;
     clearFirst();                          /* a new arming asks it again */
     lastSeen = lastAssistant();          /* the reply already on screen is not ours to answer */
     try { localStorage.setItem(keyFor(ARM_KEY), id); } catch (e) {}
@@ -31,9 +31,34 @@
     renderAll();
   }
 
+  /* Held, not turned off. The difference matters: turning it off loses the
+     turn count, the arming and the once-ledger, and getting them back means
+     arming again from the menu. A pause is for the ordinary case of wanting to
+     say something yourself for a turn or two.
+
+     Resuming sets lastSeen to what is on screen now, the same thing arming
+     does, so the conversation held while paused is not answered retroactively -
+     the loop picks up at the next reply. And a follow-up that was waiting when
+     the pause started is dropped unless it is still answering the last thing
+     Claude said, for the reason the queue does not restore held items: a
+     message written three turns ago is answering a conversation that has moved
+     on. */
+  function setPaused(v) {
+    var was = paused;
+    paused = !!v;
+    if (was === paused) return;
+    if (!paused) {
+      var now = lastAssistant();
+      if (slot && lastSeen !== now) slot = null;
+      lastSeen = now;
+    }
+    log(paused ? "paused" : "resumed");
+    renderAll();
+  }
+
   function disarm(reason) {
     if (pending) cancelRun();
-    armed = null; meta = null; slot = null; pending = false; approved = false;
+    armed = null; meta = null; slot = null; pending = false; approved = false; paused = false;
     stopped = reason || null;
     try { localStorage.removeItem(keyFor(ARM_KEY)); } catch (e) {}
     log("disarmed", reason || "by hand");
@@ -68,7 +93,7 @@
   }
 
   function maybeRun() {
-    if (!armed || stopped || pending || slot) return;
+    if (!armed || stopped || pending || slot || paused) return;
     var api = qApi();
     if (!api || api.busy() || api.paused() || api.count()) return;   /* the user's lane wins */
     var max = maxTurns();
@@ -84,6 +109,10 @@
   }
 
   function maybeSend() {
+    /* A pause holds what the loop does on its own. Pressing play is not the
+       loop acting, it is you, so an approval already given still goes - the
+       alternative is a play button that silently does nothing. */
+    if (paused && !approved) return;
     if (!slot || !armed || stopped) return;
     if (!autosend()) return;                   /* held for the first approval */
     var api = qApi();

@@ -7,9 +7,14 @@
 .__afBtn{position:relative;flex:none;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;width:26px;height:26px;padding:0;border:none;border-radius:5px;background:transparent;color:var(--app-secondary-foreground,var(--vscode-foreground,#ccc));margin-left:2px;opacity:.75;transition:background .12s ease,color .12s ease,opacity .12s ease}
 .__afBtn:hover{background:var(--app-ghost-button-hover-background,rgba(128,128,128,.16));opacity:1}
 .__afBtn svg{display:block;pointer-events:none}
-.__afBtn.__afOn,.__afBtn.__afDone{width:auto;padding:0 7px 0 6px;opacity:1}
+.__afBtn.__afOn,.__afBtn.__afDone,.__afBtn.__afHold{width:auto;padding:0 7px 0 6px;opacity:1}
 .__afBtn.__afOn{color:var(--app-claude-orange,#d97757);background:color-mix(in srgb,var(--app-claude-orange,#d97757) 16%,transparent)}
 .__afBtn.__afDone{color:var(--vscode-editorWarning-foreground,#cca700);background:color-mix(in srgb,var(--vscode-editorWarning-foreground,#cca700) 15%,transparent)}
+/* Paused is the armed chip with the accent taken out of it: same shape, same
+   count, visibly not running. Colour is not the only carrier - the tooltip
+   says "paused" and the menu says Resume. */
+.__afBtn.__afHold{color:var(--app-secondary-foreground,var(--vscode-foreground,#ccc));background:color-mix(in srgb,var(--vscode-foreground,#ccc) 12%,transparent);opacity:.8}
+.__afBtn.__afHold .__afCn{opacity:.75}
 .__afCn{font-size:10.5px;font-weight:600;font-variant-numeric:tabular-nums;direction:ltr;line-height:1;pointer-events:none}
 .__afTip{position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);z-index:20;white-space:nowrap;padding:4px 8px;font-size:.85em;line-height:1.4;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:var(--corner-radius-medium,6px);box-shadow:0 2px 6px #00000026;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .1s ease-in}
 .__afTipWide{white-space:normal;width:250px;text-align:center}

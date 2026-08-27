@@ -5,7 +5,7 @@
 require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims()};}}");
+  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,paused:paused,claims:readClaims()};}}");
 
 let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
@@ -489,6 +489,46 @@ try{
   T.openLive();   // closed
   ok(!document.querySelector('.__afLiveDlg'), 'clock: closing stops the view');
   T.disarm(null);
+
+/* Pause is reached from the picker, which is the only menu the button opens, and
+   the button has to say which of the two states it is in - a held loop that looks
+   exactly like a running one is worse than no pause at all. */
+{
+  T.arm('perf-skeptic');
+  const openPicker = () => {
+    const m = document.querySelector('.__afMenu');
+    if (m && m.parentNode) m.parentNode.removeChild(m);
+    T.toggleMenu({ currentTarget: T.btn() });
+    return [...document.querySelectorAll('.__afMenu .__afItem')];
+  };
+  let items = openPicker();
+  const pause = items.find(n => n.textContent.trim() === 'Pause');
+  ok(!!pause, 'pause: the picker offers it while armed');
+  if (pause) pause.click();
+  ok(S().paused === true, 'pause: clicking it holds the loop');
+  T.ensureButton();
+  ok((T.btn().className || '').indexOf('__afHold') >= 0,
+     'pause: the button says so, got ' + T.btn().className);
+  const tip = T.btn().querySelector('.__afTip');
+  ok(!!tip && tip.textContent.indexOf('paused') > 0,
+     'pause: and so does the tooltip, got ' + JSON.stringify(tip && tip.textContent));
+
+  items = openPicker();
+  const resume = items.find(n => n.textContent.trim() === 'Resume');
+  ok(!!resume, 'pause: the same item reads Resume once it is held');
+  if (resume) resume.click();
+  ok(S().paused === false, 'resume: and it starts again');
+  T.ensureButton();
+  ok((T.btn().className || '').indexOf('__afOn') >= 0,
+     'resume: the button goes back to armed, got ' + T.btn().className);
+
+  /* Turning it off and arming again must not leave it held. */
+  (openPicker().find(n => n.textContent.trim() === 'Pause') || { click() {} }).click();
+  T.disarm(null);
+  T.arm('perf-skeptic');
+  ok(S().paused === false, 'pause: arming again starts running, not held');
+}
+
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);

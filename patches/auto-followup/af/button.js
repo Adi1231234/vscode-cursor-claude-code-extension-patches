@@ -24,7 +24,8 @@
 
   function tipText() {
     if (stopped) return "STOP — " + stopped;
-    if (armed) return "Auto follow-up · " + (meta ? meta.name : armed);
+    if (armed) return "Auto follow-up · " + (meta ? meta.name : armed)
+                      + (paused ? " · paused" : "");
     return "Auto follow-up — off";
   }
 
@@ -74,7 +75,7 @@
   function paintButton(b) {
     var cls = "__afBtn";
     if (stopped) cls += " __afDone";
-    else if (armed) cls += " __afOn";
+    else if (armed) cls += paused ? " __afHold" : " __afOn";
     if (b.className !== cls) b.className = cls;
 
     var want = (armed || stopped) ? counterText() : "";

@@ -56,6 +56,7 @@
   var turns = 0;           /* how many follow-ups this arming has produced */
   var slot = null;         /* {message, why, invalid} awaiting send, or null */
   var stopped = null;      /* the stop reason once the loop has ended */
+  var paused = false;     /* held by hand, still armed - see setPaused */
   var pending = false;     /* a run is in flight */
   var lastSeen = "";       /* the reply already answered, so one turn is not answered twice */
   var wasBusy = false;
