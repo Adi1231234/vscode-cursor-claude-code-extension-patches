@@ -14,7 +14,28 @@ globalThis.__ccAf = globalThis.__ccAf || (function () {
     try {
       var r = wv.postMessage(msg);
       if (r && typeof r.then === "function") r.then(function () {}, function () {});
-    } catch (e) {}
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* Every panel that has spoken to this host, so an edit made in one window
+     reaches the loop running in another. The panel keeps the settings it
+     enforces itself - autosend, the context mode, max_turns, the once gate - in
+     the list it was last sent, and it only asks again when it has none at all.
+     So a save that answered only the window it came from left every other
+     window running on the settings it happened to load, with nothing on screen
+     to say so. The prompts and the model were never affected: those are read
+     from the file on every run.
+
+     A disposed webview throws on postMessage, which is how it is dropped -
+     there is no dispose event on this side of the bridge. */
+  var panels = [];
+
+  function remember(wv) {
+    if (!wv || typeof wv.postMessage !== "function") return;
+    if (panels.indexOf(wv) >= 0) return;
+    panels.push(wv);
+    if (panels.length > 32) panels.shift();
   }
 
   function openFolder() {
@@ -41,6 +62,17 @@ globalThis.__ccAf = globalThis.__ccAf || (function () {
     globalThis.__ccAfStore.seedIfEmpty(globalThis.__ccAfSamples);
     post(wv, { type: "__ccaf", op: "list", items: globalThis.__ccAfStore.list(),
                root: globalThis.__ccAfStore.root() });
+  }
+
+  /* Not just the window that saved: the same responder can be armed in several,
+     and the others have no way to know the file changed. */
+  function broadcastList(wv) {
+    remember(wv);
+    for (var i = panels.length - 1; i >= 0; i--) {
+      if (!post(panels[i], { type: "__ccaf", op: "list",
+                             items: globalThis.__ccAfStore.list(),
+                             root: globalThis.__ccAfStore.root() })) panels.splice(i, 1);
+    }
   }
 
   function doRun(wv, msg) {
@@ -81,12 +113,16 @@ globalThis.__ccAf = globalThis.__ccAf || (function () {
 
   function handle(msg, wv) {
     if (!msg || msg.type !== "__ccaf") return false;
+    /* Every panel that speaks is a panel that has to be told when a responder
+       changes - registering only on 'list' would miss one that had already
+       loaded before this code did. */
+    remember(wv);
     try {
       if (msg.op === "list") sendList(wv);
       else if (msg.op === "run") doRun(wv, msg);
       else if (msg.op === "cancel") cancel(msg.rid);
-      else if (msg.op === "save") { globalThis.__ccAfStore.save(msg.responder); sendList(wv); }
-      else if (msg.op === "delete") { globalThis.__ccAfStore.remove(msg.id); sendList(wv); }
+      else if (msg.op === "save") { globalThis.__ccAfStore.save(msg.responder); broadcastList(wv); }
+      else if (msg.op === "delete") { globalThis.__ccAfStore.remove(msg.id); broadcastList(wv); }
       else if (msg.op === "folder") openFolder();
       else if (msg.op === "export") exportClaims(msg.lines);
     } catch (e) {
