@@ -101,3 +101,25 @@ what it finds in the fiber tree. The stop button works by decorating that object
 `interrupt()`, so a stub that returned a fresh object each time made the stop test
 fail - and the failure looked exactly like the feature being broken. It was the
 stub. If a test here fails, check the stub against reality before the code.
+
+## `ab-cheap.mjs` - the experiment behind one prompt change
+
+    BEFORE=<a samples.js from before the edit> node ab-cheap.mjs 2
+
+Two arms of the same responder on the same four moments, each one a message where
+a long run is being proposed and a short check would settle it. Every answer is
+printed, and the label beside it comes from a judge with a written rubric rather
+than a regex - a classifier that cannot see the difference is indistinguishable
+from an edit that made none.
+
+The change: three paragraphs telling perf-skeptic that the check it asks for is
+part of the ask, to name the cheapest one that could still change its mind, and
+to treat a proposed sweep as a claim to challenge rather than a plan to accept.
+
+    before   asked for a cheaper check 3/8, named what it costs 1/8
+    after                              8/8                      7/8
+
+The raw answers say it more plainly than the score does: the second arm opens
+with *stop before you run the sweep* and *don't start a twenty-minute benchmark*,
+and then names the counter or the single case that would answer the same
+question.
