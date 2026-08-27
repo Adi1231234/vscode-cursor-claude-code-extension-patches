@@ -4,7 +4,7 @@
 const fs=require('fs'), path=require('path'), os=require('os');
 const base=path.resolve(__dirname,'..','host')+'/';
 process.env.CLAUDE_CONFIG_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'afrun-'));
-for(const f of ['format.js','store.js','samples.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const R=globalThis.__ccAfRun;
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 
@@ -36,6 +36,34 @@ ok(iMsg>p.indexOf('conversation so far'),'the message being answered comes after
 const p2=R.compose({rules:'R',stop:'',model:'sonnet'},{text:'X',claims:[]});
 ok(p2.indexOf('When to stop')<0,'an empty stop condition adds no heading');
 ok(p2.indexOf('R')>=0,'rules still present');
+
+
+// --- the CLI envelope: a CLI-level failure must never become a message
+const okEnv=JSON.stringify({type:'result',subtype:'success',is_error:false,
+  result:'{"message":"m","why":"w","claims":[],"stop":null}'});
+let u=R.unwrap(okEnv);
+ok(u.cli===null,'a successful envelope is not an error');
+ok(u.text.indexOf('"message"')>=0,'the model output is taken from result');
+ok(R.shape(R.extract(u.text),u.text).message==='m','and it parses through to a message');
+
+const errEnv=JSON.stringify({type:'result',subtype:'error_during_execution',is_error:true,
+  result:'Not logged in · Please run /login'});
+u=R.unwrap(errEnv);
+ok(typeof u.cli==='string' && u.cli.indexOf('Not logged in')>=0,'is_error becomes a CLI error: '+u.cli);
+ok(u.text===undefined,'and carries no message text');
+
+const subEnv=JSON.stringify({type:'result',subtype:'error_max_turns',is_error:false,result:'hit the cap'});
+ok(typeof R.unwrap(subEnv).cli==='string','a non-success subtype is an error even when is_error is false');
+
+// a bare model answer with no envelope still works, so an older CLI is not broken
+u=R.unwrap('{"message":"bare","claims":[],"stop":null}');
+ok(u.cli===null && u.text.indexOf('bare')>=0,'output with no envelope falls through unchanged');
+
+// the prose fallback survives INSIDE a successful envelope - that was the
+// approved behaviour and it is not what the CLI failure path took away
+u=R.unwrap(JSON.stringify({type:'result',subtype:'success',is_error:false,result:'just prose'}));
+const sh=R.shape(R.extract(u.text),u.text);
+ok(u.cli===null && sh.invalid===true && sh.message==='just prose','prose from the model is still a message');
 
 // --- the CLI missing must surface as an error, not a hang
 let done=false;

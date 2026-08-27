@@ -25,7 +25,7 @@ function Invoke-Patch {
         if (-not $js) {
             Write-Miss 'webview message-listener anchor not found'
         } else {
-            $parts = @('format', 'store', 'samples', 'run', 'handle')
+            $parts = @('format', 'store', 'samples', 'prompt', 'run', 'handle')
             $hostJs = ($parts | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "host/$_.js") }) -join ''
             Write-Text $Ctx.Js ("/* AUTOFOLLOWUPHOST */`n" + $hostJs.Trim() + "`n" + $js)
             Write-Ok 'host responder store + CLI runner + __ccaf hook'
@@ -36,7 +36,7 @@ function Invoke-Patch {
     # Anchored on the queue's own marker: this patch calls window.__qAuto, which
     # queue/flush-init.js defines, so it has to be injected after it. apply.ps1
     # runs prompt-queue first for the same reason.
-    $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'dialog', 'dialog-form', 'dialog-foot', 'loop', 'runtime')
+    $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'transcript', 'dialog', 'dialog-form', 'dialog-foot', 'loop', 'runtime')
     # The message selectors are the same detected names copy-message uses: the
     # transcript is read from the DOM, because nothing in the app exposes a
     # message list on the session store.

@@ -123,6 +123,15 @@ the message and the line is marked invalid. A responder that answers usefully in
 prose is worth more than a turn lost to a missing brace, and the log records it so
 one that does this every time is visible rather than merely slow.
 
+**A failure of the CLI itself is a different thing and is never sent.** The run
+asks for `--output-format json`, so the CLI's own envelope carries `is_error`
+beside the model's answer. Without it the CLI reports its own failures as ordinary
+prose on stdout with exit code 0 - `Not logged in - Please run /login` is one -
+and the prose fallback above would have typed that into the conversation as the
+user's next message, while they were away, with the loop carrying on afterwards.
+Note that `subtype` stays `"success"` in that case, so `is_error` is the field
+that separates them. A CLI failure ends the arming with the reason on the button.
+
 ## Tests
 
     node patches/auto-followup/tests/run-all.mjs      # 120 checks

@@ -13,56 +13,42 @@
    takes the outermost braces rather than trusting the whole of stdout. If that
    still fails the turn is NOT dropped: the raw output becomes the message and the
    panel marks the line invalid. A responder that answers usefully in prose is
-   more valuable than a turn lost to a missing brace, and the log records it so a
-   responder that does this every time is visible rather than merely slow. */
+   more valuable than a turn lost to a missing brace.
+
+   That fallback is deliberately NOT extended to the CLI's own failures - see
+   unwrap(). prompt.js composes what is sent. */
 globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
   var cp = require("child_process"), os = require("os");
 
   var TIMEOUT_MS = 180000;      /* a hung CLI must not wedge the loop forever */
   var MAX_OUT = 1048576;
 
-  var CONTRACT = [
-    "You are writing the human's next message in an ongoing conversation with Claude.",
-    "You are NOT talking to the human and you are NOT Claude. Your whole output is the",
-    "message that will be typed into the composer, plus bookkeeping.",
-    "",
-    "Answer with JSON only, exactly these four keys:",
-    '  "message" - the text to send. Write it as the human would: direct, short,',
-    "              in the language the human has been using.",
-    '  "why"     - one short clause naming the rule you applied. The human reads',
-    "              this to judge you, so name the trigger, not the intent.",
-    '  "claims"  - factual assertions or numbers Claude stated in the message you',
-    "              were given, as short strings. [] when there are none.",
-    '  "stop"    - null to continue, or a short reason when the stop condition is met.',
-    "",
-    "When you return a stop reason, 'message' is ignored and nothing is sent."
-  ].join("\n");
-
-  function compose(r, ctx) {
-    var p = [CONTRACT, "", "# When to type what", (r.rules || "").trim()];
-    if ((r.stop || "").trim()) p.push("", "# When to stop", r.stop.trim());
-    if (ctx.claims && ctx.claims.length) {
-      p.push("", "# What Claude has already asserted this session",
-             "Each line is one earlier claim. Use them to catch a contradiction with",
-             "the message below. You were not given the reasoning behind them.",
-             ctx.claims.join("\n"));
-    }
-    /* context: full-session. Deliberately last and deliberately labelled: a
-       responder given the reasoning tends to be persuaded by it, so a responder
-       that asks for this is choosing depth over independence and should be able
-       to see that it did. */
-    if (ctx.transcript) {
-      p.push("", "# The conversation so far", ctx.transcript.trim());
-    }
-    p.push("", "# Claude's message, which you are answering", (ctx.text || "").trim());
-    return p.join("\n");
-  }
-
   /* Outermost braces, so a fenced or prefaced object still parses. */
   function extract(out) {
     var a = out.indexOf("{"), b = out.lastIndexOf("}");
     if (a < 0 || b <= a) return null;
     try { return JSON.parse(out.slice(a, b + 1)); } catch (e) { return null; }
+  }
+
+  /* The CLI's own envelope, asked for with --output-format json.
+
+     This exists because the CLI reports its own failures as ordinary prose on
+     stdout with exit code 0: a token refresh in flight prints
+     "Not logged in - Please run /login" and returns 0. Without the envelope that
+     string is indistinguishable from a model answer, and the prose fallback
+     below would have typed it into the conversation as the user's next message -
+     while they were away, with the loop carrying on afterwards. Seen once for
+     real during testing, and it is a runtime condition rather than a setup
+     problem, so it will happen again.
+
+     is_error and subtype separate the two cases the raw text cannot. */
+  function unwrap(out) {
+    var env = extract(out);
+    if (!env || env.type !== "result") return { cli: null, text: out };
+    if (env.is_error || env.subtype !== "success") {
+      return { cli: String(env.result || env.subtype || "the CLI reported an error").trim() };
+    }
+    return { cli: null, text: typeof env.result === "string" ? env.result : "" };
   }
 
   function shape(parsed, raw) {
@@ -92,7 +78,7 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
   }
 
   function run(r, ctx, done) {
-    var args = ["-p"];
+    var args = ["-p", "--output-format", "json"];
     if (r.model) args.push("--model", r.model);
     var child;
     try {
@@ -122,12 +108,18 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
                       (err.trim() ? ": " + err.trim().slice(0, 300) : "") });
         return;
       }
-      done(shape(extract(out), out));
+      var u = unwrap(out);
+      /* A CLI-level failure is an error, never a message. It ends the arming with
+         the reason on the button, which is the honest outcome: nothing is typed
+         into the conversation on the strength of a string nobody can vouch for. */
+      if (u.cli) { done({ error: u.cli.slice(0, 300) }); return; }
+      done(shape(extract(u.text), u.text));
     });
 
-    try { child.stdin.end(compose(r, ctx || {})); } catch (e) {}
+    try { child.stdin.end(globalThis.__ccAfPrompt.compose(r, ctx || {})); } catch (e) {}
     return child;
   }
 
-  return { run: run, compose: compose };
+  return { run: run, unwrap: unwrap, extract: extract, shape: shape,
+           compose: function (r, c) { return globalThis.__ccAfPrompt.compose(r, c); } };
 })();

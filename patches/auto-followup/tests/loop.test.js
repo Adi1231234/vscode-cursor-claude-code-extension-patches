@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 const B=require('path').resolve(__dirname,'..','af')+'/';
-const order=['config','bridge','claims','button','menu','lane','dialog','dialog-form','dialog-foot','loop','runtime'];
+const order=['config','bridge','claims','button','menu','lane','transcript','dialog','dialog-form','dialog-foot','loop','runtime'];
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
 // expose internals for the test only

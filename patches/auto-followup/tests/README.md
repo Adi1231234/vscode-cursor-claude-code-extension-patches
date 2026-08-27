@@ -38,6 +38,18 @@ message until it is approved, that the user's queue and the user's pause each
 block it, that `max_turns` and a stop reason and the stop button all end it, and
 that a result addressed to another panel is ignored.
 
+**`live.test.js`** is not in `run-all.mjs`: it spawns the real CLI and costs
+tokens. It composes the prompt the panel will, runs the shipped `perf-skeptic`
+over a reply that trips two of its rules, and checks that what comes back parses,
+picks a rule rather than answering generically, and extracts the claims. Run it
+when the contract, the samples or `run.js` change.
+
+It deliberately does **not** redirect `CLAUDE_CONFIG_DIR`. The responders folder
+lives under it, but so do the CLI's credentials, so isolating it makes every run
+return `Not logged in` with `is_error` true. That cost one wrong diagnosis here -
+it was read as a transient auth blip and written up as one - so the test builds
+its responder from the shipped sample text instead of through the store.
+
 ## One thing the stubs get right on purpose
 
 `__ccStore()` returns the **same object** every call, because the real one caches

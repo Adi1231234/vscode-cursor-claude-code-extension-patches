@@ -34,7 +34,7 @@ const SCRIPTS = {
   },
   "auto-followup": {
     dir: "patches/auto-followup/af/",
-    order: ["config", "bridge", "claims", "button", "menu", "lane", "dialog",
+    order: ["config", "bridge", "claims", "button", "menu", "lane", "transcript", "dialog",
             "dialog-form", "dialog-foot", "loop", "runtime"]
   }
 };
