@@ -36,6 +36,14 @@ setting asks for them, that `full-session` adds the transcript, and that the
 message being answered comes last. It also spawns the CLI for real with a bad
 model name, to prove a failure comes back as a verdict rather than a hang.
 
+**`reload.test.js`** loads the panel script twice over the same `localStorage`,
+which is what a window reload is, and checks what comes back: the arming, the
+turn count, the answer waiting for approval, the stop reason, and a follow-up
+being dropped rather than restored once the conversation has moved past the
+message it was written for. It also loads the second panel under a **different**
+session id, because that is what a real reload does - see the README section on
+surviving a reload.
+
 **`loop.test.js`** runs the panel script itself against `dom-stubs.js` and drives
 the whole loop: that it does not answer a reply which predates arming, that one
 turn produces one run and never two, that the context carries what the responder's

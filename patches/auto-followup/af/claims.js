@@ -32,7 +32,7 @@
      every one of them starts from a session that already has an id. */
   function carryOver(was) {
     if (was) return;                    /* one real id replacing another is a new session */
-    [CLAIM_KEY, ASKED_KEY, FIRST_KEY, ARM_KEY].forEach(function (p) {
+    [CLAIM_KEY, ASKED_KEY, FIRST_KEY, ARM_KEY, STATE_KEY].forEach(function (p) {
       try {
         var v = localStorage.getItem(p + "none");
         if (v === null) return;

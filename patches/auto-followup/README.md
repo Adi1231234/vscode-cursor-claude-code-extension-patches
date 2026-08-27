@@ -266,6 +266,44 @@ store, and both were wrong here first:
   version here read `s.sessionId` and got `""`, which would have keyed every
   conversation's arming and claims to one shared bucket.
 
+## What survives a window reload
+
+Everything except a run that was in flight: the arming, the turn count, the
+answer waiting for approval, the stop reason, a released approval, the claims
+ledger and the once-ledger. They live in `localStorage` under the session id,
+and `af/persist.js` writes them from the one place every state change ends -
+`renderAll()` - with `tick()` as the catch-all.
+
+**A reload gives the same conversation a new session id.** Measured in a real
+editor: armed under `fbf2bf72`, `Developer: Reload Window`, the same two messages
+back on screen with the title unchanged, and the panel now calling itself
+`c08c5113`. Every key here is per session id, so that alone orphaned all of the
+above and the button came back off with everything still on disk under the old
+id. That, and not the variables, was why an auto follow-up did not survive a
+reload.
+
+So the identity that matters is the conversation, and what names it is its
+opening - the first thing the user asked and the first thing Claude answered,
+neither of which changes. A session that arrives with no arming of its own looks
+for a stored state whose opening matches what is on screen and takes its keys
+over, moving them rather than copying so there is only ever one claim on one
+conversation. A different conversation on screen inherits nothing.
+
+**The one thing that does not come back unconditionally** is the answer waiting
+for approval. It was written for one message, and sending it three turns later
+answers a conversation that has moved on - so it is stored with the message it
+was written for and restored only while that message is still the last thing
+Claude said. A run that was in flight is not restorable at all: its child belongs
+to the host and answers a rid that no longer has a panel. The turn it was
+answering is already in `lastSeen`, so nothing is asked twice - the cost of a
+reload mid-run is that one follow-up.
+
+Checked in a real VS Code, not only against the stub: armed, seeded with a turn
+count of 7 and an answer in the lane, reloaded for real, and the panel came back
+`__afBtn __afOn`, `7/20`, tooltip `Auto follow-up · perf-skeptic`, the answer
+still in the lane. Then the same again with the keys moved under a dead session
+id: the panel adopted them and the old keys were gone.
+
 ## Why a slot of its own and not a queue item
 
 The queue already sends one message per turn, so pushing follow-ups into it looks

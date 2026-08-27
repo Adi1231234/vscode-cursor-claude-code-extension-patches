@@ -176,7 +176,16 @@ globalThis.window={getComputedStyle:(n)=>globalThis.getComputedStyle(n),addEvent
   innerWidth:1200,innerHeight:800};
 globalThis.__winListeners={};
 const store={};
-globalThis.localStorage={getItem:k=>k in store?store[k]:null,setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}};
+/* A real Storage can be walked - length and key(i) - and the panel walks it to
+   find the state left by the same conversation under its previous session id.
+   A stub with three methods and nothing to enumerate made that code look dead. */
+globalThis.localStorage={
+  getItem:k=>k in store?store[k]:null,
+  setItem:(k,v)=>{store[k]=String(v);},
+  removeItem:k=>{delete store[k];},
+  key:i=>Object.keys(store)[i]===undefined?null:Object.keys(store)[i],
+  get length(){return Object.keys(store).length;}
+};
 globalThis.__store=store;
 globalThis.confirm=()=>true;
 globalThis.sent=[];
@@ -233,8 +242,10 @@ globalThis.__qAutoState={count:0,paused:false,busy:false};
 globalThis.window.__qAuto={
   count:()=>globalThis.__qAutoState.count,
   paused:()=>globalThis.__qAutoState.paused,
+/* The session id is settable: a window reload brings the conversation back
+   under a NEW one, and that is the case the persistence has to survive. */
   busy:()=>globalThis.__qAutoState.busy,
-  panel:()=>null, log:()=>{}, sid:()=>'sess-1',
+  panel:()=>null, log:()=>{}, sid:()=>globalThis.__sid||'sess-1',
   send:t=>{globalThis.__sentText=t;return Promise.resolve(true);}
 };
 /* The panel has no clock here: its interval callback is captured so a test can
