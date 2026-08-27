@@ -33,7 +33,7 @@
     modalEl.setAttribute("aria-label", "Background tasks");
     modalEl.appendChild(buildHead());
     bodyEl = el("div", "__bgBody");
-    listEl = el("div", "__bgList");
+    listEl = el("div", "__bgList __ccScroll");
     listEl.setAttribute("role", "listbox");
     listEl.setAttribute("aria-label", "Tasks");
     listEl.tabIndex = 0;

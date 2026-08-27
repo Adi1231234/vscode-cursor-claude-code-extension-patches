@@ -14,6 +14,7 @@
 function Invoke-Patch {
     param($Ctx)
 
+    Add-StyleBlock $Ctx (Get-LibCssPath 'ccScroll.css') '/* CCSCROLL */' 'shared scrollbar CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'followup.css') '/* AUTOFOLLOWUP */' 'auto follow-up CSS'
 
     # ---------------- extension.js (host runtime + message hook) ----------------

@@ -29,7 +29,7 @@
   }
 
   function foldBody(host, text, cls) {
-    var pre = el("pre", "__bgEntryBody" + (cls ? " " + cls : ""));
+    var pre = el("pre", "__bgEntryBody __ccScroll" + (cls ? " " + cls : ""));
     pre.textContent = text;
     host.appendChild(pre);
     return pre;

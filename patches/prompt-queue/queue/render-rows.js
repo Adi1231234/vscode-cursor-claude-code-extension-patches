@@ -57,7 +57,7 @@
   }
 
   function buildBody() {
-    var body = el("div", "__qBody");
+    var body = el("div", "__qBody __ccScroll");
     if (bodyMax) body.style.maxHeight = bodyMax + "px";
     Q.forEach(function (it, i) { body.appendChild(buildRow(it, i)); });
     return body;

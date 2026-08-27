@@ -105,6 +105,9 @@ function Get-InjectedJs {
 # patches that build their injected <script> from an ordered fragment list: drop
 # this in at the right position instead of copying the runtime into the patch.
 function Get-LibJsPath { param([string]$Name) Join-Path $PSScriptRoot "js/$Name" }
+# The shared stylesheets, appended by whichever patch runs first - the guard in
+# the file makes the second and third call a no-op.
+function Get-LibCssPath { param([string]$Name) Join-Path $PSScriptRoot "css/$Name" }
 
 # The shared worktree-session resolver (used by worktree-title-dir + worktree-fork-diff).
 function Get-CcWtResolveHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccWtResolve.js')).Trim() }

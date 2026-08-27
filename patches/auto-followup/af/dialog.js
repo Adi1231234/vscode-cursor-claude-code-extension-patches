@@ -126,7 +126,7 @@
   }
 
   function listPane() {
-    var pane = el("div", "__afPane __afList");
+    var pane = el("div", "__afPane __afList __ccScroll");
     list.forEach(function (r) {
       var it = el("div", "__afLItem" + (draft && draft.id === r.id ? " __afSel" : ""));
       var dot = el("span", "__afDot" + (armed === r.id ? "" : " __afDotOff"));
@@ -161,7 +161,7 @@
   function renderDialog() {
     if (!dlg) return;
     dlg.innerHTML = "";
-    var box = el("div", "__afDlg");
+    var box = el("div", "__afDlg __ccScroll");
     var head = el("div", "__afDlgHead");
     var h = el("h3"); txt(h, "Responders"); head.appendChild(h);
     var x = el("span", "__afX"); txt(x, "✕");

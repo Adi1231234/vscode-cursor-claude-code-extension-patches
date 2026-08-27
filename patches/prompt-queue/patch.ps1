@@ -7,6 +7,7 @@
 # <script> and 'flush-init' must close it; the middle is grouped by concern.
 function Invoke-Patch {
     param($Ctx)
+    Add-StyleBlock $Ctx (Get-LibCssPath 'ccScroll.css') '/* CCSCROLL */' 'shared scrollbar CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue.css') '/* QUEUE */' 'queue CSS'
 
     # lib/js/ccStore.js is the shared session-store finder, dropped in right after

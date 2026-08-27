@@ -50,6 +50,13 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
   beside it, nothing here can undo that - reinstall the extension in the editor
   (or delete its folder and let the editor download it again) and run once more.
 
+- **`lib/css/`** — stylesheets more than one patch needs. `ccScroll.css` is the
+  scrollbar every panel this repo draws now uses: put `__ccScroll` on a scrollable
+  node and it gets a 10px bar with a rounded inset thumb and no stepper arrows.
+  Its first line is `scrollbar-color: auto`, and that line is the whole trick -
+  something above every element in the webview sets `scrollbar-color`, and while
+  it is set Chromium ignores every `::-webkit-scrollbar` rule on that element.
+
 - **`tools/which-build.mjs`** — which windows are running the bundle that is on
   disk and which need a reload. `Developer: Reload Window` restarts **one**
   window's extension host; every other window keeps the code it loaded when it

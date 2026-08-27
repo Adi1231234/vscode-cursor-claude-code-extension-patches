@@ -1,0 +1,44 @@
+/* CCSCROLL */
+/* One scrollbar for everything this repository adds to the panel.
+
+   The platform bar in a webview is a 15px slab with stepper arrows, which in a
+   dark theme is the loudest thing on screen and looks nothing like the sliders
+   Monaco draws two inches away.
+
+   The first line is the one that makes the rest work, and it is the reason the
+   copy of these rules that background-tasks carried was inert. Something above
+   every element in this webview sets `scrollbar-color` - measured on a live
+   panel, a list computes to `rgba(168,169,170,.52) rgb(18,19,20)` without asking
+   for it - and Chromium ignores every ::-webkit-scrollbar rule on an element
+   whose scrollbar-color is set. Twenty-six lines of pseudo-elements, right there
+   in the stylesheet, and the bar they were styling still measured 15px.
+
+   `scrollbar-color: auto` releases the inherited value for this element, and the
+   rules below come back to life: measured immediately afterwards on the same
+   element, 15px became exactly the 10px asked for here.
+
+   The standard properties can express the width and the colour but not a thumb
+   inset from the edge and not hiding the steppers, which is what separates a bar
+   that reads as part of the surface from one that sits beside it. */
+.__ccScroll { scrollbar-color: auto; }
+
+.__ccScroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.__ccScroll::-webkit-scrollbar-track { background: transparent; }
+.__ccScroll::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(121, 121, 121, .4));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 5px;
+}
+.__ccScroll::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(100, 100, 100, .7));
+  background-clip: padding-box;
+}
+.__ccScroll::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground, rgba(191, 191, 191, .4));
+  background-clip: padding-box;
+}
+/* The steppers are the other half of what makes the platform bar loud, and
+   nothing this repository draws is tall enough to need them. */
+.__ccScroll::-webkit-scrollbar-button { display: none; }
+.__ccScroll::-webkit-scrollbar-corner { background: transparent; }
