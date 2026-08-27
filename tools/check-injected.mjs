@@ -86,6 +86,14 @@ function check(name) {
      lose the braces too, or evaluating the literal interpolates an undefined
      name instead of testing the escapes. Substituting a same-length token keeps
      the character count honest, since that count is the actual test. */
+  /* The first fragment has to open the <script> element. This only sees the
+     fragment list registered here, so it cannot catch a file patch.ps1 splices in
+     elsewhere - Add-ScriptAfterMarker checks the assembled bundle for that. Both
+     exist because when it went wrong the source was rendered on the page. */
+  if (!spec.escapesOnly && src.trimStart().indexOf("<script") !== 0) {
+    console.log(`  ${name}: the bundle does not open with <script> - something is concatenated before the fragment that opens it, and it will render as page text`);
+    return false;
+  }
   const filled = src.replace(/\$\{(__[A-Z]+__)\}/g, (m, t) => "x".repeat(m.length))
                     .replace(/__[A-Z]+__/g, (m) => "x".repeat(m.length));
   let evaluated;
