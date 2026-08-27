@@ -17,7 +17,7 @@ src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessag
          .split('__TOOLRES__').join('toolResult_X');
 src=src.replace('  requestList();'+String.fromCharCode(10)+'  setInterval(',
  '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'+
- 'approve:approve,openDialog:openDialog,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
+ 'approve:approve,openDialog:openDialog,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
  'ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,'+
  'dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},'+
  'btn:function(){return globalThis.__form.__afSlot;},'+
@@ -294,6 +294,115 @@ try{
   globalThis.window.__qAuto.panel = savedPanel;
   T.disarm(null);
 }
+
+// A zoomed ancestor becomes the containing block for a fixed element, so inset:0
+// stops meaning the viewport - and vh inside that subtree renders at vh times the
+// zoom. Measured at zoom 1.3 in a live panel: the dialog sat at top -51 with its
+// header and its buttons both off the screen.
+{
+  const body = globalThis.document.body;
+  const zoomBody = (screenPx, ownPx) => {
+    Object.defineProperty(body, 'getBoundingClientRect', { configurable: true,
+      value: () => ({ top: 0, bottom: screenPx, left: 0, width: 1040, height: screenPx }) });
+    Object.defineProperty(body, 'offsetHeight', { configurable: true, value: ownPx });
+  };
+  document.documentElement.clientHeight = 780;
+  document.documentElement.clientWidth = 1040;
+
+  zoomBody(156, 120);            // 1.3x
+  T.openDialog();
+  const ov = document.querySelector('.__afOverlay');
+  ok(!!ov, 'zoom: the overlay exists');
+  ok(ov.style.height === '600px',
+     'zoom: opening the dialog sizes the overlay to the screen in its own units (780/1.3), got ' + JSON.stringify(ov.style.height));
+  ok(ov.style.width === '800px', 'zoom: and the width the same way, got ' + ov.style.width);
+
+  zoomBody(120, 120);            // no zoom
+  T.fitOverlay();
+  ok(ov.style.height === '780px', 'zoom: with no zoom it is just the screen height, got ' + ov.style.height);
+
+  zoomBody(0, 0);                // a degenerate measurement must not blank the dialog
+  T.fitOverlay();
+  ok(ov.style.height === '780px', 'zoom: a zero measurement falls back to scale 1, got ' + ov.style.height);
+
+  document.documentElement.clientHeight = 800;
+  document.documentElement.clientWidth = 1200;
+}
+
+
+// The list is the master and the pane is the detail; in a left-to-right interface
+// the master goes on the left. It also puts the tab order in the order the eye
+// travels - pick a responder, then edit it.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const body = document.querySelector('.__afDlgBody');
+  const kids = body.children.map(n => String(n.className || '').split(/\s+/).filter(c => /__afList|__afEdit/.test(c))[0]).filter(Boolean);
+  ok(kids.join(' ') === '__afList __afEdit',
+     'rail: the list comes before the editor - got ' + kids.join(' '));
+
+  const stops = [...document.querySelectorAll('.__afDlgBody [tabindex="0"], .__afDlgBody textarea, .__afDlgBody input')];
+  const firstRail = stops.findIndex(e => String(e.className || '').indexOf('__afLItem') >= 0);
+  const firstField = stops.findIndex(e => String(e.className || '').indexOf('__afIn') >= 0 || e.tagName === 'TEXTAREA');
+  ok(firstRail >= 0 && firstField >= 0 && firstRail < firstField,
+     'rail: a responder is reached before the fields it edits - rail at ' + firstRail + ', field at ' + firstField);
+  T.openDialog();
+}
+
+
+// A section heading is two words and must never break across lines. The paired
+// boxes get half the pane, and a flex row with no rules about who gives way
+// breaks whatever is cheapest - which was "STOP" / "WHEN".
+//
+// The stub has no CSS engine, so asserting getComputedStyle here would only
+// confirm a fake. What can be checked honestly is the rule that ships and the
+// text it has to fit.
+{
+  const css = fs.readFileSync(require('path').resolve(__dirname, '..', 'followup.css'), 'utf8');
+  const rule = (sel) => (css.split(sel + '{')[1] || '').split('}')[0];
+  const head = rule('.__afBoxHead');
+  ok(/white-space:nowrap/.test(head), 'heads: the heading is set never to wrap');
+  const hint = rule('.__afBoxHead span');
+  ok(/text-overflow:ellipsis/.test(hint) && /white-space:nowrap/.test(hint),
+     'heads: the hint is the one that gives way');
+  ok(/min-width:0/.test(hint), 'heads: and is allowed to shrink, or it cannot give way');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead span')].map(e => e.textContent);
+  ok(paired.length === 2, 'heads: two boxes share the row, got ' + paired.length);
+  ok(paired.every(t => t.length <= 28),
+     'heads: their hints are written to fit half a pane - got ' + JSON.stringify(paired));
+  T.openDialog();
+}
+
+
+// The first open after a reload. toggleMenu asks the host for the responders and
+// builds the menu in the same breath, but the answer arrives in a message - so
+// the menu was built against an empty list, said "No responders yet", and only a
+// second open showed them.
+{
+  const items = () => {
+    const m = document.querySelector('.__afMenu');
+    return m ? [...m.querySelectorAll('.__afItem')].map(e => e.textContent.trim().slice(0, 20)) : null;
+  };
+  const emptyNote = () => !!document.querySelector('.__afMenu .__afEmpty');
+
+  // start from nothing known, the way a freshly loaded panel does
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: [] } });
+  if (document.querySelector('.__afMenu')) T.toggleMenu({ currentTarget: T.btn() });
+  T.toggleMenu({ currentTarget: T.btn() });
+  ok(!!document.querySelector('.__afMenu'), 'firstopen: the picker opens');
+  ok(emptyNote(), 'firstopen: with nothing known yet it says so');
+
+  // the host answers a moment later
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST } });
+  ok(!!document.querySelector('.__afMenu'), 'firstopen: the picker is still open');
+  ok(!emptyNote(), 'firstopen: and no longer claims there is nothing');
+  const got = items();
+  ok(got && got.length >= LIST.length,
+     'firstopen: the responders appear without a second click - got ' + JSON.stringify(got));
+  T.toggleMenu({ currentTarget: T.btn() });
+}
+
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

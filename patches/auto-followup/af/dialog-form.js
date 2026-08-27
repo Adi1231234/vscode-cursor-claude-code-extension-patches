@@ -143,10 +143,10 @@
        because it is what anybody actually writes in, the other because its lines
        are when/ask pairs that wrap badly in half a pane. */
     var pair = el("div", "__afPair");
-    pair.appendChild(box("Goal", "read before every rule", draft.goal,
+    pair.appendChild(box("Goal", "read first, before the rules", draft.goal,
       function (v) { draft.goal = v; }, "__afShort",
       "what this loop is for, in a sentence or two"));
-    pair.appendChild(box("Stop when", "returns STOP and the loop ends", draft.stop,
+    pair.appendChild(box("Stop when", "ends the loop", draft.stop,
       function (v) { draft.stop = v; }, "__afShort",
       "the condition where there is nothing left worth asking"));
     pane.appendChild(pair);

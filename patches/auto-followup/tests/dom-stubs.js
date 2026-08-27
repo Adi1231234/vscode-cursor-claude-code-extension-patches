@@ -16,6 +16,7 @@ function mkEl(tag){
     dispatchEvent(ev){return __afDispatch(this,ev);},
     removeEventListener(k,f){if(this.listeners[k])this.listeners[k]=this.listeners[k].filter(x=>x!==f);},setAttribute(k,v){this.attrs[k]=v;},
     getAttribute(k){return this.attrs[k];},
+    querySelectorAll(sel){ return __afQueryAll(sel, this); },
     querySelector(sel){
       var m=String(sel).match(/^\[class\*=["']?([^"'\]]+)["']?\]$/);
       var sub=m?m[1]:null;
@@ -107,15 +108,15 @@ function __afDispatch(target, ev) {
    under an open dropdown were both found by driving a real panel, because
    nothing here could see them.
 
-   Simple selectors only, which is all the panel code and its tests use: a tag, a
-   .class, an [attr] or [attr="value"], several of those on one element, and a
-   comma-separated list. No combinators - a descendant selector is answered as if
-   only its last part were written, which is honest for a stub as long as nobody
-   relies on the ancestor part to exclude a match. */
-function __afMatches(el, sel) {
-  const parts = String(sel).trim().split(/\s+/);
-  const last = parts[parts.length - 1];
-  const atoms = last.match(/^[a-zA-Z]+|\.[^.[\]]+|\[[^\]]+\]/g) || [];
+   Simple selectors, plus descendant combinators: a tag, a .class, an [attr] or
+   [attr="value"], several of those on one element, a space-separated chain of
+   them, and a comma-separated list. No child or sibling combinators.
+
+   The chain matters. Answering a descendant selector as if only its last part
+   were written looked like an acceptable shortcut and was not: a test asking for
+   '.__afPair .__afBoxHead span' got every span in the document. */
+function __afMatchesOne(el, part) {
+  const atoms = part.match(/^[a-zA-Z]+|\.[^.[\]]+|\[[^\]]+\]/g) || [];
   return atoms.every((a) => {
     if (a[0] === '.') return String(el.className || '').split(/\s+/).indexOf(a.slice(1)) >= 0;
     if (a[0] === '[') {
@@ -128,6 +129,18 @@ function __afMatches(el, sel) {
   });
 }
 
+function __afMatches(el, sel) {
+  const parts = String(sel).trim().split(/\s+/);
+  if (!__afMatchesOne(el, parts[parts.length - 1])) return false;
+  let n = el.parentNode;
+  for (let i = parts.length - 2; i >= 0; i--) {
+    while (n && !__afMatchesOne(n, parts[i])) n = n.parentNode;
+    if (!n) return false;
+    n = n.parentNode;
+  }
+  return true;
+}
+
 function __afWalk(root) {
   const out = [];
   (function rec(n) {
@@ -136,18 +149,23 @@ function __afWalk(root) {
   return out;
 }
 
-function __afQueryAll(sel) {
+function __afQueryAll(sel, root) {
   const sels = String(sel).split(',').map((s) => s.trim()).filter(Boolean);
-  return __afWalk(body).filter((el) => sels.some((s) => __afMatches(el, s)));
+  return __afWalk(root || body).filter((el) => sels.some((s) => __afMatches(el, s)));
 }
 globalThis.document={createElement:mkEl,
   createTextNode(t){const n=mkEl('#text');n._text=String(t==null?'':t);return n;},
+  documentElement:{clientHeight:800,clientWidth:1200},
   body,
   addEventListener(k,f){(__docListeners[k]=__docListeners[k]||[]).push(f);},
   removeEventListener(k,f){if(__docListeners[k])__docListeners[k]=__docListeners[k].filter(x=>x!==f);},
   dispatchEvent(ev){return __afDispatch(body,ev);},
   querySelector(sel){return __afQueryAll(sel)[0]||null;}};
-globalThis.window={addEventListener(k,f){globalThis.__onMsg=f;},innerWidth:1200,innerHeight:800};
+globalThis.window={addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
+  (globalThis.__winListeners[k]=globalThis.__winListeners[k]||[]).push(f);},
+  removeEventListener(k,f){if(globalThis.__winListeners[k])globalThis.__winListeners[k]=globalThis.__winListeners[k].filter(x=>x!==f);},
+  innerWidth:1200,innerHeight:800};
+globalThis.__winListeners={};
 const store={};
 globalThis.localStorage={getItem:k=>k in store?store[k]:null,setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}};
 globalThis.__store=store;

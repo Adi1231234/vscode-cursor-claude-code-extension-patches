@@ -71,6 +71,8 @@
          keep running against a definition nobody can see any more. */
       if (armed && !meta) { disarm("the responder file is gone"); }
       renderAll();
+      /* The picker may be open and showing the emptiness it was built with. */
+      try { refreshMenu(); } catch (e) {}
       return;
     }
     if (m.op === "result") {

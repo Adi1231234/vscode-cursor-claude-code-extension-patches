@@ -63,8 +63,44 @@
    heading, the rule beside the selected responder, and focus. Everything else
    is the type ramp doing the work - 10px tracked uppercase at .40 for a label,
    12px at full for a value. Before, both sat at .45 and read as one thing. */
-.__afOverlay{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
-.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:90vh;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+.__afOverlay{position:fixed;inset:0;box-sizing:border-box;padding:14px;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
+/* ---- the three surfaces ----
+   They were derived by mixing the theme's foreground into its background at 1%
+   and 5%, which separated them and no more: the whole dialog read as one grey.
+
+   Depth now comes from darkening rather than from tinting, because a surface a
+   person is meant to type into should look cut into the panel and not painted on
+   it. VS Code puts its theme kind on <body>, so the direction can differ where it
+   has to: in a dark theme the sunken surfaces mix toward black, and in a light one
+   they use the theme's own input background, which is what every other field in
+   the editor already sits on. Nothing here invents a colour.
+
+   A few percent of the accent goes into both of them, so the sunken surfaces
+   read as a colour rather than as dead grey - too little to fight the theme, and
+   enough that the panel is not five shades of the same thing.
+
+   The edges went up with them - a 16% border against a 1% fill was a line nobody
+   could see, and the borders are what say a box is a box. */
+.__afDlg{
+  --afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));
+  --afPaper:color-mix(in srgb,var(--afAcc) 5%,color-mix(in srgb,#000 26%,var(--app-menu-background,#252526)));
+  --afField:color-mix(in srgb,var(--afAcc) 7%,color-mix(in srgb,#000 52%,var(--app-menu-background,#252526)));
+  --afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 20%,transparent);
+  --afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 30%,transparent);
+  --afAcc:var(--app-claude-orange,#d97757);
+}
+body.vscode-light .__afDlg,body.vscode-high-contrast-light .__afDlg{
+  --afPaper:color-mix(in srgb,var(--afAcc) 5%,color-mix(in srgb,var(--vscode-foreground,#333) 7%,var(--app-menu-background,#f3f3f3)));
+  --afField:var(--vscode-input-background,#fff);
+  --afLine:color-mix(in srgb,var(--vscode-foreground,#333) 18%,transparent);
+  --afEdge:color-mix(in srgb,var(--vscode-foreground,#333) 32%,transparent);
+}
+/* A high-contrast theme asks for borders, not for tints. */
+body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
+  --afLine:var(--vscode-contrastBorder,currentColor);
+  --afEdge:var(--vscode-contrastBorder,currentColor);
+}
+.__afDlg{display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
 .__afDlgHead{display:flex;align-items:center;gap:10px;padding:12px 15px 11px;border-bottom:1px solid var(--afLine)}
 .__afDlgHead h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em;flex:1;direction:ltr;text-align:start}
 .__afX{opacity:.42;font-size:13px;line-height:1;cursor:pointer;padding:3px 5px;border-radius:4px}
@@ -73,7 +109,7 @@
 .__afPane{padding:14px;min-width:0}
 
 /* the rail: one column of files, and which one is open is not a guess */
-.__afList{flex:none;width:224px;padding:10px;background:var(--afChrome);border-inline-start:1px solid var(--afLine);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.__afList{flex:none;width:224px;padding:10px;background:var(--afChrome);border-inline-end:1px solid var(--afLine);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
 .__afLItem{position:relative;display:flex;align-items:flex-start;gap:9px;padding:8px 9px 8px 11px;border-radius:6px;font-size:12px;cursor:pointer;transition:background .1s ease}
 .__afLItem::before{content:"";position:absolute;inset-inline-start:0;top:7px;bottom:7px;width:2px;border-radius:2px;background:transparent}
 .__afLItem:hover{background:rgba(128,128,128,.1)}
@@ -81,7 +117,7 @@
 .__afList .__afSel::before{background:var(--afAcc)}
 .__afList .__afT b{opacity:1}
 .__afList .__afT span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.7}
-.__afNew{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border:1px dashed color-mix(in srgb,var(--vscode-foreground,#ccc) 22%,transparent);border-radius:6px;font-size:11.5px;opacity:.6;cursor:pointer;transition:opacity .1s ease,border-color .1s ease,color .1s ease}
+.__afNew{margin-top:auto;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px;border:1px dashed color-mix(in srgb,var(--vscode-foreground,#ccc) 22%,transparent);border-radius:6px;font-size:11.5px;opacity:.68;cursor:pointer;transition:opacity .1s ease,border-color .1s ease,color .1s ease}
 .__afNew:hover{opacity:1;border-color:var(--afAcc);color:var(--afAcc)}
 
 /* the document */
@@ -122,9 +158,9 @@
 /* a section of the file, and the accent rule that says so */
 .__afBox{display:flex;flex-direction:column;gap:6px;min-height:0}
 .__afGrow{flex:none}
-.__afBoxHead{display:flex;align-items:baseline;gap:8px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;opacity:.92;padding-inline-start:9px;position:relative}
+.__afBoxHead{display:flex;align-items:baseline;gap:8px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;opacity:.92;padding-inline-start:9px;position:relative;white-space:nowrap;min-width:0}
 .__afBoxHead::before{content:"";position:absolute;inset-inline-start:0;top:1px;height:9px;width:2px;border-radius:2px;background:color-mix(in srgb,var(--afAcc) 60%,transparent)}
-.__afBoxHead span{text-transform:none;letter-spacing:0;font-weight:400;opacity:.8;font-size:11px}
+.__afBoxHead span{text-transform:none;letter-spacing:0;font-weight:400;opacity:.8;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .__afTa{width:100%;box-sizing:border-box;resize:none;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:10px 12px;color:inherit;font:inherit;font-size:11.5px;line-height:1.75;outline:none;transition:border-color .1s ease}
 
 
@@ -185,11 +221,11 @@
    every row that pairs two things puts them one under the other. The pane is the
    thing being used, so it gets whatever is left. */
 @media (max-width: 640px) {
-  .__afDlg { width: calc(100% - 16px); max-height: 94vh; border-radius: 8px; }
+  .__afDlg { width: calc(100% - 16px); max-height: 100%; border-radius: 8px; }
   .__afDlgBody { flex-direction: column; }
   .__afList {
     order: -1; width: auto; flex: 0 0 auto; max-height: 168px;
-    border-inline-start: none; border-bottom: 1px solid var(--afLine);
+    border-inline-end: none; border-bottom: 1px solid var(--afLine);
   }
   .__afNew { margin-top: 6px; }
   .__afEdit { min-width: 0; }

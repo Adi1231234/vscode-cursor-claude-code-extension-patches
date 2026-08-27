@@ -8,9 +8,26 @@
      child would be clipped by it. */
   var menuNode = null;
 
+  var menuAnchor = null;
+
+  /* Rebuild the menu in place when the list arrives.
+
+     toggleMenu asks the host for the responders and then builds the menu in the
+     same breath, but the answer comes back in a message - so the first open after
+     a reload was built against an empty list and read "No responders yet", and
+     only a second open showed them. Nothing was broken except the timing, which
+     is the worst kind of empty state: it tells the user they have nothing. */
+  function refreshMenu() {
+    if (!menuNode || !menuAnchor) return;
+    var a = menuAnchor;
+    closeMenu();
+    openMenu(a);
+  }
+
   function closeMenu() {
     if (menuNode && menuNode.parentNode) menuNode.parentNode.removeChild(menuNode);
     menuNode = null;
+    menuAnchor = null;
     document.removeEventListener("mousedown", onOutside, true);
   }
 
@@ -73,6 +90,7 @@
     document.body.appendChild(m);
     place(m, anchor);
     menuNode = m;
+    menuAnchor = anchor;
     setTimeout(function () { document.addEventListener("mousedown", onOutside, true); }, 0);
   }
 
