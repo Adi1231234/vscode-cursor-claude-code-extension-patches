@@ -53,7 +53,22 @@ function Add-ScriptAfterRegex {
 # are expected to Write-Miss and leave the bundle alone.
 function Add-WebviewMessageHook {
     param([string]$Js, [string]$HookPath)
-    $rx = '(([\w$]+)\.webview\.onDidReceiveMessage\(\(([\w$]+)\)=>\{)(.{0,400}?([\w$]+)\?\.fromClient\(\3\))'
+    # Two things about the gap between the listener's '{' and the ?.fromClient that
+    # identifies it as a chat surface, and both only bite once hooks are installed:
+    #
+    #   [\s\S] and not '.', because an installed hook carries its own multi-line
+    #   comment and '.' does not cross a newline in .NET. With three hooks in, the
+    #   dot form matched zero of the three chat surfaces and this one matches all
+    #   three - and the failure reads as version drift rather than as a regex that
+    #   cannot see past its own predecessors.
+    #
+    #   2000 and not 400, because each patch inserts at the top and pushes
+    #   fromClient further away; it was measured at +446 with three installed.
+    #
+    # The match stays lazy, so it still binds to the *nearest* fromClient and cannot
+    # reach into a neighbouring listener. The doc-preview surface has none within
+    # 20k and is still correctly excluded.
+    $rx = '(([\w$]+)\.webview\.onDidReceiveMessage\(\(([\w$]+)\)=>\{)([\s\S]{0,2000}?([\w$]+)\?\.fromClient\(\3\))'
     if ($Js -notmatch $rx) { return $null }
     $hook = (Get-InjectedJs $HookPath ([ordered]@{
                 '__WV__' = '${2}'; '__MSG__' = '${3}'; '__COMMS__' = '${5}'

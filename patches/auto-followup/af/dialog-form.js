@@ -1,0 +1,125 @@
+  /* ---------- Manage responders: the edit pane ----------
+     Name and description on top, then the four settings, then two prompt boxes.
+
+     The two boxes are separate on purpose. When 'when to stop' was one line
+     inside a twenty-line prompt it was easy to write a responder and never notice
+     the field existed - and a responder with no stop condition and max_turns
+     unlimited has no brake but the stop button. Given its own labelled box it
+     cannot be missed.
+
+     'context' is the field that decides what the responder is worth. Given the
+     full session it reads Claude's reasoning and is persuaded by it; given the
+     last message plus the claims ledger it can still catch a contradiction
+     without having been argued at. */
+  var CONTEXTS = [
+    ["last-message", "רק ההודעה האחרונה של קלוד"],
+    ["last-message+claims", "ועוד רשימת הטענות שנאמרו קודם, בלי הנימוקים"],
+    ["full-session", "כל השיחה"]
+  ];
+  var MAXES = [["20", ""], ["50", ""], ["unlimited", "עד שתנאי העצירה מתקיים"]];
+  var TOGGLE = [["false", "מציג את ההודעה הראשונה"], ["true", "שולח בלי לעצור"]];
+  var MODELS = [["sonnet", ""], ["opus", ""], ["haiku", ""]];
+
+  function markDirty() { dirty = true; }
+
+  function field(label, value, opts, set) {
+    var f = el("span", "__afF");
+    var l = el("label"); txt(l, label); f.appendChild(l);
+    var b = el("b"); txt(b, value); f.appendChild(b);
+    f.insertAdjacentHTML("beforeend",
+      '<svg class="__afChev" width="9" height="9" viewBox="0 0 12 12" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" ' +
+      'stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg>');
+    on(f, "click", function (ev) { openDrop(ev.currentTarget, opts, value, set); });
+    return f;
+  }
+
+  var dropNode = null;
+
+  function closeDrop() {
+    if (dropNode && dropNode.parentNode) dropNode.parentNode.removeChild(dropNode);
+    dropNode = null;
+    document.removeEventListener("mousedown", onDropOutside, true);
+  }
+
+  function onDropOutside(ev) {
+    if (dropNode && !dropNode.contains(ev.target)) closeDrop();
+  }
+
+  function openDrop(anchor, opts, current, set) {
+    closeDrop();
+    var d = el("div", "__afDrop");
+    opts.forEach(function (o) {
+      var it = el("div", "__afDItem" + (o[0] === current ? " __afDOn" : ""));
+      txt(it, o[0]);
+      if (o[1]) { var s = el("span"); txt(s, o[1]); it.appendChild(s); }
+      on(it, "click", function () { closeDrop(); set(o[0]); markDirty(); renderDialog(); });
+      d.appendChild(it);
+    });
+    document.body.appendChild(d);
+    place(d, anchor);
+    dropNode = d;
+    setTimeout(function () { document.addEventListener("mousedown", onDropOutside, true); }, 0);
+  }
+
+  function textInput(cls, value, ph, set) {
+    var i = el("input", cls);
+    i.type = "text";
+    i.value = value || "";
+    i.placeholder = ph || "";
+    i.addEventListener("input", function () { set(i.value); markDirty(); });
+    i.addEventListener("keydown", function (ev) { ev.stopPropagation(); });
+    return i;
+  }
+
+  function box(title, hint, value, set, cls) {
+    var wrap = el("div", "__afBox" + (cls ? " " + cls : ""));
+    var head = el("div", "__afBoxHead");
+    txt(head, title);
+    if (hint) { var s = el("span"); txt(s, hint); head.appendChild(s); }
+    wrap.appendChild(head);
+    var ta = el("textarea", "__afTa");
+    ta.value = value || "";
+    ta.spellcheck = false;
+    ta.addEventListener("input", function () { set(ta.value); markDirty(); });
+    ta.addEventListener("keydown", function (ev) { ev.stopPropagation(); });
+    wrap.appendChild(ta);
+    return wrap;
+  }
+
+  function editPane() {
+    var pane = el("div", "__afPane __afEdit");
+    if (!draft) return pane;
+
+    var idrow = el("div", "__afIdRow");
+    var nameWrap = el("span", "__afFi");
+    var nl = el("label"); txt(nl, "name"); nameWrap.appendChild(nl);
+    nameWrap.appendChild(textInput("__afIn __afMono", draft.name, "perf-skeptic", function (v) {
+      draft.name = v;
+      /* The filename follows the name only while the file does not exist yet;
+         renaming a saved responder would orphan the old file. */
+      if (draft.isNew) draft.id = (v || "responder").toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64) || "responder";
+    }));
+    var descWrap = el("span", "__afFi __afWide");
+    var dl = el("label"); txt(dl, "description"); descWrap.appendChild(dl);
+    descWrap.appendChild(textInput("__afIn", draft.description, "מה המשיב הזה עושה",
+      function (v) { draft.description = v; }));
+    idrow.appendChild(nameWrap);
+    idrow.appendChild(descWrap);
+    pane.appendChild(idrow);
+
+    var fields = el("div", "__afFields");
+    fields.appendChild(field("context", draft.context, CONTEXTS, function (v) { draft.context = v; }));
+    fields.appendChild(field("max_turns", draft.max_turns, MAXES, function (v) { draft.max_turns = v; }));
+    fields.appendChild(field("autosend", draft.autosend === "true" ? "true" : "false", TOGGLE,
+      function (v) { draft.autosend = v; }));
+    fields.appendChild(field("model", draft.model, MODELS, function (v) { draft.model = v; }));
+    pane.appendChild(fields);
+
+    pane.appendChild(box("מה להקליד", "לפי מה שקלוד בדיוק כתב", draft.rules,
+      function (v) { draft.rules = v; }, "__afGrow"));
+    pane.appendChild(box("מתי לעצור", "מחזיר STOP והלולאה נגמרת", draft.stop,
+      function (v) { draft.stop = v; }, "__afShort"));
+    return pane;
+  }

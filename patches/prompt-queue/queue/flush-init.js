@@ -70,6 +70,52 @@
     }
   }
 
+  /* ---------- The surface auto-followup consumes ----------
+     That patch keeps its own single slot beside this queue rather than pushing
+     into it, for reasons its README sets out - chiefly that commitComposerToQueue
+     deliberately pauses on an idle add, which is exactly when a follow-up is
+     generated. But it must not re-implement sending: the session/DOM split, the
+     root protection and the busy check below took real bugs to get right.
+
+     So this is the whole contract, read-only except for send():
+       count()   items in the user's lane. Non-zero means the user is driving.
+       paused()  the user's hold. Nothing auto may send through it.
+       busy()    a turn is running.
+       panel()   the queue panel node, or null - the lane renders inside it.
+       send(t)   send one text now, by the same path a queued item takes.
+     Guarded so the first definition wins, like every other shared global here.
+
+     send() cannot go through sendNow: that one takes an item already in Q and
+     no-ops on anything else. sendText is the same two paths and the same guards,
+     on a text that was never queued. */
+  async function sendText(text) {
+    var t = String(text || "").trim();
+    if (!t || flushing || editing || isBusy()) return false;
+    var e = inp();
+    if (!e) return false;
+    var s = getSession();
+    var canSend = !!(s && typeof s.send === "function");
+    if (!canSend && (e.textContent || "").trim().length > 0) return false;  /* root protection */
+    flushing = true;
+    try {
+      if (canSend) await sendViaSession(s, { text: t }, []);
+      else await sendViaDom(e, { text: t }, []);
+      return true;
+    } catch (err) {
+      return false;
+    } finally {
+      flushing = false;
+    }
+  }
+
+  window.__qAuto = window.__qAuto || {
+    count: function () { return Q.length; },
+    paused: function () { return paused; },
+    busy: function () { return isBusy(); },
+    panel: function () { return panel && panel.isConnected ? panel : null; },
+    send: sendText
+  };
+
   /* ---------- Init ---------- */
   hookFileReader();
   document.addEventListener("keydown", onComposerKeydown, true);
