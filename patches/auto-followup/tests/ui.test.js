@@ -260,6 +260,41 @@ try{
   globalThis.__ccInput = savedInput;
 }
 
+// Where the follow-up is drawn. The queue panel is display:none whenever the
+// queue is empty, and that is the only state this loop ever runs in - it refuses
+// to run while the user has anything queued. Hosting the lane in a panel that is
+// merely CONNECTED put every follow-up into a hidden box: the counter moved, the
+// lane existed, and the screen showed nothing.
+{
+  const panel = document.createElement('div');
+  panel.className = '__qPanel';
+  document.body.appendChild(panel);
+  const savedPanel = globalThis.window.__qAuto.panel;
+  globalThis.window.__qAuto.panel = () => panel;
+
+  T.disarm(null); T.arm('perf-skeptic');
+  globalThis.__msgs = [{ role: 'user', content: 'go' }, { role: 'assistant', content: 'a finding, and 21 s' }];
+  T.maybeRun();
+  const run = globalThis.sent.filter(m => m.op === 'run').pop();
+  ok(!!run, 'lane: a run was requested');
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'result', rid: run.rid,
+                               message: 'and what does that cost?', why: 'a gain with no cost named', claims: [], stop: null } });
+  ok(!!T.state().slot, 'lane: the answer became a message waiting to be sent');
+
+  panel._shown = false;                       // the queue is empty, so the panel is display:none
+  T.renderLane();
+  const solo = document.querySelector('.__afSolo');
+  ok(!!solo, 'lane: a panel with no layout box is not used - the lane gets a container of its own');
+  ok(!!solo && !!solo.querySelector('.__afText'), 'lane: and the message is inside it');
+
+  panel._shown = true;                        // the user queues something; the panel is back
+  T.renderLane();
+  ok(!document.querySelector('.__afSolo'), 'lane: the spare container goes when the panel returns');
+
+  globalThis.window.__qAuto.panel = savedPanel;
+  T.disarm(null);
+}
+
 // A zoomed ancestor becomes the containing block for a fixed element, so inset:0
 // stops meaning the viewport - and vh inside that subtree renders at vh times the
 // zoom. Measured at zoom 1.3 in a live panel: the dialog sat at top -51 with its
@@ -294,6 +329,52 @@ try{
   document.documentElement.clientWidth = 1200;
 }
 
+
+// The list is the master and the pane is the detail; in a left-to-right interface
+// the master goes on the left. It also puts the tab order in the order the eye
+// travels - pick a responder, then edit it.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const body = document.querySelector('.__afDlgBody');
+  const kids = body.children.map(n => String(n.className || '').split(/\s+/).filter(c => /__afList|__afEdit/.test(c))[0]).filter(Boolean);
+  ok(kids.join(' ') === '__afList __afEdit',
+     'rail: the list comes before the editor - got ' + kids.join(' '));
+
+  const stops = [...document.querySelectorAll('.__afDlgBody [tabindex="0"], .__afDlgBody textarea, .__afDlgBody input')];
+  const firstRail = stops.findIndex(e => String(e.className || '').indexOf('__afLItem') >= 0);
+  const firstField = stops.findIndex(e => String(e.className || '').indexOf('__afIn') >= 0 || e.tagName === 'TEXTAREA');
+  ok(firstRail >= 0 && firstField >= 0 && firstRail < firstField,
+     'rail: a responder is reached before the fields it edits - rail at ' + firstRail + ', field at ' + firstField);
+  T.openDialog();
+}
+
+
+// A section heading is two words and must never break across lines. The paired
+// boxes get half the pane, and a flex row with no rules about who gives way
+// breaks whatever is cheapest - which was "STOP" / "WHEN".
+//
+// The stub has no CSS engine, so asserting getComputedStyle here would only
+// confirm a fake. What can be checked honestly is the rule that ships and the
+// text it has to fit.
+{
+  const css = fs.readFileSync(require('path').resolve(__dirname, '..', 'followup.css'), 'utf8');
+  const rule = (sel) => (css.split(sel + '{')[1] || '').split('}')[0];
+  const head = rule('.__afBoxHead');
+  ok(/white-space:nowrap/.test(head), 'heads: the heading is set never to wrap');
+  const hint = rule('.__afBoxHead span');
+  ok(/text-overflow:ellipsis/.test(hint) && /white-space:nowrap/.test(hint),
+     'heads: the hint is the one that gives way');
+  ok(/min-width:0/.test(hint), 'heads: and is allowed to shrink, or it cannot give way');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead span')].map(e => e.textContent);
+  ok(paired.length === 2, 'heads: two boxes share the row, got ' + paired.length);
+  ok(paired.every(t => t.length <= 28),
+     'heads: their hints are written to fit half a pane - got ' + JSON.stringify(paired));
+  T.openDialog();
+}
+
+
 // The first open after a reload. toggleMenu asks the host for the responders and
 // builds the menu in the same breath, but the answer arrives in a message - so
 // the menu was built against an empty list, said "No responders yet", and only a
@@ -322,48 +403,6 @@ try{
   T.toggleMenu({ currentTarget: T.btn() });
 }
 
-// The list is the master and the pane is the detail; in a left-to-right interface
-// the master goes on the left. It also puts the tab order in the order the eye
-// travels - pick a responder, then edit it.
-{
-  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
-  const body = document.querySelector('.__afDlgBody');
-  const kids = body.children.map(n => String(n.className || '').split(/\s+/).filter(c => /__afList|__afEdit/.test(c))[0]).filter(Boolean);
-  ok(kids.join(' ') === '__afList __afEdit',
-     'rail: the list comes before the editor - got ' + kids.join(' '));
-
-  const stops = [...document.querySelectorAll('.__afDlgBody [tabindex="0"], .__afDlgBody textarea, .__afDlgBody input')];
-  const firstRail = stops.findIndex(e => String(e.className || '').indexOf('__afLItem') >= 0);
-  const firstField = stops.findIndex(e => String(e.className || '').indexOf('__afIn') >= 0 || e.tagName === 'TEXTAREA');
-  ok(firstRail >= 0 && firstField >= 0 && firstRail < firstField,
-     'rail: a responder is reached before the fields it edits - rail at ' + firstRail + ', field at ' + firstField);
-  T.openDialog();
-}
-
-// A section heading is two words and must never break across lines. The paired
-// boxes get half the pane, and a flex row with no rules about who gives way
-// breaks whatever is cheapest - which was "STOP" / "WHEN".
-//
-// The stub has no CSS engine, so asserting getComputedStyle here would only
-// confirm a fake. What can be checked honestly is the rule that ships and the
-// text it has to fit.
-{
-  const css = fs.readFileSync(require('path').resolve(__dirname, '..', 'followup.css'), 'utf8');
-  const rule = (sel) => (css.split(sel + '{')[1] || '').split('}')[0];
-  const head = rule('.__afBoxHead');
-  ok(/white-space:nowrap/.test(head), 'heads: the heading is set never to wrap');
-  const hint = rule('.__afBoxHead span');
-  ok(/text-overflow:ellipsis/.test(hint) && /white-space:nowrap/.test(hint),
-     'heads: the hint is the one that gives way');
-  ok(/min-width:0/.test(hint), 'heads: and is allowed to shrink, or it cannot give way');
-
-  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
-  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead span')].map(e => e.textContent);
-  ok(paired.length === 2, 'heads: two boxes share the row, got ' + paired.length);
-  ok(paired.every(t => t.length <= 28),
-     'heads: their hints are written to fit half a pane - got ' + JSON.stringify(paired));
-  T.openDialog();
-}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);
