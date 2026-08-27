@@ -16,15 +16,16 @@ globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:[
   {id:'unl',name:'unl',context:'full-session',max_turns:'unlimited',autosend:'true',model:'opus',rules:'r',stop:'s'}]}});
 
 // 1. arming
-globalThis.__msgs=[{role:'user',content:'hi'},{role:'assistant',content:'first reply'}];
+globalThis.__msgs=[{role:'user',content:'hi'}];   /* nothing of Claude's to answer yet */
 T.arm('perf-skeptic');
 ok(S().armed==='perf-skeptic','armed');
 ok(globalThis.__store['ccAfArmed:sess-1']==='perf-skeptic','arming persisted per session');
 
-// 2. does NOT answer the reply that was already on screen
+// 2. nothing to answer yet: the last thing in the conversation is your own
+// message, so it waits - the same wait as before, for a different reason.
 globalThis.sent.length=0;
 T.maybeRun();
-ok(!globalThis.sent.some(m=>m.op==='run'),'does not answer a reply that predates arming');
+ok(!globalThis.sent.some(m=>m.op==='run'),'no run while the last message is the user own');
 
 // 3. a new reply triggers exactly one run
 globalThis.__msgs.push({role:'assistant',content:'second reply, 98.7 seconds'});
@@ -93,7 +94,7 @@ T.disarm(null); T.arm('unl');
 globalThis.__msgs.push({role:'assistant',content:'sixth'});
 globalThis.sent.length=0; T.maybeRun();
 const r4=globalThis.sent.filter(m=>m.op==='run')[0];
-ok(r4 && typeof r4.ctx.transcript==='string' && r4.ctx.transcript.indexOf('CLAUDE: first reply')>=0,'full-session sends the transcript');
+ok(r4 && typeof r4.ctx.transcript==='string' && r4.ctx.transcript.indexOf('CLAUDE: second reply, 98.7 seconds')>=0,'full-session sends the transcript');
 ok(r4 && r4.ctx.transcript.indexOf('HUMAN: hi')>=0,'transcript includes the human turns');
 
 
@@ -239,13 +240,12 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   ok(!globalThis.sent.some(m=>m.op==='run'),'pause: no run is asked for while paused');
   ok(S().armed==='perf-skeptic','pause: and it is still armed');
 
-  // resuming does not answer the conversation that happened while it was held
+  // resuming is a play too: what was said while it was held is answered as soon
+  // as it comes back, with no message of yours needed to wake it up
+  globalThis.sent.length=0;
   T.setPaused(false);
   T.maybeRun();
-  ok(!globalThis.sent.some(m=>m.op==='run'),'resume: the reply that was on screen is not answered');
-  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'a reply after resuming'}];
-  T.maybeRun();
-  ok(globalThis.sent.some(m=>m.op==='run'),'resume: the next reply is');
+  ok(globalThis.sent.some(m=>m.op==='run'),'resume: the reply that arrived while paused is answered at once');
 
   // an approval already given is you, not the loop, so it still goes
   const rid=globalThis.sent.filter(m=>m.op==='run').pop().rid;
@@ -257,6 +257,26 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   T.approve();
   T.maybeSend();
   ok(globalThis.__sentText==='a follow-up','pause: pressing play still sends, got '+globalThis.__sentText);
+}
+
+
+// Play means start now. Arming used to set lastSeen to whatever was on screen,
+// so the loop did nothing until the next reply - which meant sending Claude a
+// message yourself and waiting for it to finish before the thing you had just
+// switched on did anything at all.
+{
+  T.disarm(null);
+  globalThis.__msgs=[{role:'user',content:'go'},
+                     {role:'assistant',content:'a reply that was already on screen'}];
+  globalThis.sent.length=0;
+  T.arm('perf-skeptic');
+  T.maybeRun();
+  const r=globalThis.sent.filter(m=>m.op==='run');
+  ok(r.length===1,'play: arming answers the reply already on screen, got '+r.length);
+  ok(r[0] && r[0].ctx.text==='a reply that was already on screen',
+     'play: and it is that reply, got '+JSON.stringify(r[0]&&r[0].ctx.text));
+  T.maybeRun();
+  ok(globalThis.sent.filter(m=>m.op==='run').length===1,'play: and only once');
 }
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
