@@ -193,6 +193,52 @@ try{
   ok(String(save2.className).indexOf('__afDirty')>=0,'dirty: and is marked as such');
   T.openDialog();
 }
+
+// Two patches, one slot. background-tasks' indicator anchors with the same rule
+// this button used - "be the element immediately before .__qAdd" - and only one
+// element can be, so each timer displaced the other about three times a second.
+//
+// The shared form fixture cannot show this: it overrides querySelector and
+// insertBefore with stand-ins that record the node and ignore ordering, which is
+// exactly the mechanism under test. So this builds a real one.
+{
+  const realForm = (kids) => {
+    const f = document.createElement('form');
+    for (const c of kids) { const e = document.createElement('button'); e.className = c; f.appendChild(e); }
+    const input = document.createElement('div');
+    input.closest = () => f;
+    globalThis.__ccInput = () => input;
+    return f;
+  };
+  const order = (f) => f.children.map(n => String(n.className || '').split(/\s+/)[0]).join(' ');
+  const savedInput = globalThis.__ccInput;
+
+  let f = realForm(['__bgInd', '__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
+     'anchor: it takes the slot before the indicator, not the one the indicator holds - got ' + order(f));
+
+  const settled = order(f);
+  T.ensureButton(); T.ensureButton(); T.ensureButton();
+  ok(order(f) === settled, 'anchor: three more passes move nothing - got ' + order(f));
+
+  f = realForm(['__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qAdd sendButton_X',
+     'anchor: with no indicator it sits before the add button - got ' + order(f));
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qAdd sendButton_X', 'anchor: and stays there - got ' + order(f));
+
+  // the indicator appearing later must not shift this button either
+  f.insertBefore(Object.assign(document.createElement('button'), { className: '__bgInd' }),
+                 f.children.find(n => n.className === '__qAdd'));
+  const afterIndicator = order(f);
+  T.ensureButton(); T.ensureButton();
+  ok(order(f) === afterIndicator,
+     'anchor: an indicator appearing later moves nothing - got ' + order(f));
+
+  globalThis.__ccInput = savedInput;
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

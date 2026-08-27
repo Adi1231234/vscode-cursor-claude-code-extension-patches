@@ -34,7 +34,22 @@
     var form = e.closest("form");
     if (!form) return;
     var add = form.querySelector(".__qAdd");
-    var anchor = add || form.querySelector('[class*="sendButton"]');
+    /* background-tasks' indicator anchors itself with the same rule as this one -
+       "be the element immediately before .__qAdd" - and only one element can be.
+       Each timer saw the other in the slot and moved itself there, displacing it,
+       about three times a second: measured at 11 inserts and 11 removals in three
+       seconds, two DOM orders differing only in which of the two came first, and
+       the button oscillating 42px. The lab never showed it because the indicator
+       only exists while a background task is running.
+
+       So this one takes the slot before the indicator rather than competing for
+       the one after it. Both rules are then satisfiable at once and neither moves
+       again: the indicator sits immediately before .__qAdd, and this sits
+       immediately before the indicator. When the indicator appears it inserts
+       itself between this button and .__qAdd, which is where this button already
+       wanted it - so nothing moves then either. */
+    var anchor = form.querySelector(".__bgInd") || add ||
+                 form.querySelector('[class*="sendButton"]');
     if (!anchor || !anchor.parentNode) return;
 
     var b = form.querySelector(".__afBtn");

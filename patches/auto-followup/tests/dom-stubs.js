@@ -3,7 +3,12 @@ function mkEl(tag){
   const e={tagName:tag,className:'',style:{},children:[],attrs:{},_text:'',
     isConnected:true,parentNode:null,listeners:{},
     appendChild(c){c.parentNode=this;this.children.push(c);return c;},
-    insertBefore(c,r){c.parentNode=this;this.children.unshift(c);return c;},
+    insertBefore(c,r){
+      if(c.parentNode){c.parentNode.children=c.parentNode.children.filter(x=>x!==c);}
+      c.parentNode=this;
+      var i=r?this.children.indexOf(r):-1;
+      if(i<0){this.children.push(c);}else{this.children.splice(i,0,c);}
+      return c;},
     removeChild(c){this.children=this.children.filter(x=>x!==c);c.parentNode=null;},
     addEventListener(k,f){(this.listeners[k]=this.listeners[k]||[]).push(f);},
     click(){(this.listeners.click||[]).forEach(f=>f({preventDefault(){},stopPropagation(){},target:this,currentTarget:this}));},
@@ -11,7 +16,16 @@ function mkEl(tag){
     dispatchEvent(ev){return __afDispatch(this,ev);},
     removeEventListener(k,f){if(this.listeners[k])this.listeners[k]=this.listeners[k].filter(x=>x!==f);},setAttribute(k,v){this.attrs[k]=v;},
     getAttribute(k){return this.attrs[k];},
-    querySelector(sel){var c=String(sel).replace('.','');for(var i=0;i<this.children.length;i++){if(this.children[i].className===c)return this.children[i];}return null;},closest(){return globalThis.__form;},
+    querySelector(sel){var c=String(sel).replace('.','');
+      var hit=null;
+      var walk=function(n){
+        for(var i=0;i<n.children.length&&!hit;i++){
+          var k=String(n.children[i].className||'').split(/\s+/);
+          if(k.indexOf(c)>=0){hit=n.children[i];return;}
+          walk(n.children[i]);
+        }
+      };
+      walk(this);return hit;},closest(){return globalThis.__form;},
     getBoundingClientRect(){return {top:100,bottom:126,left:50,width:26,height:26};},
     insertAdjacentHTML(){},focus(){},
     cloneNode(){const c=mkEl(this.tagName);c.className=this.className;c._text=this._text;
@@ -25,7 +39,14 @@ function mkEl(tag){
       while((m=re.exec(v))){ var c=mkEl('span'); c.className=m[1]; c.parentNode=this; this.children.push(c); }
     },
     get firstChild(){return this.children[0]||null;},
-    get previousElementSibling(){return null;},get offsetWidth(){return 200;},get offsetHeight(){return 120;}};
+    get previousElementSibling(){
+      if(!this.parentNode)return null;
+      var i=this.parentNode.children.indexOf(this);
+      return i>0?this.parentNode.children[i-1]:null;},
+    get nextElementSibling(){
+      if(!this.parentNode)return null;
+      var i=this.parentNode.children.indexOf(this);
+      return (i>=0&&i+1<this.parentNode.children.length)?this.parentNode.children[i+1]:null;},get offsetWidth(){return 200;},get offsetHeight(){return 120;}};
   return e;
 }
 const body=mkEl('body');
