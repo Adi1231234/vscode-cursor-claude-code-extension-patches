@@ -16,7 +16,11 @@
     ["last-message+claims", "and the claims recorded earlier, without the reasoning"],
     ["full-session", "the whole conversation"]
   ];
-  var MAXES = [["20", ""], ["50", ""], ["unlimited", "until the stop condition is met"]];
+  /* The third element marks a row that is typed into rather than chosen. The
+     other lists have none, so nothing else changes. */
+  var MAXES = [["20", ""], ["50", ""],
+               ["unlimited", "until the stop condition is met"],
+               ["custom", "any number of turns", "free"]];
   var TOGGLE = [["false", "shows you the message first"], ["true", "sends without stopping"]];
   var MODELS = [["sonnet", ""], ["opus", ""], ["haiku", ""]];
   /* How hard the model is asked to think, not which model. The two are
