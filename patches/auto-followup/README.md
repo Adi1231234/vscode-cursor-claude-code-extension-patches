@@ -274,6 +274,13 @@ ledger and the once-ledger. They live in `localStorage` under the session id,
 and `af/persist.js` writes them from the one place every state change ends -
 `renderAll()` - with `tick()` as the catch-all.
 
+**It comes back held.** Everything returns except the permission to act on it: a
+window that reopens is one nobody has looked at yet, the conversation may have
+moved on while it was closed, and a loop that starts typing the moment an editor
+comes up is a loop nobody asked for at that moment. The saved value is not
+consulted - running or paused, it returns paused, and one click on Resume starts
+it on the reply that is on screen then.
+
 **A reload gives the same conversation a new session id.** Measured in a real
 editor: armed under `fbf2bf72`, `Developer: Reload Window`, the same two messages
 back on screen with the title unchanged, and the panel now calling itself

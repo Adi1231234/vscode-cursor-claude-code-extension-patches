@@ -62,7 +62,18 @@
     if (typeof o.turns === "number" && o.turns >= 0) turns = o.turns;
     if (typeof o.stopped === "string" && o.stopped) stopped = o.stopped;
     approved = o.approved === true;
-    paused = o.paused === true;
+    /* Everything comes back except the permission to act on it. A window that
+       reopens is a window nobody has looked at yet: the conversation may have
+       moved on while it was closed, the person may have opened it to read rather
+       than to continue, and a loop that starts typing on its own the moment an
+       editor comes up is a loop nobody asked for at that moment. So the arming,
+       the count, the ledgers and the waiting answer all return, and the loop
+       returns held. One click on Resume starts it, and by then it is a decision
+       rather than a side effect of opening a window.
+
+       The saved value is deliberately not consulted: paused or running, it comes
+       back paused either way. */
+    paused = true;
     if (typeof o.lastSeen === "string") lastSeen = o.lastSeen;
 
     if (o.slot && typeof o.slot === "object" && typeof o.slot.message === "string") {

@@ -65,6 +65,8 @@ const after = T.state();
 
 ok(JSON.stringify(globalThis.__store) === store || true, 'the store is the one the first panel wrote');
 ok(after.armed === 'perf-skeptic', 'reload: still armed, got ' + after.armed);
+ok(after.paused === true,
+   'reload: and held - a window that reopens is one nobody has looked at yet');
 ok(after.turns === 1, 'reload: the turn count comes back, got ' + after.turns);
 ok(!!after.slot && after.slot.message === 'and on how many inputs?',
    'reload: the answer waiting for approval comes back, got ' + JSON.stringify(after.slot));
@@ -72,7 +74,12 @@ ok(after.lastSeen === 'first reply: 28.0 s to 21.8 s',
    'reload: it knows which reply it already answered, got ' + JSON.stringify(after.lastSeen));
 
 /* ...and it does not answer that same reply again */
+/* Two separate reasons it stays quiet, and the test should not confuse them:
+   it comes back held, and even released it has already answered that reply. */
 globalThis.sent.length = 0;
+T.maybeRun();
+ok(!globalThis.sent.some((m) => m.op === 'run'), 'reload: held, so nothing runs');
+T.setPaused(false);
 T.maybeRun();
 ok(!globalThis.sent.some((m) => m.op === 'run'), 'reload: the answered reply is not answered twice');
 
@@ -161,6 +168,39 @@ reply('a new reply while it was reloading');
 T9.maybeRun();
 ok(!globalThis.sent.some((m) => m.op === 'run'),
    'reload: a paused loop does not start answering because the window came back');
+
+
+/* Saved running, restored held. The state is worth keeping - the count, the
+   ledgers, the answer waiting - but acting on it the moment an editor opens is
+   not something anyone asked for at that moment. */
+globalThis.__sid = 'running-before';
+globalThis.__msgs = [{ role: 'user', content: 'the running chat' },
+                     { role: 'assistant', content: 'the running answer' }];
+let TA = loadPanel(EXPOSE);
+globalThis.__tick();
+list();
+TA.arm('perf-skeptic');
+ok(TA.state().paused === false, 'armed and running before the reload');
+turn(TA, 'a measured claim: 28.0 s to 21.8 s', 'on how many inputs?');
+
+globalThis.__sid = 'running-after';
+let TB = loadPanel(EXPOSE);
+globalThis.__tick();
+list();
+ok(TB.state().armed === 'perf-skeptic', 'reload: the arming came back');
+ok(TB.state().turns === 1, 'reload: and the count');
+ok(TB.state().paused === true, 'reload: but it came back held, got ' + TB.state().paused);
+
+globalThis.sent.length = 0;
+reply('a brand new reply nobody has answered');
+TB.maybeRun();
+ok(!globalThis.sent.some((m) => m.op === 'run'),
+   'reload: it does not start answering because a window opened');
+
+/* and one click starts it, on the reply that is on screen now */
+TB.setPaused(false);
+TB.maybeRun();
+ok(globalThis.sent.some((m) => m.op === 'run'), 'resume: one click and it runs');
 
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
