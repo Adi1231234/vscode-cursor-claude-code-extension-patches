@@ -175,6 +175,21 @@ into the next one. And the last line is still parsed exactly as before, which is
 why a bundle patched before this change - or a CLI too old for stream-json -
 keeps working.
 
+**What it is actually worth, measured against the real CLI rather than the
+harness.** Two runs of the shipped runner with the shipped responder: the first
+delta arrived 16.2 s into an 18.1 s run and 22.2 s into a 24.3 s one, and the
+whole answer was written in the second after it - four chunks, about 300
+characters. So this view is mostly a wait, which is why the header carries a
+clock: a wait with no number on it reads as nothing happening.
+
+Neither run produced a single thinking delta. The pane is there because a model
+that does think should be watchable, not because this responder does.
+
+The stream is the answer and not a paraphrase of it: the streamed text is the
+exact JSON the model wrote, and the message shown in the lane is parsed out of
+it. A first check said otherwise and was wrong - it compared the parsed message
+against raw JSON, where the quotes are still escaped.
+
 Escape closes the view and leaves the responders dialog underneath open. It used
 to close the dialog instead: that handler is registered first and stopped the
 event, so the layer nobody was looking at was the one that went.
