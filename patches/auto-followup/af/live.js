@@ -13,6 +13,8 @@
 
      Kept per run id. A late chunk from a cancelled run cannot bleed into the
      next one, because the id it carries no longer matches. */
+  var liveResult = null;   /* the parsed answer once it lands, for the view */
+  var liveRawOpen = false;
   var liveRid = "";
   var liveParts = [];        /* {kind, text} in arrival order */
   var liveChars = 0;
@@ -27,6 +29,7 @@
     liveChars = 0;
     liveStart = Date.now();
     renderLive();
+    liveResult = null;
   }
 
   function liveAppend(rid, kind, text) {
@@ -124,25 +127,80 @@
     box.appendChild(head);
 
     var body = el("div", "__afLiveBody __ccScroll");
-    if (!liveParts.length) {
+
+    /* A block per thing worth reading, in the order they matter: the message
+       that will be typed, why this move was picked, and the claims it recorded.
+       The raw stream is still there behind a toggle - it is what the model
+       actually wrote and the only way to see a malformed answer - but it is not
+       what the view is for. */
+    function block(label, text, cls) {
+      var seg = el("div", "__afSeg " + (cls || ""));
+      var tag = el("span", "__afSegTag");
+      txt(tag, label);
+      seg.appendChild(tag);
+      var pre = el("div", "__afSegText");
+      pre.dir = "auto";
+      txt(pre, text);
+      seg.appendChild(pre);
+      body.appendChild(seg);
+      return seg;
+    }
+
+    var thinking = liveThinking();
+    if (thinking) block("thinking", thinking, "__afSegThink");
+
+    var raw = liveRaw();
+    var done = liveResult;
+    var msg = done ? (done.message || "") : "";
+    var partial = false;
+    if (!done) {
+      var f = jsonField(raw, "message");
+      if (f) { msg = f.text; partial = f.partial; }
+    }
+
+    if (msg) {
+      block(partial ? "message so far" : "message", msg, "__afSegOut");
+    } else if (raw) {
+      /* Not JSON, or not yet - before the field appears, and for a model that
+         answers in prose. Showing the stream is what this view did before
+         anything was extracted from it, and it must never show less. */
+      block("output", raw, "__afSegOut");
+    } else if (!thinking) {
       var empty = el("div", "__afLiveEmpty");
       txt(empty, pending ? "waiting for the first words - nothing has been written yet"
                          : "nothing was written this turn");
       body.appendChild(empty);
-    } else {
-      for (var i = 0; i < liveParts.length; i++) {
-        var p = liveParts[i];
-        var seg = el("div", "__afSeg " + (p.kind === "thinking" ? "__afSegThink" : "__afSegOut"));
-        var tag = el("span", "__afSegTag");
-        txt(tag, p.kind === "thinking" ? "thinking" : "output");
-        seg.appendChild(tag);
-        var pre = el("div", "__afSegText");
-        pre.dir = "auto";
-        txt(pre, p.text);
-        seg.appendChild(pre);
-        body.appendChild(seg);
-      }
     }
+
+    if (done && done.why) block("why this move", done.why, "__afSegWhy");
+    if (done && done.stop) block("stop condition met", done.stop, "__afSegStop");
+
+    if (done && done.claims && done.claims.length) {
+      var seg = el("div", "__afSeg __afSegClaims");
+      var tag = el("span", "__afSegTag");
+      txt(tag, done.claims.length + (done.claims.length === 1 ? " claim recorded" : " claims recorded"));
+      seg.appendChild(tag);
+      var list = el("ul", "__afClaimList");
+      for (var c = 0; c < done.claims.length; c++) {
+        var li = el("li");
+        li.dir = "auto";
+        txt(li, done.claims[c]);
+        list.appendChild(li);
+      }
+      seg.appendChild(list);
+      body.appendChild(seg);
+    }
+
+    /* Last, small, and off by default: the only way to see what a malformed
+       answer actually said, and noise every other time. */
+    if (raw) {
+      var toggle = el("div", "__afRawToggle");
+      txt(toggle, liveRawOpen ? "hide what the model wrote" : "show what the model wrote");
+      press(toggle, function () { liveRawOpen = !liveRawOpen; renderLive(); }, "button");
+      body.appendChild(toggle);
+      if (liveRawOpen) block("raw", raw, "__afSegRaw");
+    }
+
     box.appendChild(body);
     liveNode.appendChild(box);
 

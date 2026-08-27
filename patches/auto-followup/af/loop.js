@@ -89,6 +89,9 @@
       disarm(m.error);
       return;
     }
+    /* The view is watching this run: give it the parsed answer, so it can show
+       the message and the claims rather than the JSON they arrived in. */
+    liveResult = m;
     turns += 1;
     if (m.claims && m.claims.length) addClaims(m.claims);
     if (m.stop) { slot = null; disarm(m.stop); return; }

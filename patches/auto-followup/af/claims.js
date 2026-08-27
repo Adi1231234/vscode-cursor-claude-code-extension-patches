@@ -31,15 +31,18 @@
      Found by arming a real panel. None of the unit tests could see it, because
      every one of them starts from a session that already has an id. */
   function carryOver(was) {
-    if (was) return;                    /* one real id replacing another is a new session */
+    if (was) return false;              /* one real id replacing another is a new session */
+    var moved = false;
     [CLAIM_KEY, ASKED_KEY, FIRST_KEY, ARM_KEY, STATE_KEY].forEach(function (p) {
       try {
         var v = localStorage.getItem(p + "none");
         if (v === null) return;
         localStorage.setItem(keyFor(p), v);
         localStorage.removeItem(p + "none");
+        moved = true;
       } catch (e) {}
     });
+    return moved;
   }
 
   function claimsKey() {

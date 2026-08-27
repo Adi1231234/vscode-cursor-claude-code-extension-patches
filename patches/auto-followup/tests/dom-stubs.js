@@ -245,8 +245,10 @@ globalThis.window.__qAuto={
   paused:()=>globalThis.__qAutoState.paused,
 /* The session id is settable: a window reload brings the conversation back
    under a NEW one, and that is the case the persistence has to survive. */
+/* A panel whose session has no id yet reports "" - and || would have turned
+   that into the default, which is the one case being tested. */
   busy:()=>globalThis.__qAutoState.busy,
-  panel:()=>null, log:()=>{}, sid:()=>globalThis.__sid||'sess-1',
+  panel:()=>null, log:()=>{}, sid:()=>globalThis.__sid===undefined?'sess-1':globalThis.__sid,
   send:t=>{globalThis.__sentText=t;return Promise.resolve(true);},
   /* The queue the follow-up now goes into. Without it here the loop takes its
      fallback path and every check passes against code the product does not

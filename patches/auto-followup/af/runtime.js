@@ -26,7 +26,7 @@
     if (now === sid) return;
     var was = sid;
     sid = now;
-    carryOver(was);
+    var carried = carryOver(was);
     armed = null; meta = null; slot = null; stopped = null; turns = 0; pending = false;
     try {
       /* A reload restores the conversation under a new id, so a session with
@@ -43,7 +43,7 @@
       }
       /* After the arming, because the slot it may bring back has to be checked
          against the reply that is on screen now. */
-      restoreState();
+      restoreState(carried);
     } catch (e) {}
     renderAll();
   }
