@@ -43,6 +43,22 @@ written back, and a file with no `##` headings at all still works - the whole bo
 becomes the rules. Three examples are written on first use and are yours to
 delete; nothing recreates them.
 
+## `first_question`
+
+One question the responder must put before anything else, on the first turn it is
+armed. The **panel** decides when - it records that it was asked and never asks
+again in that arming - and the responder is left only the wording.
+
+It began as the first paragraph of the rules, as prose competing with four other
+rules for attention. Measured against the real message where it mattered most in
+this project, it fired **3 times out of 6**: a coin flip on the highest-value move
+there is, and when it lost, the same message read as "a finding, then a stop" and
+produced "what is the next axis" instead. Moved into the mechanism, **6 of 6**.
+
+That is the rule this patch keeps rediscovering: whatever the mechanism can
+decide, the mechanism decides. The claims ledger, the record of what was sent, and
+this are all the same lesson.
+
 ## The four settings
 
 - **`context`** decides what the responder is worth, and it is the one to

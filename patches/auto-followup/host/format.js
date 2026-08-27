@@ -29,6 +29,7 @@
    section names to get one running. */
 globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
   var DEFAULTS = {
+    first_question: "",
     context: "last-message+claims",
     max_turns: "20",
     autosend: "false",

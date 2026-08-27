@@ -32,6 +32,7 @@
   var SETTLE_MS = 700;             /* quiet after busy drops, before reading the reply */
   var CLAIM_KEY = "ccAfClaims:";   /* + session id */
   var ARM_KEY = "ccAfArmed:";      /* + session id */
+  var FIRST_KEY = "ccAfFirst:";    /* + session id - has first_question been put */
   var ASKED_KEY = "ccAfAsked:";    /* + session id - what the panel actually sent */
   var MAX_ASKED = 5;               /* enough to recognise a repeat, not a transcript */
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */

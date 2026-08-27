@@ -94,6 +94,22 @@
     } catch (e) { return []; }
   }
 
+  /* Whether the responder's first_question has been put yet, in this arming.
+     Kept by the panel, not judged by the model: asked once, then never again.
+     Whether the answer was any good is a separate matter and belongs to the
+     ordinary rules, which is why this is a flag and not a judgement. */
+  function needFirst() {
+    try { return localStorage.getItem(keyFor(FIRST_KEY)) !== "1"; } catch (e) { return true; }
+  }
+
+  function markFirstAsked() {
+    try { localStorage.setItem(keyFor(FIRST_KEY), "1"); } catch (e) {}
+  }
+
+  function clearFirst() {
+    try { localStorage.removeItem(keyFor(FIRST_KEY)); } catch (e) {}
+  }
+
   function recordAsked(text) {
     var t = String(text || "").trim();
     if (!t) return;

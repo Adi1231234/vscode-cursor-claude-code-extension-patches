@@ -24,6 +24,7 @@
     armed = id;
     meta = findResponder(id);
     turns = 0; slot = null; stopped = null; approved = false;
+    clearFirst();                          /* a new arming asks it again */
     lastSeen = lastAssistant();          /* the reply already on screen is not ours to answer */
     try { localStorage.setItem(keyFor(ARM_KEY), id); } catch (e) {}
     log("armed", id);
@@ -41,7 +42,8 @@
 
   function contextFor() {
     var mode = (meta && meta.context) || "last-message+claims";
-    var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [], asked: readAsked() };
+    var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [], asked: readAsked(),
+                needFirst: !!(meta && (meta.first_question || "").trim()) && needFirst() };
     if (mode === "last-message+claims") ctx.claims = readClaims();
     else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
     return ctx;
@@ -72,7 +74,9 @@
     var text = lastAssistant();
     if (!text || text === lastSeen) return;    /* nothing new to answer */
     lastSeen = text;
-    inflight = requestRun(armed, contextFor());
+    var ctx = contextFor();
+    if (ctx.needFirst) markFirstAsked();   /* asked once, whatever comes back */
+    inflight = requestRun(armed, ctx);
     renderAll();
   }
 

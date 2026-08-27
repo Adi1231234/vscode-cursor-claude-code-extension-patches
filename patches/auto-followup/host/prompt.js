@@ -22,7 +22,39 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     "When you return a stop reason, 'message' is ignored and nothing is sent."
   ].join("\n");
 
+  /* The one question that has to be asked before anything else, on the turn the
+     panel says it has not been asked yet.
+
+     It used to be the first paragraph of the rules, as prose competing with four
+     other rules for the model's attention, and measured on the message where it
+     mattered most in this project it fired 3 times out of 6 - a coin flip on the
+     highest-value move there is. When it lost, the model read the same message as
+     "a finding, then a stop" and said "what is the next axis" instead.
+
+     So the panel decides when, and the model is left only the wording. Same
+     principle as the sent-message ledger: whatever the mechanism can decide, the
+     mechanism decides. */
+  function firstQuestion(r, ctx) {
+    return (ctx.needFirst && (r.first_question || "").trim()) || "";
+  }
+
   function compose(r, ctx) {
+    var first = firstQuestion(r, ctx);
+    if (first) {
+      return [CONTRACT, "",
+        "# This turn has exactly one job",
+        "Ask this, and nothing else:",
+        "    " + first,
+        "",
+        "Put it in your own words, in the language of the conversation, and tie it to",
+        "the specific numbers in the message below so it does not read as boilerplate.",
+        "Ask nothing else this turn, however tempting the rest of the message is - it",
+        "will still be there next turn, and the answer to this changes which of it",
+        "matters. 'stop' is null.",
+        "",
+        "# Claude's message", (ctx.text || "").trim()
+      ].join("\n");
+    }
     var p = [CONTRACT, "", "# When to type what", (r.rules || "").trim()];
     if ((r.stop || "").trim()) p.push("", "# When to stop", r.stop.trim());
     if (ctx.claims && ctx.claims.length) {
