@@ -79,6 +79,12 @@
     saveState();
   }
 
-  requestList();
+  /* No requestList() here any more. It cannot work: the only route to the host
+     is the app session store, the store is found by walking the React fiber tree
+     up from the composer input, and this script runs before the app has rendered
+     one. Measured in a real panel - "no composer input yet" twice, then "bridge
+     ready after 902ms" - so a send from here does not race and sometimes lose, it
+     loses every time by about a second, and leaves a confusing line in the log
+     saying so. tick() owns it instead, and asks until the host answers once. */
   setInterval(function () { try { tick(); } catch (e) {} }, TICK);
 })();</script>

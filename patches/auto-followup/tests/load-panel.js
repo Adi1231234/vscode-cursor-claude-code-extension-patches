@@ -36,8 +36,8 @@ function panelSource() {
 function loadPanel(expose) {
   eval(fs.readFileSync(ROW, 'utf8'));
   const src = panelSource().replace(
-    '  requestList();' + NL + '  setInterval(',
-    '  globalThis.__t=' + expose + ';' + NL + '  requestList();' + NL + '  setInterval(');
+    '  setInterval(',
+    '  globalThis.__t=' + expose + ';' + NL + '  setInterval(');
   if (src.indexOf('globalThis.__t=') < 0)
     throw new Error('load-panel: the splice point in runtime.js moved');
   eval(src);

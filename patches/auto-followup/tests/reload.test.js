@@ -212,7 +212,12 @@ ok(globalThis.sent.some((m) => m.op === 'run'), 'resume: one click and it runs')
 globalThis.__sid = 'never-answered';
 globalThis.sent.length = 0;
 const TC = loadPanel(EXPOSE);
-ok(globalThis.sent.some((m) => m.op === 'list'), 'list: it asks once when the script runs');
+/* Nothing is asked for while the script runs, and that is deliberate: the only
+   route to the host is the app session store, which is found by walking up from
+   the composer input, and the app has not rendered one yet. Measured in a real
+   panel: two failed sends, then 'bridge ready after 902ms'. */
+ok(!globalThis.sent.some((m) => m.op === 'list'),
+   'list: the script does not ask before the app can carry it');
 
 /* The first tick establishes the session, and syncSession asks for a list of its
    own on the way through - so the tick that proves the retry is the SECOND one,

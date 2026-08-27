@@ -53,6 +53,7 @@
   var armed = null;        /* the responder id, or null when off */
   var meta = null;         /* its parsed fields, from the host list */
   var list = [];           /* every responder the host knows about */
+  var startedAt = Date.now();   /* when this script ran, for the timings below */
   var listSeen = false;    /* has the host ever answered with one - see tick */
   var askedListAt = 0;
   var turns = 0;           /* how many follow-ups this arming has produced */

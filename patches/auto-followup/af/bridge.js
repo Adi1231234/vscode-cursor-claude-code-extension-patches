@@ -7,13 +7,31 @@
      Replies are matched on rid rather than "the next result wins". Two panels
      share one host, and a slow run in one window must not be delivered as the
      other window's follow-up. */
+  var firstSendAt = 0;
+
+  /* Everything the panel says to the host goes through the app's own session
+     store, and that store is not on a global: it is found by walking the React
+     fiber tree up from the composer input. So a send before the app has rendered
+     its composer has nowhere to go, and the failure says which half is missing -
+     the input, the store, or the connection - because they fail at different
+     moments and the answer decides what to do about it. */
   function send(msg) {
+    var why = "";
     try {
+      var e = globalThis.__ccInput ? globalThis.__ccInput() : null;
       var s = globalThis.__ccStore();
       var c = s && s.connection && s.connection.value;
-      if (c && typeof c.send === "function") { c.send(msg); return true; }
-    } catch (e) {}
-    log("bridge send failed", msg && msg.op);
+      if (c && typeof c.send === "function") {
+        if (!firstSendAt) {
+          firstSendAt = Date.now();
+          log("bridge ready after", String(firstSendAt - startedAt) + "ms");
+        }
+        c.send(msg);
+        return true;
+      }
+      why = !e ? "no composer input yet" : (!s ? "input but no store" : "store but no connection");
+    } catch (e2) { why = "threw: " + (e2 && e2.message); }
+    log("bridge send failed", msg && msg.op, why);
     return false;
   }
 
