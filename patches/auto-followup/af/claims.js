@@ -22,6 +22,26 @@
     return prefix + (sid || "none");
   }
 
+  /* A panel armed before its session exists stores under "none", and the id
+     arriving afterwards is not a new session - it is the same one, finally
+     identified. Without this the arming vanished the moment the first prompt was
+     sent: the button went back to "off" with the responder still selected and
+     nothing in the log to say why.
+
+     Found by arming a real panel. None of the unit tests could see it, because
+     every one of them starts from a session that already has an id. */
+  function carryOver(was) {
+    if (was) return;                    /* one real id replacing another is a new session */
+    [CLAIM_KEY, ASKED_KEY, FIRST_KEY, ARM_KEY].forEach(function (p) {
+      try {
+        var v = localStorage.getItem(p + "none");
+        if (v === null) return;
+        localStorage.setItem(keyFor(p), v);
+        localStorage.removeItem(p + "none");
+      } catch (e) {}
+    });
+  }
+
   function claimsKey() {
     return keyFor(CLAIM_KEY);
   }

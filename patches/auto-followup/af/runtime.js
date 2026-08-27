@@ -24,7 +24,9 @@
   function syncSession() {
     var now = sessionId();
     if (now === sid) return;
+    var was = sid;
     sid = now;
+    carryOver(was);
     armed = null; meta = null; slot = null; stopped = null; turns = 0; pending = false;
     try {
       var saved = localStorage.getItem(keyFor(ARM_KEY));

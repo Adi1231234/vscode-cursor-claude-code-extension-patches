@@ -190,5 +190,31 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   const ps=F2.parse('perf-skeptic',globalThis.__ccAfSamples2.find(s=>s.id==='perf-skeptic').text);
   ok(ps.once[1].after==='frame','after: the shipped factor question waits for the frame question');
 }
+
+// Arming before the session has an id. A live panel lost its arming here and no
+// unit test could see it: they all start from a session that already has one.
+{
+  const sidWas = globalThis.window.__qAuto.sid;
+  globalThis.window.__qAuto.sid = () => '';        // no session yet
+  globalThis.__tick();
+  T.arm('perf-skeptic');
+  ok(localStorage.getItem('ccAfArmed:none')==='perf-skeptic','carry: arming with no session stores under none');
+  localStorage.setItem('ccAfClaims:none','["a claim"]');
+  globalThis.window.__qAuto.sid = () => 'sess-new';   // the session appears
+  globalThis.__tick();
+  ok(S().armed==='perf-skeptic','carry: the arming survives the session getting its id');
+  ok(localStorage.getItem('ccAfArmed:sess-new')==='perf-skeptic','carry: it moved to the real key');
+  ok(localStorage.getItem('ccAfArmed:none')===null,'carry: and no longer sits under none');
+  ok(localStorage.getItem('ccAfClaims:sess-new')==='["a claim"]','carry: the ledgers move with it');
+  // one real session replacing another is a different conversation, and must not inherit
+  localStorage.setItem('ccAfArmed:none','picky-reviewer');
+  globalThis.window.__qAuto.sid = () => 'sess-other';
+  globalThis.__tick();
+  ok(S().armed===null,'carry: a second real session does not inherit the arming');
+  ok(localStorage.getItem('ccAfArmed:none')==='picky-reviewer','carry: and nothing under none is consumed by it');
+  localStorage.removeItem('ccAfArmed:none');
+  globalThis.window.__qAuto.sid = sidWas;
+  globalThis.__tick();
+}
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

@@ -262,6 +262,28 @@ Over `tools/cdp`, against a real conversation of 524 messages:
 - the composer's computed direction is **ltr** even in a Hebrew conversation, so
   the button sits left of the add-to-queue button as designed
 
+
+### Armed in a real panel
+
+Everything above is measured through the host runtime directly. The loop itself
+was run in a patched editor under `tools/lab`, armed from the picker, against a
+real session:
+
+- The three sample responders were written to the lab's own responder folder,
+  came back over the message channel, and rendered in the picker.
+- One prompt was sent. When the turn ended the lane carried a generated message,
+  its `why` line, and the badge - and the claims ledger held two claims from that
+  answer, the once-ledger the id of the question it had spent, and the counter
+  read 1/20.
+- The message was the framing question, fired by its pattern, in the language of
+  the conversation and tied to the number in the answer:
+  "the 40 ms is on an empty `node -e ""` - that is not a real input. What real
+  input was it measured on, and how many seconds does a person wait end to end?"
+
+That run is also what found the arming being lost when a session gets its id.
+Nothing short of a live panel could have: every unit test starts from a session
+that already has one.
+
 ## Tests
 
     node patches/auto-followup/tests/run-all.mjs      # 120 checks
