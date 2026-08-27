@@ -138,11 +138,16 @@ function __afQueryAll(sel) {
   return __afWalk(body).filter((el) => sels.some((s) => __afMatches(el, s)));
 }
 globalThis.document={createElement:mkEl,body,
+  documentElement:{clientHeight:800,clientWidth:1200},
   addEventListener(k,f){(__docListeners[k]=__docListeners[k]||[]).push(f);},
   removeEventListener(k,f){if(__docListeners[k])__docListeners[k]=__docListeners[k].filter(x=>x!==f);},
   dispatchEvent(ev){return __afDispatch(body,ev);},
   querySelector(sel){return __afQueryAll(sel)[0]||null;}};
-globalThis.window={addEventListener(k,f){globalThis.__onMsg=f;},innerWidth:1200,innerHeight:800};
+globalThis.window={addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
+  (globalThis.__winListeners[k]=globalThis.__winListeners[k]||[]).push(f);},
+  removeEventListener(k,f){if(globalThis.__winListeners[k])globalThis.__winListeners[k]=globalThis.__winListeners[k].filter(x=>x!==f);},
+  innerWidth:1200,innerHeight:800};
+globalThis.__winListeners={};
 const store={};
 globalThis.localStorage={getItem:k=>k in store?store[k]:null,setItem:(k,v)=>{store[k]=String(v);},removeItem:k=>{delete store[k];}};
 globalThis.__store=store;

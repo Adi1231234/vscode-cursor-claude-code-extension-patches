@@ -17,7 +17,7 @@ src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessag
          .split('__TOOLRES__').join('toolResult_X');
 src=src.replace('  requestList();'+String.fromCharCode(10)+'  setInterval(',
  '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'+
- 'approve:approve,openDialog:openDialog,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
+ 'approve:approve,openDialog:openDialog,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
  'ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,'+
  'dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},'+
  'btn:function(){return globalThis.__form.__afSlot;},'+
@@ -258,6 +258,40 @@ try{
   ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X', 'anchor: and the order holds');
 
   globalThis.__ccInput = savedInput;
+}
+
+// A zoomed ancestor becomes the containing block for a fixed element, so inset:0
+// stops meaning the viewport - and vh inside that subtree renders at vh times the
+// zoom. Measured at zoom 1.3 in a live panel: the dialog sat at top -51 with its
+// header and its buttons both off the screen.
+{
+  const body = globalThis.document.body;
+  const zoomBody = (screenPx, ownPx) => {
+    Object.defineProperty(body, 'getBoundingClientRect', { configurable: true,
+      value: () => ({ top: 0, bottom: screenPx, left: 0, width: 1040, height: screenPx }) });
+    Object.defineProperty(body, 'offsetHeight', { configurable: true, value: ownPx });
+  };
+  document.documentElement.clientHeight = 780;
+  document.documentElement.clientWidth = 1040;
+
+  zoomBody(156, 120);            // 1.3x
+  T.openDialog();
+  const ov = document.querySelector('.__afOverlay');
+  ok(!!ov, 'zoom: the overlay exists');
+  ok(ov.style.height === '600px',
+     'zoom: opening the dialog sizes the overlay to the screen in its own units (780/1.3), got ' + JSON.stringify(ov.style.height));
+  ok(ov.style.width === '800px', 'zoom: and the width the same way, got ' + ov.style.width);
+
+  zoomBody(120, 120);            // no zoom
+  T.fitOverlay();
+  ok(ov.style.height === '780px', 'zoom: with no zoom it is just the screen height, got ' + ov.style.height);
+
+  zoomBody(0, 0);                // a degenerate measurement must not blank the dialog
+  T.fitOverlay();
+  ok(ov.style.height === '780px', 'zoom: a zero measurement falls back to scale 1, got ' + ov.style.height);
+
+  document.documentElement.clientHeight = 800;
+  document.documentElement.clientWidth = 1200;
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);

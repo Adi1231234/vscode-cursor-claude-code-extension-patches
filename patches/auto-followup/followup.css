@@ -63,8 +63,8 @@
    heading, the rule beside the selected responder, and focus. Everything else
    is the type ramp doing the work - 10px tracked uppercase at .40 for a label,
    12px at full for a value. Before, both sat at .45 and read as one thing. */
-.__afOverlay{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
-.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:90vh;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+.__afOverlay{position:fixed;inset:0;box-sizing:border-box;padding:14px;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
+.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
 .__afDlgHead{display:flex;align-items:center;gap:10px;padding:12px 15px 11px;border-bottom:1px solid var(--afLine)}
 .__afDlgHead h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em;flex:1;direction:ltr;text-align:start}
 .__afX{opacity:.42;font-size:13px;line-height:1;cursor:pointer;padding:3px 5px;border-radius:4px}
@@ -185,7 +185,7 @@
    every row that pairs two things puts them one under the other. The pane is the
    thing being used, so it gets whatever is left. */
 @media (max-width: 640px) {
-  .__afDlg { width: calc(100% - 16px); max-height: 94vh; border-radius: 8px; }
+  .__afDlg { width: calc(100% - 16px); max-height: 100%; border-radius: 8px; }
   .__afDlgBody { flex-direction: column; }
   .__afList {
     order: -1; width: auto; flex: 0 0 auto; max-height: 168px;

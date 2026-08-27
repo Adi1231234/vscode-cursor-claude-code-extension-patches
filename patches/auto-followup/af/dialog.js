@@ -17,6 +17,7 @@
     if (dlg && dlg.parentNode) dlg.parentNode.removeChild(dlg);
     dlg = null; draft = null; dirty = false;
     document.removeEventListener("keydown", onDialogKey, true);
+    window.removeEventListener("resize", fitOverlay);
   }
 
   /* Escape takes the innermost layer, which is the one the person is looking at.
@@ -30,12 +31,45 @@
     closeDialog();
   }
 
+  /* The overlay has to be told how tall the screen is.
+
+     The zoom patch sets `zoom` on <body>, and in Chromium a zoomed ancestor
+     becomes the containing block for a fixed-position descendant - so `inset: 0`
+     stopped meaning the viewport and started meaning the body box, which is
+     shorter. And `vh` inside a zoomed subtree is a viewport unit measured in the
+     unzoomed space, so a `max-height: 90vh` rendered at 90vh times the zoom.
+
+     Measured in a live panel at zoom 1.3: viewport 759px, overlay 584px, dialog
+     729px, top at -51px - clipped off the top of the screen and off the bottom,
+     with the header and the buttons both out of reach.
+
+     Nothing in CSS can read the zoom, so the ratio is measured: a rect is in
+     screen pixels and offsetHeight is in the element's own, and their quotient is
+     whatever scaling is in force. The overlay is then given the screen height in
+     its own units, and the dialog is capped at 100% of the overlay - so it cannot
+     leave the screen whatever the zoom is set to. */
+  function fitOverlay() {
+    if (!dlg) return;
+    var ref = document.body;
+    var seen = ref.getBoundingClientRect().height;
+    var own = ref.offsetHeight;
+    var scale = (own > 0 && seen > 0) ? (seen / own) : 1;
+    if (!isFinite(scale) || scale <= 0) scale = 1;
+    var screenH = document.documentElement.clientHeight || window.innerHeight || 0;
+    var screenW = document.documentElement.clientWidth || window.innerWidth || 0;
+    if (!screenH) return;
+    dlg.style.height = (screenH / scale) + "px";
+    dlg.style.width = (screenW / scale) + "px";
+  }
+
   function openDialog() {
     requestList();
     if (dlg) closeDialog();
     dlg = el("div", "__afOverlay");
     on(dlg, "mousedown", function (ev) { if (ev.target === dlg) closeDialog(); });
     document.body.appendChild(dlg);
+    fitOverlay();
+    window.addEventListener("resize", fitOverlay);
     document.addEventListener("keydown", onDialogKey, true);
     selectDraft(armed || (list[0] && list[0].id) || null);
   }
