@@ -53,4 +53,30 @@ only one element can be, so each timer evicted the other. The numbers name the
 cause without guessing: bursts at the tick period with the two actors a few
 milliseconds apart, exactly two DOM orders differing only in their order, and an
 oscillation one button-width wide. It only reproduces while a background task is
-running, because that is when the other button exists.
+running, because that is when the other button exists.
+
+## A browser is enough for the layout ones
+
+`tests/browser/build.mjs` writes a page that loads the real injected script with
+the real stylesheet and the panel's theme variables. Served over http and driven
+with an emulated viewport, it answers the layout and contrast questions without a
+lab and without going anywhere near the editors somebody is working in:
+
+```
+node patches/auto-followup/tests/browser/build.mjs
+python3 -m http.server 8792 --bind 127.0.0.1 --directory patches/auto-followup/tests/browser
+```
+
+Measured there across the range, with the dialog open:
+
+  340px   dialog 297x733, stacked, rail above the pane, nothing clipped, no
+          horizontal overflow, all four headings on one line
+  640px   still stacked - the boundary of the rule
+  760px   dialog 708x732, rail 205px on the left, editor 502px, no box overlaps
+  every width   13 of 14 text styles at AA, the fourteenth raised from 4.39 to
+          5.22 by the measurement
+
+Two probes written inline for this were wrong before they were right: one read
+`color(srgb ... / a)` as opaque and reported two failures that were the
+instrument, and an earlier one compared box tops instead of rectangles and called
+a side-by-side pair an overlap.
