@@ -1,7 +1,8 @@
 // Minimal DOM/browser stubs - only what the panel script actually touches.
 function mkEl(tag){
-  const e={tagName:tag,className:'',style:{},children:[],attrs:{},_text:'',
+  const e={tagName:tag,nodeType:1,className:'',style:{},children:[],attrs:{},_text:'',
     isConnected:true,parentNode:null,listeners:{},
+    get parentElement(){return this.parentNode&&this.parentNode.nodeType===1?this.parentNode:null;},
     appendChild(c){c.parentNode=this;this.children.push(c);return c;},
     insertBefore(c,r){
       if(c.parentNode){c.parentNode.children=c.parentNode.children.filter(x=>x!==c);}
@@ -161,7 +162,15 @@ globalThis.document={createElement:mkEl,
   removeEventListener(k,f){if(__docListeners[k])__docListeners[k]=__docListeners[k].filter(x=>x!==f);},
   dispatchEvent(ev){return __afDispatch(body,ev);},
   querySelector(sel){return __afQueryAll(sel)[0]||null;}};
-globalThis.window={addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
+/* Enough of getComputedStyle for the one property the panel reads. It is the
+   zoom, and reading it is how the dialog learns the scale it is painted at -
+   the quotient it used to infer that from is 1 at every zoom in the Electron
+   VS Code ships. Without nodeType and parentElement above, the loop that walks
+   up to find it never ran a single step, and the test that covers the zoom
+   passed against a code path it never entered. */
+globalThis.getComputedStyle=(n)=>({zoom:(n&&n.style&&n.style.zoom)||'',
+  color:'',opacity:'',backgroundColor:'',display:'',position:''});
+globalThis.window={getComputedStyle:(n)=>globalThis.getComputedStyle(n),addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
   (globalThis.__winListeners[k]=globalThis.__winListeners[k]||[]).push(f);},
   removeEventListener(k,f){if(globalThis.__winListeners[k])globalThis.__winListeners[k]=globalThis.__winListeners[k].filter(x=>x!==f);},
   innerWidth:1200,innerHeight:800};

@@ -80,3 +80,31 @@ Two probes written inline for this were wrong before they were right: one read
 `color(srgb ... / a)` as opaque and reported two failures that were the
 instrument, and an earlier one compared box tops instead of rectangles and called
 a side-by-side pair an overlap.
+
+## `fit.js` - does the dialog stay inside the panel
+
+    node tools/lab/lab.mjs eval patches/auto-followup/tests/panel/fit.js
+    node tools/lab/lab.mjs width 340   # then again
+
+Four zoom levels at whatever width the panel currently is. `browser/fit.html`
+sweeps eight viewports because an iframe can be any size; a panel cannot, so this
+one sweeps the axis a panel does have and prints the width beside every row.
+
+**Run this one, not only the browser one.** The browser was green the whole time
+the dialog was hanging a third of its height out of a real panel, because CSS
+zoom does not mean the same thing in the two engines:
+
+- Chrome 141 returns a rect already multiplied by the zoom
+- the Electron in VS Code 1.135 returns it in the element's own units
+
+So `bodyRect.height / body.offsetHeight` is the zoom in one and **1 in the
+other** - and that quotient was how the dialog inferred its scale. Measured in the
+lab at zoom 1.5: body rect 512, offsetHeight 512, quotient 1, overlay set to
+768px, and 768 CSS px under zoom 1.5 paints 1152 of a 783px panel. Same code,
+same session: 32 of 32 green in the browser, 3 of 4 failing here.
+
+`getComputedStyle().zoom` is 1.5 in both, so that is what the dialog reads now and
+the quotient is only a fallback. The probe has to know about both systems too: it
+derives which one it is in from the same quotient and converts the screen size
+before comparing anything. Without that it reported identical numbers at every
+zoom and called the overflowing dialog a pass.

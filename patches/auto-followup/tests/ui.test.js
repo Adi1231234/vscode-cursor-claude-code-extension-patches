@@ -308,6 +308,25 @@ try{
   T.fitOverlay();
   ok(ov.style.height === '780px', 'zoom: a zero measurement falls back to scale 1, got ' + ov.style.height);
 
+  /* The case the quotient cannot see. In the Electron VS Code 1.135 ships, a
+     rect and an offsetHeight come back in the same units at every zoom, so the
+     quotient is 1 and the overlay was sized as if there were no zoom - 768px
+     under zoom 1.5 paints 1152 of a 783px panel, and a third of the dialog hung
+     off the bottom. The zoom is read from the computed style now. */
+  zoomBody(120, 120);            // the quotient says 1, as that engine does
+  body.style.zoom = '1.5';
+  T.fitOverlay();
+  ok(ov.style.height === '520px',
+     'zoom: a computed zoom of 1.5 is believed over a quotient of 1 (780/1.5), got ' + ov.style.height);
+  ok(ov.style.width === (1040 / 1.5) + 'px',
+     'zoom: and the width with it, got ' + ov.style.width);
+
+  body.style.zoom = '';
+  zoomBody(156, 120);            // no computed zoom, quotient 1.3: the fallback
+  T.fitOverlay();
+  ok(ov.style.height === '600px',
+     'zoom: an engine that will not report zoom still gets the quotient, got ' + ov.style.height);
+
   document.documentElement.clientHeight = 800;
   document.documentElement.clientWidth = 1200;
 }

@@ -25,6 +25,23 @@ long as any window is open - hours on a working machine - and without the flag
 that takes the other thirty checks down with it, including the ones that would
 have caught a real defect.
 
+**The mutex has a way out that keeps you on VS Code.** The block is per install,
+not per machine: download the official archive build, which has no installer and
+therefore no Inno Setup mutex, and point the lab at it.
+
+```
+curl -L -o vscode.zip https://update.code.visualstudio.com/latest/win32-x64-archive/stable
+# unzip it somewhere, then
+node tools/lab/lab.mjs up --code <that>/Code.exe
+```
+
+That is still Visual Studio Code - same Electron, same webview, same window title
+- rather than a fork that merely resembles it, which matters when what you are
+checking is layout. It launched in seconds while stable had been refusing for
+31 seconds and then giving up, with `Code is currently being updated` in the lab's
+own main.log. Worth reading that log first: the refusal is not visible anywhere
+else, and from the outside it looks exactly like the panel failing to register.
+
 **If you have just arrived:** `node tools/lab/selftest/run.mjs --fresh` builds a
 lab from nothing and checks the whole chain - every module and patch parses, every
 patch guard landed, the injected scripts survive the template literal they live in,
