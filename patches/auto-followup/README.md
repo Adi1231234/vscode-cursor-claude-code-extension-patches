@@ -307,6 +307,22 @@ That run is also what found the arming being lost when a session gets its id.
 Nothing short of a live panel could have: every unit test starts from a session
 that already has one.
 
+### A narrow panel
+
+The panel docks at any width, and at 340px this dialog was unusable: the rail held
+its fixed 224px, the edit pane - which carries `min-width:0` so a long description
+can truncate - collapsed to about sixty pixels, every field was cut mid-word, and
+the panel grew a horizontal scrollbar.
+
+Below 640px the two columns become one. The rail moves above the pane and caps its
+own height, and every row that pairs two things stacks them instead. Measured at
+340px: no section box overlaps another, none collapses, and the dialog is 326px
+inside a 340px viewport. The one pixel of horizontal overflow that remains is the
+app's own `body_aqhumA`, present with the dialog closed.
+
+`tests/panel/` holds the three checks that need a real panel, and says how to run
+them.
+
 ## Tests
 
     node patches/auto-followup/tests/run-all.mjs      # 120 checks
