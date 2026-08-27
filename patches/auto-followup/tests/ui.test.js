@@ -97,12 +97,17 @@ T.arm('unl');
 globalThis.__msgs=[{role:'assistant',content:'another reply'}];
 globalThis.sent.length=0; T.maybeRun();
 const r2=globalThis.sent.filter(m=>m.op==='run')[0];
+/* The send race belongs to the fallback path: with a queue that takes the item
+   there is nothing here that sends, and nothing to resurrect. Drop add() for
+   this block so the lane is exercised, and put it back afterwards. */
+const realAdd=globalThis.window.__qAuto.add; delete globalThis.window.__qAuto.add;
 globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:r2.rid,message:'will fail',claims:[],stop:null}});
 let resolveSend; globalThis.window.__qAuto.send=()=>new Promise(r=>{resolveSend=r;});
 T.maybeSend();
 ok(S().slot===null,'slot cleared while the send is in flight');
 T.disarm('stopped by hand');
 resolveSend(false);
+globalThis.window.__qAuto.add=realAdd;
 globalThis.setTimeout(function(){
   ok(S().slot===null,'a failed send does not resurrect the slot after a disarm');
 
@@ -254,6 +259,11 @@ try{
   const savedPanel = globalThis.window.__qAuto.panel;
   globalThis.window.__qAuto.panel = () => panel;
 
+  /* This block is about the lane itself - where it mounts when the queue panel
+     has no layout box - so it runs the fallback path deliberately. The queue
+     path has no lane to place. */
+  const keepAdd = globalThis.window.__qAuto.add;
+  delete globalThis.window.__qAuto.add;
   T.disarm(null); T.arm('perf-skeptic');
   globalThis.__msgs = [{ role: 'user', content: 'go' },
                        { role: 'assistant', content: 'the live view turn: 31.4 s and a claim of sameness' }];
@@ -269,6 +279,7 @@ try{
   const solo = document.querySelector('.__afSolo');
   ok(!!solo, 'lane: a panel with no layout box is not used - the lane gets a container of its own');
   ok(!!solo && !!solo.querySelector('.__afText'), 'lane: and the message is inside it');
+  globalThis.window.__qAuto.add = keepAdd;
 
   panel._shown = true;                        // the user queues something; the panel is back
   T.renderLane();

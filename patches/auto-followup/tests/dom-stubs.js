@@ -239,6 +239,7 @@ document.querySelectorAll=function(sel){
   });
 };
 globalThis.__qAutoState={count:0,paused:false,busy:false};
+globalThis.__qItems=[];   /* what the queue would be holding */
 globalThis.window.__qAuto={
   count:()=>globalThis.__qAutoState.count,
   paused:()=>globalThis.__qAutoState.paused,
@@ -246,7 +247,15 @@ globalThis.window.__qAuto={
    under a NEW one, and that is the case the persistence has to survive. */
   busy:()=>globalThis.__qAutoState.busy,
   panel:()=>null, log:()=>{}, sid:()=>globalThis.__sid||'sess-1',
-  send:t=>{globalThis.__sentText=t;return Promise.resolve(true);}
+  send:t=>{globalThis.__sentText=t;return Promise.resolve(true);},
+  /* The queue the follow-up now goes into. Without it here the loop takes its
+     fallback path and every check passes against code the product does not
+     run - the shape of failure this repo keeps finding. */
+  add:(text,opts)=>{
+    if(!text||!String(text).trim())return false;
+    globalThis.__qItems.push({text:String(text),off:!!(opts&&opts.off),auto:true});
+    return true;
+  },
 };
 /* The panel has no clock here: its interval callback is captured so a test can
    step it, and its timeouts run at once. Anything that spawns a real process

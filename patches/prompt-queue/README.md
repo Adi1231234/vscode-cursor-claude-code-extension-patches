@@ -215,3 +215,20 @@ chosen over "fire-once" / "fire-all" catch-up because our messages execute.
 > (not just the standalone script) to catch this.
 
 Exposes a single `Invoke-Patch $Ctx` (dot-sourced and called by `../../apply.ps1`). Idempotent and fail-safe: if its anchor isn't found it skips instead of corrupting anything.
+
+## Items a responder wrote
+
+`window.__qAuto.add(text, { off })` puts a line in the queue as an **ordinary**
+item: same position at the end, same menu, same skip checkbox, same position box,
+same editable text, same persistence. The only difference is `it.auto`, which puts
+a small mark on the row (`.__qAi`, an orange four-pointed star with the tooltip
+*Written by a responder, not by you*). A duplicate of one is still marked - a copy
+of a written line was still written.
+
+It does not go through `commitComposerToQueue`, which pauses the queue on an idle
+add - and idle is exactly when a responder writes, so that route would hold the
+queue every time. This is the same push the composer ends in, without that.
+
+`off: true` parks the item skipped: present, editable, one click from being sent.
+That is what a responder set to ask before sending uses, and it is also forced for
+an answer that did not parse, whatever the responder says.

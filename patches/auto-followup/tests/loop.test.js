@@ -41,20 +41,23 @@ ok(!runs[0].ctx.transcript,'last-message+claims does not send the transcript');
 globalThis.sent.length=0; T.maybeRun();
 ok(globalThis.sent.filter(m=>m.op==='run').length===0,'no double run while pending');
 
-// 5. result fills the slot and records claims
+// 5. the result goes into the queue as an ordinary item, and the claims are
+// recorded. It used to fill a lane of its own; the queue is where a person
+// already edits, reorders and deletes what is about to be sent.
+globalThis.__qItems.length=0;
 globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:runs[0].rid,message:'was that proof?',why:'sameness claim',claims:['98.7 s prefill'],stop:null}});
-ok(S().slot && S().slot.message==='was that proof?','slot filled');
+ok(globalThis.__qItems.length===1,'the follow-up is queued, got '+globalThis.__qItems.length);
+ok((globalThis.__qItems[0]||{}).text==='was that proof?','queued with the message it wrote');
+ok((globalThis.__qItems[0]||{}).auto===true,'queued marked as written rather than typed');
+ok(!S().slot,'and nothing is left in the lane');
 ok(S().turns===1,'turn counted');
 ok(S().claims.length===1 && S().claims[0].indexOf('98.7 s prefill')>0,'claim recorded: '+JSON.stringify(S().claims));
 ok(S().claims[0].indexOf('[1]')===0,'claim numbered by turn');
 
-// 6. autosend:false holds the first one
-globalThis.__sentText=null; T.maybeSend();
-ok(globalThis.__sentText===null,'first message held for approval');
-ok(S().autosend===false,'gate closed before approval');
-T.approve();
-ok(globalThis.__sentText==='was that proof?','approval releases it');
-ok(S().autosend===true,'gate open after approval');
+// 6. autosend:false parks it skipped rather than holding it somewhere else:
+// present in the queue, editable, one click from being sent.
+ok((globalThis.__qItems[0]||{}).off===true,'autosend false parks it skipped');
+ok(S().autosend===false,'and the responder still says ask first');
 
 // 7. the user's queue wins
 globalThis.__msgs.push({role:'assistant',content:'third'});
@@ -120,13 +123,15 @@ ok(S().armed===null,'max_turns disarmed it');
 ok(String(S().stopped).indexOf('max_turns')>=0,'max_turns reason: '+S().stopped);
 ok(S().turns===20,'stopped at 20 turns, got '+S().turns);
 
-// 14. the invalid flag reaches the slot
+// 14. an answer that did not parse is parked skipped whatever the responder
+// says - it is the one case where what was written is not what was asked for.
 T.disarm(null); T.arm('perf-skeptic');
 globalThis.__msgs.push({role:'assistant',content:'zzz'});
-globalThis.sent.length=0; T.maybeRun();
+globalThis.sent.length=0; globalThis.__qItems.length=0; T.maybeRun();
 var r5=globalThis.sent.filter(m=>m.op==='run')[0];
 globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:r5.rid,message:'prose',why:'output was not JSON',claims:[],stop:null,invalid:true}});
-ok(S().slot && S().slot.invalid===true,'invalid output is flagged on the slot');
+ok(globalThis.__qItems.length===1 && globalThis.__qItems[0].off===true,
+   'an unparsed answer is queued skipped, got '+JSON.stringify(globalThis.__qItems));
 
 // 15. a repeated claim is not recorded twice
 T.disarm(null); T.arm('perf-skeptic');
@@ -248,15 +253,18 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   ok(globalThis.sent.some(m=>m.op==='run'),'resume: the reply that arrived while paused is answered at once');
 
   // an approval already given is you, not the loop, so it still goes
+  // a follow-up produced while it is held still goes into the queue - the queue
+  // is where it waits, and the queue has its own pause. What a pause here stops
+  // is the loop asking for another one.
   const rid=globalThis.sent.filter(m=>m.op==='run').pop().rid;
+  globalThis.__qItems.length=0;
   globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:rid,message:'a follow-up',why:'w',claims:[],stop:null}});
+  ok(globalThis.__qItems.length===1,'pause: the answer that was in flight still lands in the queue');
   T.setPaused(true);
-  globalThis.__sentText=null;
-  T.maybeSend();
-  ok(!globalThis.__sentText,'pause: an unapproved follow-up is held');
-  T.approve();
-  T.maybeSend();
-  ok(globalThis.__sentText==='a follow-up','pause: pressing play still sends, got '+globalThis.__sentText);
+  globalThis.sent.length=0;
+  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'another reply while paused'}];
+  T.maybeRun();
+  ok(!globalThis.sent.some(m=>m.op==='run'),'pause: and no further run is asked for');
 }
 
 

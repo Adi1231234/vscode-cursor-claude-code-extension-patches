@@ -54,7 +54,7 @@ T.arm('perf-skeptic');
 ok(turn(T, 'first reply: 28.0 s to 21.8 s', 'and on how many inputs?'), 'a turn ran');
 const before = T.state();
 ok(before.turns === 1, 'before: one turn counted, got ' + before.turns);
-ok(!!before.slot, 'before: an answer is waiting for approval');
+ok(globalThis.__qItems.length === 1, 'before: the answer went into the queue');
 
 /* ---------- the reload ---------- */
 const store = JSON.stringify(globalThis.__store);
@@ -68,8 +68,9 @@ ok(after.armed === 'perf-skeptic', 'reload: still armed, got ' + after.armed);
 ok(after.paused === true,
    'reload: and held - a window that reopens is one nobody has looked at yet');
 ok(after.turns === 1, 'reload: the turn count comes back, got ' + after.turns);
-ok(!!after.slot && after.slot.message === 'and on how many inputs?',
-   'reload: the answer waiting for approval comes back, got ' + JSON.stringify(after.slot));
+/* The answer itself is a queue item now, and the queue keeps its own items
+   across a reload - that is not this file's business any more. What is: the
+   arming, the count, and coming back held. */
 ok(after.lastSeen === 'first reply: 28.0 s to 21.8 s',
    'reload: it knows which reply it already answered, got ' + JSON.stringify(after.lastSeen));
 
@@ -119,7 +120,7 @@ globalThis.__tick();
 list();
 T5.arm('perf-skeptic');
 turn(T5, 'a measured claim: 28.0 s to 21.8 s', 'on how many inputs?');
-ok(T5.state().turns === 1 && !!T5.state().slot, 'before: one turn and an answer waiting');
+ok(T5.state().turns === 1, 'before: one turn counted');
 
 globalThis.__sid = 'after-the-reload';
 let T6 = loadPanel(EXPOSE);
@@ -128,8 +129,6 @@ list();
 const back = T6.state();
 ok(back.armed === 'perf-skeptic', 'new id: the arming follows the conversation, got ' + back.armed);
 ok(back.turns === 1, 'new id: so does the turn count, got ' + back.turns);
-ok(!!back.slot && back.slot.message === 'on how many inputs?',
-   'new id: and the answer waiting for approval comes with it');
 ok(globalThis.__store['ccAfArmed:before-the-reload'] === undefined,
    'new id: the old key is moved, not copied - one claim on one conversation');
 
