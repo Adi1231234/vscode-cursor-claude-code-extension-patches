@@ -198,12 +198,29 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   ok(localStorage.getItem('ccAfArmed:sess-new')==='perf-skeptic','carry: it moved to the real key');
   ok(localStorage.getItem('ccAfArmed:none')===null,'carry: and no longer sits under none');
   ok(localStorage.getItem('ccAfClaims:sess-new')==='["a claim"]','carry: the ledgers move with it');
-  // one real session replacing another is a different conversation, and must not inherit
+  // A second real session id is NOT proof of a different conversation: a window
+  // reload brings the same conversation back under a new one. Measured in a real
+  // editor - armed under fbf2bf72, reloaded, same two messages on screen, panel
+  // now calling itself c08c5113 - and that alone used to orphan the arming, the
+  // ledger and the state. What tells the two apart is the transcript, so that is
+  // what is asked. A different conversation on screen inherits nothing:
   localStorage.setItem('ccAfArmed:none','picky-reviewer');
+  globalThis.__msgs=[{role:'user',content:'an entirely different chat'},
+                     {role:'assistant',content:'a different first answer'}];
   globalThis.window.__qAuto.sid = () => 'sess-other';
   globalThis.__tick();
-  ok(S().armed===null,'carry: a second real session does not inherit the arming');
+  ok(S().armed===null,'carry: a session showing a different conversation inherits nothing');
   ok(localStorage.getItem('ccAfArmed:none')==='picky-reviewer','carry: and nothing under none is consumed by it');
+  // ...and the same conversation under a new id keeps its arming, which is the
+  // whole point of surviving a reload (af/persist.js, reload.test.js).
+  globalThis.__msgs=[{role:'user',content:'the original chat'},
+                     {role:'assistant',content:'the original answer'}];
+  globalThis.window.__qAuto.sid = () => 'sess-reloaded-a';
+  globalThis.__tick();
+  T.arm('perf-skeptic');
+  globalThis.window.__qAuto.sid = () => 'sess-reloaded-b';
+  globalThis.__tick();
+  ok(S().armed==='perf-skeptic','carry: the same conversation under a new id keeps its arming');
   localStorage.removeItem('ccAfArmed:none');
   globalThis.window.__qAuto.sid = sidWas;
   globalThis.__tick();

@@ -21,8 +21,10 @@
           three turns later is answering a conversation that has moved on, so the
           slot holds one message, replaced every turn, and never accumulates.
        4. The queue persists to localStorage and restores held. A follow-up is
-          valid for one turn; restoring one after a reload would send a stale
-          message into a different conversation. The slot is never persisted.
+          valid for one turn, so restoring one blindly after a reload would send
+          a stale message into a conversation that has moved on. The slot is
+          stored with the message it was written for and comes back only while
+          that message is still the last thing Claude said - see af/persist.js.
 
      The user's own queue always wins: nothing is generated while items are
      waiting in it, so a batch the user typed is never overtaken. */
@@ -34,6 +36,7 @@
   var ARM_KEY = "ccAfArmed:";      /* + session id */
   var FIRST_KEY = "ccAfFirst:";    /* + session id - has first_question been put */
   var ASKED_KEY = "ccAfAsked:";    /* + session id - what the panel actually sent */
+  var STATE_KEY = "ccAfState:";  /* + session id - turns, slot, stop reason */
   var MAX_ASKED = 5;               /* enough to recognise a repeat, not a transcript */
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */

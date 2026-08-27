@@ -10,6 +10,7 @@ const root = path.resolve(here, "..", "..", "..");
 const jobs = [
   ["host.test.js", [path.join(here, "host.test.js")]],
   ["loop.test.js", [path.join(here, "loop.test.js")]],
+  ["reload.test.js", [path.join(here, "reload.test.js")]],
   ["ui.test.js", [path.join(here, "ui.test.js")]],
   ["host-run.test.js", [path.join(here, "host-run.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "auto-followup"]],

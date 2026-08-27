@@ -29,6 +29,9 @@
     carryOver(was);
     armed = null; meta = null; slot = null; stopped = null; turns = 0; pending = false;
     try {
+      /* A reload restores the conversation under a new id, so a session with
+         nothing of its own asks whether it is one it has seen before. */
+      if (!localStorage.getItem(keyFor(ARM_KEY))) adopt();
       var saved = localStorage.getItem(keyFor(ARM_KEY));
       if (saved) {
         armed = saved;
@@ -38,6 +41,9 @@
            approval gate have nothing to read. Ask again rather than run blind. */
         if (!meta) requestList();
       }
+      /* After the arming, because the slot it may bring back has to be checked
+         against the reply that is on screen now. */
+      restoreState();
     } catch (e) {}
     renderAll();
   }
@@ -47,12 +53,13 @@
     hookStop();
     ensureButton();
     var busy = qApi() ? qApi().busy() : false;
-    if (busy) { wasBusy = true; idleAt = 0; renderLane(); return; }
+    if (busy) { wasBusy = true; idleAt = 0; renderLane(); saveState(); return; }
     if (wasBusy) { wasBusy = false; idleAt = Date.now(); }
     if (idleAt && Date.now() - idleAt < SETTLE_MS) return;
     maybeRun();
     maybeSend();
     renderLane();
+    saveState();
   }
 
   requestList();

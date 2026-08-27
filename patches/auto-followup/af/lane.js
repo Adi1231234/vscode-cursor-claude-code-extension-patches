@@ -115,4 +115,9 @@
   function renderAll() {
     try { ensureButton(); } catch (e) {}
     try { renderLane(); } catch (e) {}
+    /* Every state change in this script ends by rendering, so this is the one
+       place that catches all of them. tick() calls saveState() too, which is
+       what covers a change made outside a render - but relying on the tick
+       alone left a 300ms window in which a reload lost the last transition. */
+    try { saveState(); } catch (e) {}
   }
