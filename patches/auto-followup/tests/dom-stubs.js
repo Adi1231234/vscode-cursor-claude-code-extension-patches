@@ -30,7 +30,10 @@ function mkEl(tag){
         }
       };
       walk(this);return hit;},closest(){return globalThis.__form;},
-    getBoundingClientRect(){return {top:100,bottom:126,left:50,width:26,height:26};},
+    _shown:true,
+    getBoundingClientRect(){return this._shown?{top:100,bottom:126,left:50,width:26,height:26}
+      :{top:0,bottom:0,left:0,width:0,height:0};},
+    getClientRects(){return this._shown?[{width:26,height:26}]:[];},
     insertAdjacentHTML(){},focus(){},
     cloneNode(){const c=mkEl(this.tagName);c.className=this.className;c._text=this._text;
       c.querySelectorAll=()=>[];return c;},
@@ -137,7 +140,9 @@ function __afQueryAll(sel) {
   const sels = String(sel).split(',').map((s) => s.trim()).filter(Boolean);
   return __afWalk(body).filter((el) => sels.some((s) => __afMatches(el, s)));
 }
-globalThis.document={createElement:mkEl,body,
+globalThis.document={createElement:mkEl,
+  createTextNode(t){const n=mkEl('#text');n._text=String(t==null?'':t);return n;},
+  body,
   addEventListener(k,f){(__docListeners[k]=__docListeners[k]||[]).push(f);},
   removeEventListener(k,f){if(__docListeners[k])__docListeners[k]=__docListeners[k].filter(x=>x!==f);},
   dispatchEvent(ev){return __afDispatch(body,ev);},
@@ -150,6 +155,7 @@ globalThis.confirm=()=>true;
 globalThis.sent=[];
 const input=mkEl('div');
 globalThis.__form=mkEl('form');
+body.appendChild(globalThis.__form);
 const __add=mkEl('button'); __add.className='__qAdd';
 globalThis.__form.__afSlot=null;
 globalThis.__form.querySelector=(sel)=>{

@@ -259,6 +259,41 @@ try{
 
   globalThis.__ccInput = savedInput;
 }
+
+// Where the follow-up is drawn. The queue panel is display:none whenever the
+// queue is empty, and that is the only state this loop ever runs in - it refuses
+// to run while the user has anything queued. Hosting the lane in a panel that is
+// merely CONNECTED put every follow-up into a hidden box: the counter moved, the
+// lane existed, and the screen showed nothing.
+{
+  const panel = document.createElement('div');
+  panel.className = '__qPanel';
+  document.body.appendChild(panel);
+  const savedPanel = globalThis.window.__qAuto.panel;
+  globalThis.window.__qAuto.panel = () => panel;
+
+  T.disarm(null); T.arm('perf-skeptic');
+  globalThis.__msgs = [{ role: 'user', content: 'go' }, { role: 'assistant', content: 'a finding, and 21 s' }];
+  T.maybeRun();
+  const run = globalThis.sent.filter(m => m.op === 'run').pop();
+  ok(!!run, 'lane: a run was requested');
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'result', rid: run.rid,
+                               message: 'and what does that cost?', why: 'a gain with no cost named', claims: [], stop: null } });
+  ok(!!T.state().slot, 'lane: the answer became a message waiting to be sent');
+
+  panel._shown = false;                       // the queue is empty, so the panel is display:none
+  T.renderLane();
+  const solo = document.querySelector('.__afSolo');
+  ok(!!solo, 'lane: a panel with no layout box is not used - the lane gets a container of its own');
+  ok(!!solo && !!solo.querySelector('.__afText'), 'lane: and the message is inside it');
+
+  panel._shown = true;                        // the user queues something; the panel is back
+  T.renderLane();
+  ok(!document.querySelector('.__afSolo'), 'lane: the spare container goes when the panel returns');
+
+  globalThis.window.__qAuto.panel = savedPanel;
+  T.disarm(null);
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

@@ -11,7 +11,15 @@
   function laneHost() {
     var api = qApi();
     var p = api && api.panel();
-    if (p) {
+    /* Connected is not the same as on screen. The queue panel is display:none
+       whenever the queue is empty - which is the only state this loop ever runs
+       in, because it refuses to run while the user has anything queued. Testing
+       for isConnected put every follow-up ever generated into a hidden box: the
+       counter moved, the lane existed, and nothing was on the screen.
+
+       getClientRects() is empty for anything with no layout box, which is the
+       question actually being asked. */
+    if (p && p.getClientRects && p.getClientRects().length) {
       if (soloNode && soloNode.parentNode) { soloNode.parentNode.removeChild(soloNode); soloNode = null; }
       return p;
     }
