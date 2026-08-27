@@ -12,12 +12,12 @@
      last message plus the claims ledger it can still catch a contradiction
      without having been argued at. */
   var CONTEXTS = [
-    ["last-message", "רק ההודעה האחרונה של קלוד"],
-    ["last-message+claims", "ועוד רשימת הטענות שנאמרו קודם, בלי הנימוקים"],
-    ["full-session", "כל השיחה"]
+    ["last-message", "only what Claude said last"],
+    ["last-message+claims", "and the claims recorded earlier, without the reasoning"],
+    ["full-session", "the whole conversation"]
   ];
-  var MAXES = [["20", ""], ["50", ""], ["unlimited", "עד שתנאי העצירה מתקיים"]];
-  var TOGGLE = [["false", "מציג את ההודעה הראשונה"], ["true", "שולח בלי לעצור"]];
+  var MAXES = [["20", ""], ["50", ""], ["unlimited", "until the stop condition is met"]];
+  var TOGGLE = [["false", "shows you the message first"], ["true", "sends without stopping"]];
   var MODELS = [["sonnet", ""], ["opus", ""], ["haiku", ""]];
 
   function markDirty() { dirty = true; }
@@ -118,7 +118,7 @@
     }));
     var descWrap = el("span", "__afFi __afWide");
     var dl = el("label"); txt(dl, "description"); descWrap.appendChild(dl);
-    descWrap.appendChild(textInput("__afIn", draft.description, "מה המשיב הזה עושה",
+    descWrap.appendChild(textInput("__afIn", draft.description, "what this responder does",
       function (v) { draft.description = v; }));
     idrow.appendChild(nameWrap);
     idrow.appendChild(descWrap);
@@ -131,6 +131,7 @@
       function (v) { draft.autosend = v; }));
     fields.appendChild(field("model", draft.model, MODELS, function (v) { draft.model = v; }));
     pane.appendChild(fields);
+
     /* The four sections of the file, in the order the prompt is built from them,
        so the dialog reads as the thing it edits. Two of them - the goal and the
        once chain - had no field at all: they survived a save because serialize
@@ -139,26 +140,22 @@
 
        The two short prose sections share a row because they are short and the
        dialog is wide. Rules and the once chain each take the full width - one
-       because it is the thing anybody actually writes, the other because its
-       lines are when/ask pairs that wrap badly in half a pane. */
+       because it is what anybody actually writes in, the other because its lines
+       are when/ask pairs that wrap badly in half a pane. */
     var pair = el("div", "__afPair");
-    pair.appendChild(box("\u05dc\u05d0\u05df \u05d7\u05d5\u05ea\u05e8\u05d9\u05dd",
-      "\u05de\u05e2\u05dc \u05dc\u05db\u05dc \u05d4\u05db\u05dc\u05dc\u05d9\u05dd",
-      draft.goal, function (v) { draft.goal = v; }, "__afShort",
-      "\u05dc\u05d0\u05df \u05d4\u05dc\u05d5\u05dc\u05d0\u05d4 \u05d4\u05d6\u05d5 \u05d7\u05d5\u05ea\u05e8\u05ea, \u05d1\u05de\u05e9\u05e4\u05d8 \u05d0\u05d5 \u05e9\u05e0\u05d9\u05d9\u05dd"));
-    pair.appendChild(box("\u05de\u05ea\u05d9 \u05dc\u05e2\u05e6\u05d5\u05e8",
-      "\u05de\u05d7\u05d6\u05d9\u05e8 STOP",
-      draft.stop, function (v) { draft.stop = v; }, "__afShort",
-      "\u05d4\u05ea\u05e0\u05d0\u05d9 \u05e9\u05d1\u05d5 \u05d0\u05d9\u05df \u05d8\u05e2\u05dd \u05dc\u05e9\u05d0\u05d5\u05dc \u05e2\u05d5\u05d3"));
+    pair.appendChild(box("Goal", "read before every rule", draft.goal,
+      function (v) { draft.goal = v; }, "__afShort",
+      "what this loop is for, in a sentence or two"));
+    pair.appendChild(box("Stop when", "returns STOP and the loop ends", draft.stop,
+      function (v) { draft.stop = v; }, "__afShort",
+      "the condition where there is nothing left worth asking"));
     pane.appendChild(pair);
 
-    pane.appendChild(box("\u05de\u05d4 \u05dc\u05d4\u05e7\u05dc\u05d9\u05d3",
-      "\u05dc\u05e4\u05d9 \u05de\u05d4 \u05e9\u05e7\u05dc\u05d5\u05d3 \u05d1\u05d3\u05d9\u05d5\u05e7 \u05db\u05ea\u05d1",
+    pane.appendChild(box("What to type", "given exactly what Claude just wrote",
       draft.rules, function (v) { draft.rules = v; }, "__afGrow",
-      "\u05de\u05ea\u05d9 \u05dc\u05e2\u05e9\u05d5\u05ea \u05de\u05d4, \u05de\u05e6\u05d1 \u05d5\u05de\u05d4\u05dc\u05da \u05d1\u05db\u05dc \u05e9\u05d5\u05e8\u05d4"));
+      "a situation, then the move it calls for, on the line under it"));
 
-    pane.appendChild(box("\u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea",
-      "\u05e0\u05e9\u05d0\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8 \u05e9\u05d1\u05d5 \u05d4\u05d3\u05e4\u05d5\u05e1 \u05de\u05ea\u05d0\u05d9\u05dd, \u05d5\u05dc\u05d0 \u05e9\u05d5\u05d1",
+    pane.appendChild(box("Ask once", "on the turn its pattern first matches, then never again",
       draft.onceText, function (v) { draft.onceText = v; }, "__afOnce __afMono",
       ["name: frame", "when: [0-9]+ ?s", "after: ", "ask: what was that measured on?"].join(NL)));
     return pane;

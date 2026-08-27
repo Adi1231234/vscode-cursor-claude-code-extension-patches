@@ -30,3 +30,14 @@ looks reachable and is not.
 Run `layout.js` at 340px as well as full width. The narrow panel is where this
 dialog was unusable - the rail held its fixed width, the edit pane collapsed to
 about sixty pixels, and every field was cut mid-word.
+
+`english-only.js` walks every string the dialog renders - text nodes, field
+values, placeholders, aria-labels and titles - and reports any that carry Hebrew.
+The dialog's own chrome is English; the one thing it is expected to find is the
+`when:` patterns inside a responder's own `## once` section, which are the user's
+content and are Hebrew on purpose: without those unit words the framing question
+matched none of twelve real turning points.
+
+The first version of it read child text nodes only and reported zero. A textarea
+whose value is set from JavaScript never updates its child text node, so the box
+on screen was full of text the check could not see.
