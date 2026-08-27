@@ -98,10 +98,11 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     r.name = meta.name || id;
     r.description = meta.description || "";
     Object.keys(DEFAULTS).forEach(function (k) { r[k] = meta[k] || DEFAULTS[k]; });
+    r.goal = section(body, "goal");
     r.rules = section(body, "rules");
     r.once = parseOnce(section(body, "once"));
     r.stop = section(body, "stop");
-    if (!r.rules && !r.stop) r.rules = body.trim();
+    if (!r.rules && !r.stop && !r.goal) r.rules = body.trim();
     return r;
   }
 
@@ -118,12 +119,19 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     return NL + NL + "## once" + NL + body;
   }
 
+  var L_RULES = NL + "## rules" + NL;
+  var L_STOP = NL + NL + "## stop" + NL;
+
+  function goalText(r) {
+    return (r.goal || "").trim() ? NL + "## goal" + NL + r.goal.trim() + NL : "";
+  }
+
   function serialize(r) {
     var head = ["---", "name: " + (r.name || r.id), "description: " + (r.description || "")];
     Object.keys(DEFAULTS).forEach(function (k) { head.push(k + ": " + (r[k] || DEFAULTS[k])); });
     Object.keys(r.extra || {}).forEach(function (k) { head.push(k + ": " + r.extra[k]); });
     head.push("---", "");
-    return head.join("\n") + "\n## rules\n" + (r.rules || "").trim() +
+    return head.join(NL) + goalText(r) + L_RULES + (r.rules || "").trim() +
            onceText(r) +
            "\n\n## stop\n" + (r.stop || "").trim() + "\n";
   }

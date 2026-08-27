@@ -46,10 +46,25 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     return (ctx.needFirst && (r.first_question || "").trim()) || "";
   }
 
+  /* What the loop is for, stated once and put above everything else.
+
+     Without it the prompt was a format contract, a list of moves and a stop
+     condition, and nothing anywhere said what any of it was in service of. That
+     is enough to pick a reasonable move turn by turn and not enough to choose
+     between two moves that both fit, which is most turns. It also left the stop
+     condition referring to a target that was never stated.
+
+     It goes above the rules deliberately: a rule says what to type, the goal says
+     which rule matters. */
+  function goalOf(r) {
+    var g = (r.goal || "").trim();
+    return g ? ["# What you are trying to get to", g, ""] : [];
+  }
+
   function compose(r, ctx) {
     var first = firstQuestion(r, ctx);
     if (first) {
-      return [CONTRACT, "",
+      return [CONTRACT, ""].concat(goalOf(r)).concat([
         "# This turn has exactly one job",
         "Ask this, and nothing else:",
         "    " + first,
@@ -61,9 +76,10 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
         "matters. 'stop' is null.",
         "",
         "# Claude's message", (ctx.text || "").trim()
-      ].join("\n");
+      ]).join("\n");
     }
-    var p = [CONTRACT, "", "# When to type what", (r.rules || "").trim()];
+    var p = [CONTRACT, ""].concat(goalOf(r))
+              .concat(["# When to type what", (r.rules || "").trim()]);
     if ((r.stop || "").trim()) p.push("", "# When to stop", r.stop.trim());
     if (ctx.claims && ctx.claims.length) {
       p.push("", "# What Claude has already asserted this session",
