@@ -12,7 +12,18 @@ node tools/lab/lab.mjs repatch          # pristine again -> apply.ps1 -> real re
 node tools/lab/lab.mjs down [--purge]   # stop it (--purge also deletes the profile)
 
 node tools/lab/selftest/run.mjs         # is the patcher + the lab still sound?
+node tools/lab/selftest/run.mjs --no-editor   # ...when the editor cannot start
 ```
+
+**When the editor will not start**, `--no-editor` runs everything that reads the
+bundle rather than the panel: every module and patch parses, every guard landed,
+the injected scripts survive their template literal, `apply.ps1` is idempotent,
+a throwing patch is reported without stopping the others, and a missing anchor
+writes nothing. Only the width section needs a panel. The reason this exists:
+a VS Code installer holding the `vscode-updating` mutex blocks every launch for as
+long as any window is open - hours on a working machine - and without the flag
+that takes the other thirty checks down with it, including the ones that would
+have caught a real defect.
 
 **If you have just arrived:** `node tools/lab/selftest/run.mjs --fresh` builds a
 lab from nothing and checks the whole chain - every module and patch parses, every
