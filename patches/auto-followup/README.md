@@ -373,6 +373,17 @@ any point: armed with a reply on screen, `0/20` became `1/20` and the follow-up
 appeared in the lane. Then paused, a reply arrived while it was held and the
 counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
 
+## Both overlays are sized by one function
+
+The live view had its own copy of the sizing, and the copy was the version from
+before the zoom was measured rather than inferred - so the responders dialog
+fitted the tab and the live view hung out of it. `fitOverlay(node)` takes the
+overlay it is sizing and both use it.
+
+Measured in a real panel at zoom 1.5, both open in turn: the overlay is set to
+`512 x 263` - the panel in its own units, `768/1.5` by `395/1.5` - and neither box
+is over an edge by a pixel.
+
 ## The picker is never empty on the first open
 
 The panel had no responders to show because it had never been told any, and it
