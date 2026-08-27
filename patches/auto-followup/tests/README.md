@@ -50,6 +50,33 @@ return `Not logged in` with `is_error` true. That cost one wrong diagnosis here 
 it was read as a transient auth blip and written up as one - so the test builds
 its responder from the shipped sample text instead of through the store.
 
+**`loop-live.test.js`** is the one that tests the design rather than the
+plumbing, and it is an experiment with a control. `context: last-message+claims`
+exists so a responder can catch Claude contradicting itself across turns, and
+nothing else here tested that: every other test feeds canned results. This runs
+the real loop over a scripted five-turn conversation with the real CLI deciding
+each turn, and plants a contradiction three turns after the claim it contradicts.
+
+The control is the same conversation on `context: last-message`, which by
+construction cannot see the earlier claim. **Four runs, four times the same
+result:** the ledger arm connects turn 4's "3% difference" to turn 1's
+"byte-identical" and asks about it; the control arm asks a reasonable question
+about turn 4 alone and never reaches back. If both arms had caught it, the ledger
+would not be what did the work and the setting would be decoration.
+
+Two things it settled that were not obvious:
+
+The ledger arm often does **not** stop where the control does. That is the ledger
+working, not failing: turn 5 disposes of an item "because it changes the output",
+which contradicts turn 1, so the budget is not settled and the responder says so.
+It is also the concrete shape of the risk in `max_turns: unlimited` - a responder
+that keeps finding contradictions has no reason to stop.
+
+Citing the ledger by number - "in [3] you wrote ... and in [4]" - is the strongest
+evidence it was read rather than merely attached, and it happens in some runs and
+not others. It is printed, never asserted. A check that fails two runs in three is
+worse than no check.
+
 ## One thing the stubs get right on purpose
 
 `__ccStore()` returns the **same object** every call, because the real one caches
