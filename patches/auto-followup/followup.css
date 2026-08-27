@@ -165,7 +165,7 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afF b{font-weight:600;font-size:12px;direction:ltr;flex:1;min-width:0}
 .__afFVal{display:flex;align-items:center;justify-content:space-between;gap:7px}
 .__afChev{opacity:.35;flex:none}
-.__afDrop{position:fixed;z-index:2147483200;min-width:300px;padding:5px;display:flex;flex-direction:column;gap:1px;background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,rgba(128,128,128,.35));border-radius:7px;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.__afDrop{position:fixed;z-index:2147483200;box-sizing:border-box;overflow-y:auto;padding:5px;display:flex;flex-direction:column;gap:1px;background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,rgba(128,128,128,.35));border-radius:7px;box-shadow:0 10px 26px rgba(0,0,0,.5)}
 .__afDItem{padding:7px 10px;border-radius:5px;font-size:11.5px;cursor:pointer;font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));direction:ltr;text-align:start}
 .__afDItem:hover{background:rgba(128,128,128,.18)}
 .__afDOn{background:color-mix(in srgb,var(--app-claude-orange,#d97757) 13%,transparent);color:var(--app-claude-orange,#d97757)}

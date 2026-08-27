@@ -31,10 +31,11 @@ function mkEl(tag){
           walk(n.children[i]);
         }
       };
-      walk(this);return hit;},closest(){return globalThis.__form;},
+      walk(this);return hit;},closest(){return this._closest!==undefined?this._closest:globalThis.__form;},
     _shown:true,
-    getBoundingClientRect(){return this._shown?{top:100,bottom:126,left:50,width:26,height:26}
-      :{top:0,bottom:0,left:0,width:0,height:0};},
+    getBoundingClientRect(){return this._rect?this._rect
+      :this._shown?{top:100,bottom:126,left:50,right:76,width:26,height:26}
+      :{top:0,bottom:0,left:0,right:0,width:0,height:0};},
     getClientRects(){return this._shown?[{width:26,height:26}]:[];},
     insertAdjacentHTML(){},focus(){},
     cloneNode(){const c=mkEl(this.tagName);c.className=this.className;c._text=this._text;
@@ -55,7 +56,7 @@ function mkEl(tag){
     get nextElementSibling(){
       if(!this.parentNode)return null;
       var i=this.parentNode.children.indexOf(this);
-      return (i>=0&&i+1<this.parentNode.children.length)?this.parentNode.children[i+1]:null;},get offsetWidth(){return 200;},get offsetHeight(){return 120;}};
+      return (i>=0&&i+1<this.parentNode.children.length)?this.parentNode.children[i+1]:null;},get offsetWidth(){return this._ow===undefined?200:this._ow;},get offsetHeight(){return this._oh===undefined?120:this._oh;}};
   return e;
 }
 const body=mkEl('body');
