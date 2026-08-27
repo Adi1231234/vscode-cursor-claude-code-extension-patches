@@ -228,5 +228,10 @@ globalThis.window.__qAuto={
   panel:()=>null, log:()=>{}, sid:()=>'sess-1',
   send:t=>{globalThis.__sentText=t;return Promise.resolve(true);}
 };
+/* The panel has no clock here: its interval callback is captured so a test can
+   step it, and its timeouts run at once. Anything that spawns a real process
+   must hold the real timers before requiring this file - run.js arms a timeout
+   that kills the child, and under this stub it fires on spawn. See
+   e2e/README.md. */
 globalThis.setInterval=(f,ms)=>{globalThis.__tick=f;return 1;};
 globalThis.setTimeout=(f)=>{try{f();}catch(e){}return 1;};

@@ -1,18 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
-const B=require('path').resolve(__dirname,'..','af')+'/';
-const order=JSON.parse(fs.readFileSync(B+'order.json','utf8'));
-const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
-eval(fs.readFileSync(LIBROW,'utf8'));
-let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('')
-  .split(String.fromCharCode(13)+String.fromCharCode(10)).join(String.fromCharCode(10));
-src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
-// expose internals for the test only
-src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
-         .split('__THINK__').join('thinking_X').split('__TOOLUSE__').join('toolUse_X')
-         .split('__TOOLRES__').join('toolResult_X');
-src=src.replace('  requestList();\n  setInterval(', '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})};\n  requestList();\n  setInterval(');
-eval(src);
+require('./load-panel.js').loadPanel(
+  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
