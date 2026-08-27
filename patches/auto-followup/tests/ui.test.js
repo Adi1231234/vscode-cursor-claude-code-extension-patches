@@ -293,6 +293,34 @@ try{
   document.documentElement.clientHeight = 800;
   document.documentElement.clientWidth = 1200;
 }
+
+// The first open after a reload. toggleMenu asks the host for the responders and
+// builds the menu in the same breath, but the answer arrives in a message - so
+// the menu was built against an empty list, said "No responders yet", and only a
+// second open showed them.
+{
+  const items = () => {
+    const m = document.querySelector('.__afMenu');
+    return m ? [...m.querySelectorAll('.__afItem')].map(e => e.textContent.trim().slice(0, 20)) : null;
+  };
+  const emptyNote = () => !!document.querySelector('.__afMenu .__afEmpty');
+
+  // start from nothing known, the way a freshly loaded panel does
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: [] } });
+  if (document.querySelector('.__afMenu')) T.toggleMenu({ currentTarget: T.btn() });
+  T.toggleMenu({ currentTarget: T.btn() });
+  ok(!!document.querySelector('.__afMenu'), 'firstopen: the picker opens');
+  ok(emptyNote(), 'firstopen: with nothing known yet it says so');
+
+  // the host answers a moment later
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST } });
+  ok(!!document.querySelector('.__afMenu'), 'firstopen: the picker is still open');
+  ok(!emptyNote(), 'firstopen: and no longer claims there is nothing');
+  const got = items();
+  ok(got && got.length >= LIST.length,
+     'firstopen: the responders appear without a second click - got ' + JSON.stringify(got));
+  T.toggleMenu({ currentTarget: T.btn() });
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

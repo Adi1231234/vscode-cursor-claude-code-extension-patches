@@ -16,6 +16,7 @@ function mkEl(tag){
     dispatchEvent(ev){return __afDispatch(this,ev);},
     removeEventListener(k,f){if(this.listeners[k])this.listeners[k]=this.listeners[k].filter(x=>x!==f);},setAttribute(k,v){this.attrs[k]=v;},
     getAttribute(k){return this.attrs[k];},
+    querySelectorAll(sel){ return __afQueryAll(sel, this); },
     querySelector(sel){
       var m=String(sel).match(/^\[class\*=["']?([^"'\]]+)["']?\]$/);
       var sub=m?m[1]:null;
@@ -133,9 +134,9 @@ function __afWalk(root) {
   return out;
 }
 
-function __afQueryAll(sel) {
+function __afQueryAll(sel, root) {
   const sels = String(sel).split(',').map((s) => s.trim()).filter(Boolean);
-  return __afWalk(body).filter((el) => sels.some((s) => __afMatches(el, s)));
+  return __afWalk(root || body).filter((el) => sels.some((s) => __afMatches(el, s)));
 }
 globalThis.document={createElement:mkEl,body,
   documentElement:{clientHeight:800,clientWidth:1200},
