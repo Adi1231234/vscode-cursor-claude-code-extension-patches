@@ -132,6 +132,34 @@ user's next message, while they were away, with the loop carrying on afterwards.
 Note that `subtype` stays `"success"` in that case, so `is_error` is the field
 that separates them. A CLI failure ends the arming with the reason on the button.
 
+## Installing it over an already-patched bundle
+
+This patch adds `window.__qAuto` to **prompt-queue**, and everything here gates on
+it - `maybeRun` returns early when it is missing, so the feature is inert rather
+than wrong. But `prompt-queue` reports `[skip] queue JS already patched` on an
+install that already has it, so the export never arrives and nothing happens.
+
+Confirmed over CDP against a live panel: `typeof window.__qAuto === "undefined"`.
+
+Same rule as CLAUDE.md's note on re-anchored patches: restore the pristine bundles
+or reinstall the extension, then re-run `apply.ps1`. Both patches have to be
+re-injected, not just this one.
+
+## Verified against a live panel
+
+Over `tools/cdp`, against a real conversation of 524 messages:
+
+- all five detected selectors exist with the hashes `patch.ps1` substitutes -
+  `message_07S1Yg`, `userMessage_07S1Yg`, `thinking_aHyQPQ`, `toolUse_uq5aLg`,
+  `toolResult_uq5aLg`
+- the shipped `transcript.js` read it correctly: 82 user turns and 442 assistant
+  turns split right, `lastAssistant()` returned the real last reply, and the
+  thinking blocks and tool calls were stripped out of it
+- the composer form exists and carries `.__qAdd`, so the button anchors where it
+  is meant to
+- the composer's computed direction is **ltr** even in a Hebrew conversation, so
+  the button sits left of the add-to-queue button as designed
+
 ## Tests
 
     node patches/auto-followup/tests/run-all.mjs      # 120 checks

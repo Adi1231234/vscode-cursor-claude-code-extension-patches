@@ -58,6 +58,15 @@
       if (t) out.push((isUser(ms[i]) ? "HUMAN: " : "CLAUDE: ") + t);
     }
     var all = out.join(NL + NL);
-    return all.length > MAX_TRANSCRIPT ? all.slice(-MAX_TRANSCRIPT) : all;
+    if (all.length <= MAX_TRANSCRIPT) return all;
+    /* Cut back to a turn boundary rather than mid-sentence: slicing the last N
+       characters leaves the transcript opening on half a reply with no speaker,
+       which reads to the responder as something the human said. Verified against
+       a live 524-message panel, where the raw slice began "...CLAUDE:" two lines
+       in. */
+    var cut = all.slice(-MAX_TRANSCRIPT);
+    var h = cut.indexOf(NL + "HUMAN: "), c = cut.indexOf(NL + "CLAUDE: ");
+    var at = (h < 0) ? c : (c < 0 ? h : Math.min(h, c));
+    return at > 0 ? cut.slice(at + 1) : cut;
   }
 
