@@ -373,6 +373,21 @@ any point: armed with a reply on screen, `0/20` became `1/20` and the follow-up
 appeared in the lane. Then paused, a reply arrived while it was held and the
 counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
 
+## The picker asks before it throws work away
+
+While a loop is running, two clicks in the picker cost something that cannot be
+recovered: another responder restarts the turn count and the once-ledger, and
+Turn off does that and kills a run in flight. Both ask first, and the question
+names what goes rather than saying "are you sure":
+
+    Switch responder?
+    perf-skeptic is running. 7 turns counted and a run in flight go with it.
+    plan-drift starts a new count.                       [Cancel]  [Switch]
+
+Arming from nothing does not ask - there is nothing to lose - and neither does
+Pause, Resume or Manage. Escape cancels, Enter confirms, and the confirm is above
+both the dialog and the live view so Escape reaches the layer that is on top.
+
 ## Three brakes, and a fourth that is not one
 
 The stop condition ends the task, `max_turns` ends the arming, and the stop

@@ -57,7 +57,10 @@
     it.appendChild(t);
     press(it, function () {
       closeMenu();
-      if (armed === r.id) disarm(null); else arm(r.id);
+      /* Both of these throw the count away while a loop is running, so both
+         ask first. Arming from nothing does not - there is nothing to lose. */
+      if (armed === r.id) confirmArmingChange("off", r.name || r.id, function () { disarm(null); });
+      else confirmArmingChange("switch", r.name || r.id, function () { arm(r.id); });
     });
     return it;
   }
@@ -92,7 +95,9 @@
       }));
     }
     m.appendChild(plainItem("Manage responders…", openDialog));
-    if (armed || stopped) m.appendChild(plainItem("Turn off", function () { disarm(null); }));
+    if (armed || stopped) m.appendChild(plainItem("Turn off", function () {
+      confirmArmingChange("off", "", function () { disarm(null); });
+    }));
 
     document.body.appendChild(m);
     place(m, anchor);
