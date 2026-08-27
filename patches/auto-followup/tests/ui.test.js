@@ -17,7 +17,7 @@ src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessag
          .split('__TOOLRES__').join('toolResult_X');
 src=src.replace('  requestList();'+String.fromCharCode(10)+'  setInterval(',
  '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'+
- 'approve:approve,openDialog:openDialog,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
+ 'approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
  'ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,'+
  'dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},'+
  'btn:function(){return globalThis.__form.__afSlot;},'+
@@ -273,7 +273,8 @@ try{
   globalThis.window.__qAuto.panel = () => panel;
 
   T.disarm(null); T.arm('perf-skeptic');
-  globalThis.__msgs = [{ role: 'user', content: 'go' }, { role: 'assistant', content: 'a finding, and 21 s' }];
+  globalThis.__msgs = [{ role: 'user', content: 'go' },
+                       { role: 'assistant', content: 'the live view turn: 31.4 s and a claim of sameness' }];
   T.maybeRun();
   const run = globalThis.sent.filter(m => m.op === 'run').pop();
   ok(!!run, 'lane: a run was requested');
@@ -403,6 +404,66 @@ try{
   T.toggleMenu({ currentTarget: T.btn() });
 }
 
+
+// The live view: what the responder is writing, while it writes it.
+{
+  /* An earlier block can leave the queue looking busy or a message still held,
+     and maybeRun refuses in either case - so the preconditions are set here
+     rather than inherited. */
+  globalThis.__qAutoState.count = 0;
+  globalThis.__qAutoState.busy = false;
+  globalThis.__qAutoState.paused = false;
+  T.disarm(null); T.arm('perf-skeptic');
+  globalThis.__msgs = [{ role: 'user', content: 'go' }, { role: 'assistant', content: 'a finding, and 21 s' }];
+  const beforeRuns = globalThis.sent.filter(m => m.op === 'run').length;
+  T.maybeRun();
+  const runs = globalThis.sent.filter(m => m.op === 'run');
+  ok(runs.length === beforeRuns + 1, 'live: a run was requested by this block');
+  ok(T.state().pending === true, 'live: and the loop is waiting for it');
+  const run = runs[runs.length - 1];
+
+  const chunk = (kind, text, rid) => globalThis.__onMsg({ data: { type: '__ccaf', op: 'chunk', rid: rid || run.rid, kind, text } });
+  chunk('thinking', 'the number has no workload behind it');
+  chunk('text', 'what real input ');
+  chunk('text', 'was that measured on?');
+
+  T.openLive();
+  const segs = [...document.querySelectorAll('.__afSeg')];
+  ok(segs.length === 2, 'live: consecutive deltas of one kind become one block, got ' + segs.length);
+  ok(String(segs[0].className).indexOf('__afSegThink') >= 0, 'live: thinking first, as it arrived');
+  ok(document.querySelector('.__afSegOut .__afSegText').textContent === 'what real input was that measured on?',
+     'live: the text deltas are joined in order');
+  ok(/writing/.test(document.querySelector('.__afLiveState').textContent),
+     'live: it says it is still being written');
+
+  // a chunk from another run must not bleed in
+  chunk('text', 'FROM SOME OTHER RUN', 'someone-else:9');
+  ok(document.body.innerText.indexOf('FROM SOME OTHER RUN') < 0,
+     'live: a delta carrying another run id is ignored');
+
+  // the answer lands
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'result', rid: run.rid,
+    message: 'what real input was that measured on?', why: 'a duration with no workload', claims: [], stop: null } });
+  T.openLive(); T.openLive();   // toggle closed then open again
+  ok(!!document.querySelector('.__afLiveDlg'), 'live: it reopens after the run has finished');
+  ok(/approval|finished/.test(document.querySelector('.__afLiveState').textContent),
+     'live: and it no longer claims to be writing, got ' + document.querySelector('.__afLiveState').textContent);
+
+  // Escape closes it, and does not close the responders dialog behind it
+  globalThis.document.dispatchEvent(new globalThis.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  ok(!document.querySelector('.__afLiveDlg'), 'live: Escape closes it');
+
+  // a new run clears the view rather than appending to the last one
+  T.maybeRun();
+  const run2 = globalThis.sent.filter(m => m.op === 'run').pop();
+  if (run2 && run2.rid !== run.rid) {
+    T.openLive();
+    ok(document.querySelectorAll('.__afSeg').length === 0,
+       'live: a new run starts an empty view');
+    T.openLive();
+  }
+  T.disarm(null);
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

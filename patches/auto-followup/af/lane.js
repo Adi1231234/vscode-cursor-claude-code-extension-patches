@@ -71,6 +71,11 @@
     laneNode.innerHTML = "";
 
     var head = el("div", "__afLaneHead");
+    /* The header is the way in to what the responder is writing. It is the
+       only part of the lane that is not the message itself, so it is the only
+       part that can be clicked without getting in the way of editing. */
+    head.setAttribute("title", "Show what the responder is writing");
+    press(head, function () { openLive(); }, "button");
     /* The release control, shown only while the first message is being held.
        Editing the row and then pressing this is the whole review step: after it,
        the rest of this arming flows without stopping. */

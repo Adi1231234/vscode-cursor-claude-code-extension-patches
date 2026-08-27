@@ -25,6 +25,10 @@
      with it, which is a lot to lose for a keypress that meant "close this menu". */
   function onDialogKey(ev) {
     if (ev.key !== "Escape") return;
+    /* The live view sits on top of this one, and its own handler is registered
+       later, so leaving the event alone is what lets the topmost layer take it.
+       Escape used to close the dialog underneath while the view stayed up. */
+    if (liveOpen()) return;
     ev.preventDefault();
     ev.stopPropagation();
     if (dropOpen()) { closeDrop(); return; }

@@ -151,6 +151,34 @@ Save says whether there is anything to save. It read "Save" on an untouched draf
 so the only way to find out was to press it - which on an untouched draft is a
 write nobody asked for.
 
+
+## Watching it write
+
+Clicking the lane's header opens the live view: the responder's thinking and its
+output, arriving as they are written. The lane shows the finished message and the
+one line of reasoning it reports; this is what it was doing on the way there,
+which is the only way to tell a model that is stuck from one being careful - and
+the only way to decide to stop it before it finishes.
+
+The host runs the CLI with `--output-format stream-json
+--include-partial-messages`, which prints one JSON object per line: a system
+init, a `stream_event` per delta, then the same result envelope plain `json`
+would have given on its own. Text arrives as `content_block_delta` with
+`delta.text` and thinking as the same event with `delta.thinking` - checked
+against the CLI, not the documentation.
+
+**The deltas are for looking at and nothing else.** The result envelope is still
+the only thing the loop reads, so a delta that is malformed, truncated, or
+arrives after its run has ended can make the view wrong and can do nothing worse.
+Buffers are kept per run id, so a late chunk from a cancelled run cannot bleed
+into the next one. And the last line is still parsed exactly as before, which is
+why a bundle patched before this change - or a CLI too old for stream-json -
+keeps working.
+
+Escape closes the view and leaves the responders dialog underneath open. It used
+to close the dialog instead: that handler is registered first and stopped the
+event, so the layer nobody was looking at was the one that went.
+
 ## The four settings
 
 - **`context`** decides what the responder is worth, and it is the one to

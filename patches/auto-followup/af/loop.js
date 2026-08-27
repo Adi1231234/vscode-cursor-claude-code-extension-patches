@@ -79,6 +79,7 @@
     var ctx = contextFor();
     if (ctx.once) markOnceAsked(ctx.once.id);   /* asked once, whatever comes back */
     inflight = requestRun(armed, ctx);
+    try { liveReset(inflight); } catch (e) {}
     renderAll();
   }
 
