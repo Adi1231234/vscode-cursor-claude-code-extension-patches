@@ -241,5 +241,26 @@ globalThis.__tick();
 ok(!globalThis.sent.some((m) => m.op === 'list'), 'list: an answer stops the asking');
 Date.now = realNow;
 
+
+/* A session getting its id is not a window reopening. Arming an empty chat writes
+   under 'none', the id arrives a moment later, the keys are carried over - and
+   forcing a pause there undoes an arming made seconds earlier. Measured in a real
+   panel: armed, sent the first message, and it came back held. */
+globalThis.__sid = '';
+globalThis.__msgs = [{ role: 'user', content: 'a brand new chat' },
+                     { role: 'assistant', content: 'the first answer' }];
+let TD = loadPanel(EXPOSE);
+globalThis.__tick();
+list();
+TD.arm('perf-skeptic');
+ok(TD.state().paused === false, 'armed before the session had an id');
+ok(globalThis.__store['ccAfArmed:none'] === 'perf-skeptic', 'and it is stored under none');
+
+globalThis.__sid = 'the-id-arrives';
+globalThis.__tick();
+ok(TD.state().armed === 'perf-skeptic', 'the arming survives the id arriving');
+ok(TD.state().paused === false,
+   'and it is still running - nobody reopened anything, got ' + TD.state().paused);
+
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

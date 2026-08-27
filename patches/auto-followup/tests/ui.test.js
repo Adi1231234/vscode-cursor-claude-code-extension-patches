@@ -641,6 +641,54 @@ try{
   ok(S().paused === true, 'confirm: it just pauses');
 }
 
+
+/* What the live view shows. The model streams the JSON the contract asks for, so
+   the raw text is braces and escapes with the sentence that matters buried in the
+   middle - which is what it used to put on screen. */
+{
+  T.disarm(null); T.arm('perf-skeptic');
+  globalThis.__msgs = [{ role: 'user', content: 'go' },
+                       { role: 'assistant', content: 'a claim of sameness and 21 s' }];
+  globalThis.sent.length = 0;
+  T.maybeRun();
+  const run = globalThis.sent.filter((m) => m.op === 'run').pop();
+  const chunk = (kind, text) => globalThis.__onMsg({ data: { type: '__ccaf', op: 'chunk',
+    rid: run.rid, kind, text } });
+  const segs = () => [...document.querySelectorAll('.__afSeg')].map((s) => ({
+    tag: (s.querySelector('.__afSegTag') || {}).textContent,
+    text: (s.querySelector('.__afSegText') || {}).textContent }));
+
+  /* half of the JSON, cut inside the message the way a stream cuts it */
+  chunk('text', '{' + '"' + 'message' + '"' + ': ' + '"' + 'on how many inputs');
+  T.openLive();
+  let s = segs();
+  ok(s.length === 1, 'live: one block while only the message has started, got ' + s.length);
+  ok(s[0].tag === 'message so far', 'live: and it says the message is not finished, got ' + s[0].tag);
+  ok(s[0].text === 'on how many inputs',
+     'live: showing the value, not the JSON around it, got ' + JSON.stringify(s[0].text));
+
+  /* the rest of it, and the result the host parsed out */
+  chunk('text', '?' + '"' + ', ' + '"' + 'why' + '"' + ': ' + '"' + 'a sameness claim' + '"' + '}');
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'result', rid: run.rid,
+    message: 'on how many inputs?', why: 'a sameness claim with no count',
+    claims: ['28.0 s to 21.8 s on one file'], stop: null } });
+  s = segs();
+  ok(s.some((x) => x.tag === 'message' && x.text === 'on how many inputs?'),
+     'live: the finished message is shown as the message, got ' + JSON.stringify(s));
+  ok(s.some((x) => x.tag === 'why this move'), 'live: with why the move was picked');
+  ok(!!document.querySelector('.__afClaimList li'), 'live: and the claims as a list');
+  ok(document.querySelector('.__afClaimList li').textContent.indexOf('28.0 s') >= 0,
+     'live: with the claim in it');
+  ok(!s.some((x) => x.tag === 'raw'), 'live: the raw stream is not shown by default');
+
+  const toggle = document.querySelector('.__afRawToggle');
+  ok(!!toggle, 'live: but there is a way to see it');
+  toggle.click();
+  ok(segs().some((x) => x.tag === 'raw' && x.text.indexOf('message') > 0),
+     'live: and clicking it shows what the model actually wrote');
+  T.openLive();   /* close */
+}
+
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);

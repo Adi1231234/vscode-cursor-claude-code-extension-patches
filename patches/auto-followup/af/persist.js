@@ -50,7 +50,7 @@
     try { localStorage.setItem(stateKey(), JSON.stringify(payload)); } catch (e) {}
   }
 
-  function restoreState() {
+  function restoreState(carried) {
     var raw = null;
     try { raw = localStorage.getItem(stateKey()); } catch (e) { return; }
     if (!raw) { lastWritten = ""; return; }
@@ -71,9 +71,11 @@
        returns held. One click on Resume starts it, and by then it is a decision
        rather than a side effect of opening a window.
 
-       The saved value is deliberately not consulted: paused or running, it comes
-       back paused either way. */
-    paused = true;
+       The exception is a panel whose session has just been given its id: the
+       keys were carried over from "none" a moment ago, nobody reopened
+       anything, and forcing a pause there undoes an arming made seconds
+       earlier - measured by arming an empty chat and then typing into it. */
+    paused = carried ? (o.paused === true) : true;
     if (typeof o.lastSeen === "string") lastSeen = o.lastSeen;
 
     if (o.slot && typeof o.slot === "object" && typeof o.slot.message === "string") {

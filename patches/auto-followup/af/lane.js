@@ -115,6 +115,11 @@
   function renderAll() {
     try { ensureButton(); } catch (e) {}
     try { renderLane(); } catch (e) {}
+    /* The live view is part of the state too. It has a timer of its own for the
+       clock, and leaving it to that meant the answer appeared in the view up to a
+       second after it had already been queued. It returns immediately when the
+       view is closed, which is nearly always. */
+    try { renderLive(); } catch (e) {}
     /* Every state change in this script ends by rendering, so this is the one
        place that catches all of them. tick() calls saveState() too, which is
        what covers a change made outside a render - but relying on the tick

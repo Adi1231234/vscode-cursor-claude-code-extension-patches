@@ -373,6 +373,34 @@ any point: armed with a reply on screen, `0/20` became `1/20` and the follow-up
 appeared in the lane. Then paused, a reply arrived while it was held and the
 counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
 
+## What the live view shows
+
+The model streams the JSON the contract asks for, so the raw text is braces,
+escaped quotes and unicode sequences with the sentence that matters buried in the
+middle of it. That is what this view used to put on screen.
+
+It shows the parts instead, in the order they matter:
+
+    MESSAGE             the line that will be typed
+    WHY THIS MOVE       one dimmed line, the responder's own reason
+    3 CLAIMS RECORDED   a numbered list, not a paragraph with newlines in it
+    STOP CONDITION MET  only when it is, and it carries the warning colour
+    show what the model wrote   the raw stream, off by default
+
+While the answer is still being written there is nothing parsed yet, and waiting
+for the end would leave braces on screen for the twenty seconds someone is
+actually watching. So the message is pulled out of the JSON prefix as it arrives
+and the block is labelled **message so far**. `af/live-parse.js` is not a JSON
+parser and does not try to be: it finds the field, takes the string, and stops
+wherever the text stops.
+
+If the stream is not JSON at all - a model answering in prose, or the first few
+characters before the field appears - the raw text is shown as the output block.
+This view must never show less than it did before anything was extracted from it.
+
+Measured on a real run at opus/max: MESSAGE 214 characters, WHY THIS MOVE 107,
+three claims as three list items, and the raw stream one click away.
+
 ## Both overlays are sized by one function
 
 The live view had its own copy of the sizing, and the copy was the version from

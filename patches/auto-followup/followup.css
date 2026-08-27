@@ -295,8 +295,35 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afSegTag{align-self:flex-start;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;padding:2px 7px;border-radius:4px;opacity:.85}
 .__afSegThink .__afSegTag{background:color-mix(in srgb,var(--vscode-foreground,#ccc) 14%,transparent)}
 .__afSegOut .__afSegTag{background:color-mix(in srgb,var(--afAcc) 22%,transparent);color:var(--afAcc);opacity:1}
-.__afSegText{white-space:pre-wrap;word-break:break-word;font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));font-size:11.5px;line-height:1.65;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:9px 11px}
-.__afSegThink .__afSegText{opacity:.78;font-style:italic}
+/* The message is prose, and often Hebrew prose - monospace was the wrong body
+   text for it and made a sentence look like a stack trace. Monospace is kept for
+   the one block that is not prose: the raw stream. */
+.__afSegText{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.7;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:10px 12px}
+.__afSegOut .__afSegText{color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc))}
+.__afSegThink .__afSegText{opacity:.78;font-style:italic;font-size:11.5px}
+
+/* Why this move, and the stop condition: notes about the message rather than
+   the message, so they are quieter and the stop one carries the accent because
+   it is the sentence that ends the loop. */
+.__afSegWhy .__afSegTag{background:color-mix(in srgb,var(--vscode-foreground,#ccc) 12%,transparent)}
+.__afSegWhy .__afSegText{opacity:.72;font-size:11.5px;font-style:italic}
+.__afSegStop .__afSegTag{background:color-mix(in srgb,var(--vscode-editorWarning-foreground,#cca700) 22%,transparent);color:var(--vscode-editorWarning-foreground,#cca700);opacity:1}
+.__afSegStop .__afSegText{border-color:color-mix(in srgb,var(--vscode-editorWarning-foreground,#cca700) 35%,var(--afEdge))}
+
+/* The claims are a list and are numbered by the turn that produced them, so they
+   get a list rather than a paragraph with newlines in it. */
+.__afSegClaims .__afSegTag{background:color-mix(in srgb,var(--afAcc) 16%,transparent);color:var(--afAcc);opacity:1}
+.__afClaimList{margin:0;padding:8px 26px 9px;list-style:decimal;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;font-size:11.5px;line-height:1.7}
+.__afClaimList li{padding:1px 0;opacity:.9}
+.__afClaimList li::marker{opacity:.45;font-variant-numeric:tabular-nums}
+
+/* The escape hatch: what the model actually wrote, which is the only way to read
+   a malformed answer and noise every other time. */
+.__afRawToggle{align-self:flex-start;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;opacity:.5;cursor:pointer;padding:3px 2px;border-radius:4px}
+.__afRawToggle:hover{opacity:.8}
+.__afRawToggle:focus-visible{outline:2px solid var(--app-claude-orange,#d97757);outline-offset:1px}
+.__afSegRaw .__afSegTag{background:color-mix(in srgb,var(--vscode-foreground,#ccc) 10%,transparent);opacity:.7}
+.__afSegRaw .__afSegText{font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));font-size:10.5px;line-height:1.55;opacity:.62;direction:ltr;text-align:start}
 .__afLaneHead[role="button"]{cursor:pointer;border-radius:6px}
 .__afLaneHead[role="button"]:hover{background:color-mix(in srgb,var(--vscode-foreground,#ccc) 8%,transparent)}
 .__afLaneHead:focus-visible{outline:2px solid var(--app-claude-orange,#d97757);outline-offset:1px}
