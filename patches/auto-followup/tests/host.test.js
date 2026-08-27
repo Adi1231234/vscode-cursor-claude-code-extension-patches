@@ -109,6 +109,44 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(!new RegExp(ps.once[2].when,'i').test('18 שכבות'),'once: a bare count in Hebrew is not a percent');
   ok(!(ps.first_question||'').trim(),'once: the shipped responder no longer relies on first_question');
 }
+
+// A responder edited in one window has to reach the loop running in another.
+// The panel enforces autosend, the context mode, max_turns and the once gate
+// from the list it was last sent, and it only asks for a new one when it has
+// none - so a save that answered only the window it came from left every other
+// window running on whatever it happened to load, with nothing on screen to say
+// so. Measured before the fix: one list to the saving panel, zero to the other.
+{
+  const H = globalThis.__ccAf;
+  const got = { a: [], b: [] };
+  const A = { postMessage: (m) => got.a.push(m) };
+  const B = { postMessage: (m) => got.b.push(m) };
+  H.handle({ type: '__ccaf', op: 'list' }, A);
+  H.handle({ type: '__ccaf', op: 'list' }, B);
+  got.a.length = 0; got.b.length = 0;
+  const r = S.read('perf-skeptic');
+  H.handle({ type: '__ccaf', op: 'save',
+             responder: Object.assign({}, r, { model: 'opus', max_turns: '50' }) }, A);
+  const listOf = (x) => got[x].filter((m) => m.op === 'list').pop();
+  const modelOf = (x) => { const l = listOf(x); return l && (l.items.find((i) => i.id === 'perf-skeptic')||{}).model; };
+  ok(!!listOf('a') && modelOf('a') === 'opus', 'save: the window that saved gets the new list');
+  ok(!!listOf('b'), 'save: so does every other window that has spoken to this host');
+  ok(modelOf('b') === 'opus', 'save: and it carries the edit, got ' + modelOf('b'));
+
+  got.a.length = 0; got.b.length = 0;
+  H.handle({ type: '__ccaf', op: 'delete', id: 'plan-drift' }, B);
+  ok(got.a.some((m) => m.op === 'list'), 'delete: the other window is told too');
+
+  // A disposed webview throws on postMessage and there is no dispose event on
+  // this side, so throwing is how it is dropped. It must not take the
+  // broadcast down with it.
+  const dead = { postMessage: () => { throw new Error('disposed'); } };
+  H.handle({ type: '__ccaf', op: 'list' }, dead);
+  got.a.length = 0;
+  H.handle({ type: '__ccaf', op: 'save', responder: S.read('perf-skeptic') }, B);
+  ok(got.a.some((m) => m.op === 'list'), 'save: a disposed panel does not stop the others being told');
+}
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 fs.rmSync(dir,{recursive:true,force:true});
 process.exit(fail?1:0);

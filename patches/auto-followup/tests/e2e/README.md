@@ -88,3 +88,41 @@ And the second run in a two-turn probe does not happen if the first answer is
 still sitting in the lane: `autosend: false` means the panel waits for approval
 before it will run again. Approve it first. An earlier version did not, got no
 second run at all, and that read as the change being ignored.
+
+# `settings-live.mjs` - does an edit reach the loop that is already running
+
+    node patches/auto-followup/tests/e2e/settings-live.mjs
+
+Arm a responder, then edit it and press Save, and check the **next run** against
+every field the dialog can change: model, what to type, goal, stop when, context,
+autosend, max turns, ask once, and the name. Thirteen checks, no model call - the
+CLI is a fake child that records its argv and the prompt written to its stdin and
+answers with a canned envelope. Where the setting lands is what is being tested;
+`model-e2e.mjs` is what proves the CLI then honours it.
+
+The two halves of the answer:
+
+- the **prompts and the model** are read from the file by the host on every run
+- everything the **panel** enforces - autosend, the context mode, max turns, the
+  once gate - comes from the list the panel was last sent, and `saveDraft` also
+  replaces the armed responder's copy in memory as it saves
+
+Neither needs re-arming, and the turn counter is not reset by an edit.
+
+The limit is read at the top of every `maybeRun`, so it binds in both directions:
+raised, the loop keeps going; lowered below the count already reached, the next
+attempt disarms rather than running.
+
+## Three traps this ran into, all of which read as an edit being ignored
+
+**The fake envelope has to be the real shape.** `unwrap()` calls anything without
+`subtype: "success"` a CLI error, and an error disarms the responder - so a lazy
+fake ended the loop after the first turn and every later check failed.
+
+**The once question owns the first matching turn.** `compose()` gives that turn
+exactly one job and deliberately leaves the rules out of it, so a rules edit
+checked against that turn looks ignored. One warm-up turn first.
+
+**The first tick is where the session id is read.** Taken late it looks like the
+session changing and resets the counter under you - the counter read 0/50 when it
+should have read 7/50. `loop.test.js` ticks once at the top for the same reason.
