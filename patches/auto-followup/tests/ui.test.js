@@ -491,7 +491,7 @@ try{
   const count = () => document.querySelector('.__afLiveCount').textContent;
   ok(/\d+s$/.test(count()), 'clock: the header carries elapsed seconds, got ' + JSON.stringify(count()));
   ok(!/chars/.test(count()), 'clock: with nothing written yet it shows only the time, got ' + count());
-  ok(/waiting for the first words/.test(document.querySelector('.__afLiveEmpty').textContent),
+  ok(/nothing written yet/.test(document.querySelector('.__afLiveEmpty').textContent),
      'clock: and says nothing has been written rather than looking empty');
 
   globalThis.__onMsg({ data: { type: '__ccaf', op: 'chunk', rid: run.rid, kind: 'text', text: 'on what input?' } });
@@ -663,7 +663,12 @@ try{
   T.openLive();
   let s = segs();
   ok(s.length === 1, 'live: one block while only the message has started, got ' + s.length);
-  ok(s[0].tag === 'message so far', 'live: and it says the message is not finished, got ' + s[0].tag);
+  /* No label on the message - it is the only prose in the box and a tag over it
+     would be a caption on a photograph of itself. That it is still being written
+     is said by the header state, the pulse, the sweeping hairline, and an accent
+     rule down the side of the text. The rule is what this asserts. */
+  ok(!!document.querySelector('.__afSegWriting'),
+     'live: the message is marked as still being written');
   ok(s[0].text === 'on how many inputs',
      'live: showing the value, not the JSON around it, got ' + JSON.stringify(s[0].text));
 
@@ -673,18 +678,22 @@ try{
     message: 'on how many inputs?', why: 'a sameness claim with no count',
     claims: ['28.0 s to 21.8 s on one file'], stop: null } });
   s = segs();
-  ok(s.some((x) => x.tag === 'message' && x.text === 'on how many inputs?'),
-     'live: the finished message is shown as the message, got ' + JSON.stringify(s));
+  ok(!!document.querySelector('.__afSegMsg') &&
+     document.querySelector('.__afSegMsg .__afSegText').textContent === 'on how many inputs?',
+     'live: the finished message is the message block, got ' + JSON.stringify(s));
+  ok(!document.querySelector('.__afSegWriting'),
+     'live: and the in-progress rule is gone once it has landed');
   ok(s.some((x) => x.tag === 'why this move'), 'live: with why the move was picked');
   ok(!!document.querySelector('.__afClaimList li'), 'live: and the claims as a list');
   ok(document.querySelector('.__afClaimList li').textContent.indexOf('28.0 s') >= 0,
      'live: with the claim in it');
-  ok(!s.some((x) => x.tag === 'raw'), 'live: the raw stream is not shown by default');
+  ok(!document.querySelector('.__afSegRaw'), 'live: the raw stream is not shown by default');
 
   const toggle = document.querySelector('.__afRawToggle');
   ok(!!toggle, 'live: but there is a way to see it');
   toggle.click();
-  ok(segs().some((x) => x.tag === 'raw' && x.text.indexOf('message') > 0),
+  ok(!!document.querySelector('.__afSegRaw') &&
+     document.querySelector('.__afSegRaw .__afSegText').textContent.indexOf('message') > 0,
      'live: and clicking it shows what the model actually wrote');
   T.openLive();   /* close */
 }
