@@ -16,12 +16,16 @@ function mkEl(tag){
     dispatchEvent(ev){return __afDispatch(this,ev);},
     removeEventListener(k,f){if(this.listeners[k])this.listeners[k]=this.listeners[k].filter(x=>x!==f);},setAttribute(k,v){this.attrs[k]=v;},
     getAttribute(k){return this.attrs[k];},
-    querySelector(sel){var c=String(sel).replace('.','');
+    querySelector(sel){
+      var m=String(sel).match(/^\[class\*=["']?([^"'\]]+)["']?\]$/);
+      var sub=m?m[1]:null;
+      var c=String(sel).replace('.','');
       var hit=null;
       var walk=function(n){
         for(var i=0;i<n.children.length&&!hit;i++){
-          var k=String(n.children[i].className||'').split(/\s+/);
-          if(k.indexOf(c)>=0){hit=n.children[i];return;}
+          var cn=String(n.children[i].className||'');
+          var k=cn.split(/\s+/);
+          if(sub?cn.indexOf(sub)>=0:k.indexOf(c)>=0){hit=n.children[i];return;}
           walk(n.children[i]);
         }
       };

@@ -7,6 +7,14 @@
 
   var indEl = null;
 
+  /* Where this button sits among the ones other patches inject into the same row.
+     Each of them used to assert "be the element immediately before .__qAdd", and
+     only one element can be - so two of them evicted each other for as long as
+     both were on screen. Measured in a live panel: forty moves each in three
+     seconds, alternating between two orders about every 150 ms. ccRow holds the
+     ranks and does the placing; this file states only where this button belongs. */
+  if (window.__ccRow) window.__ccRow.rank("__bgInd", 30);
+
   function ensureIndicator() {
     var n = runningCount();
     var done = snapshot().finished.length;
@@ -35,7 +43,9 @@
     indEl = b;
 
     var target = form.querySelector(".__qAdd") || send;
-    if (target.previousElementSibling !== b) target.parentNode.insertBefore(b, target);
+    if (b.parentNode !== target.parentNode) target.parentNode.insertBefore(b, target);
+    if (window.__ccRow) window.__ccRow.place(send.parentNode, send);
+    else if (target.previousElementSibling !== b) target.parentNode.insertBefore(b, target);
 
     /* Animated with a count while something runs; a quiet glyph afterwards, so the
        finished list stays reachable without a permanent fixture in the footer.

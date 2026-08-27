@@ -6,6 +6,8 @@ require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 const B=path.resolve(__dirname,'..','af')+'/';
 const order=JSON.parse(require('fs').readFileSync(B+'order.json','utf8'));
+const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
+eval(fs.readFileSync(LIBROW,'utf8'));
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
 src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
@@ -213,10 +215,15 @@ try{
   const order = (f) => f.children.map(n => String(n.className || '').split(/\s+/)[0]).join(' ');
   const savedInput = globalThis.__ccInput;
 
+  // prompt-queue and background-tasks register these when they are installed
+  globalThis.window.__ccRow.rank('__qLog', 20);
+  globalThis.window.__ccRow.rank('__bgInd', 30);
+  globalThis.window.__ccRow.rank('__qAdd', 40);
+
   let f = realForm(['__bgInd', '__qAdd', 'sendButton_X']);
   T.ensureButton();
   ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
-     'anchor: it takes the slot before the indicator, not the one the indicator holds - got ' + order(f));
+     'anchor: the shared order puts it first in the row - got ' + order(f));
 
   const settled = order(f);
   T.ensureButton(); T.ensureButton(); T.ensureButton();
@@ -232,10 +239,22 @@ try{
   // the indicator appearing later must not shift this button either
   f.insertBefore(Object.assign(document.createElement('button'), { className: '__bgInd' }),
                  f.children.find(n => n.className === '__qAdd'));
-  const afterIndicator = order(f);
   T.ensureButton(); T.ensureButton();
-  ok(order(f) === afterIndicator,
-     'anchor: an indicator appearing later moves nothing - got ' + order(f));
+  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
+     'anchor: an indicator appearing later takes its own rank - got ' + order(f));
+
+  // The whole point: once the row is in rank order, further passes write nothing.
+  // The old rule wrote on every pass forever whenever a second patch was present.
+  f = realForm(['__bgInd', '__qLog', '__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X',
+     'anchor: three injected buttons land in rank order - got ' + order(f));
+  const real = f.insertBefore.bind(f);
+  let writes = 0;
+  f.insertBefore = (n, r) => { writes++; return real(n, r); };
+  for (let i = 0; i < 20; i++) T.ensureButton();
+  ok(writes === 0, 'anchor: twenty further passes write nothing at all - got ' + writes + ' writes');
+  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X', 'anchor: and the order holds');
 
   globalThis.__ccInput = savedInput;
 }

@@ -45,7 +45,7 @@ function Invoke-Patch {
         'logpane', 'toolbar', 'footer', 'tail', 'workflow', 'dialog', 'keys',
         'list', 'indicator', 'init'
     )
-    $parts = @((Join-Path $PSScriptRoot 'tasks/config-dom.js'), (Get-LibJsPath 'ccStore.js')) +
+    $parts = @((Join-Path $PSScriptRoot 'tasks/config-dom.js'), (Get-LibJsPath 'ccStore.js'), (Get-LibJsPath 'ccRow.js')) +
         ($names | Select-Object -Skip 1 | ForEach-Object { Join-Path $PSScriptRoot "tasks/$_.js" })
     $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script @{ '__NONCE__' = $Ctx.Nonce }
