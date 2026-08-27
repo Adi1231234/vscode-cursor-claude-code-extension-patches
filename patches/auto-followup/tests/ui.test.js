@@ -540,6 +540,38 @@ try{
   ok(S().paused === false, 'pause: arming again starts running, not held');
 }
 
+
+/* Which build this window is running. Twice a change was applied, the window was
+   reloaded and the old behaviour was still there - and nothing on screen could
+   say whether the reload had missed this window or the change had missed the
+   mark. The two need completely different work. */
+{
+  T.arm('perf-skeptic');
+  T.ensureButton();
+  const tip = () => (T.btn().querySelector('.__afTip') || {}).textContent || '';
+  ok(tip().indexOf('newer build') < 0, 'build: nothing is said while the host says nothing');
+
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST,
+    build: { running: 'A', onDisk: 'A', stale: false } } });
+  T.ensureButton();
+  ok(tip().indexOf('newer build') < 0, 'build: nor when the running build is the one on disk');
+
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST,
+    build: { running: 'A', onDisk: 'B', stale: true } } });
+  T.ensureButton();
+  ok(tip().indexOf('newer build is installed, reload this window') > 0,
+     'build: and says so when the bundle on disk is newer, got ' + JSON.stringify(tip()));
+  ok(tip().indexOf('running A') > 0 && tip().indexOf('on disk B') > 0,
+     'build: naming both, so the next question is answerable');
+  ok(window.__ccBuild && window.__ccBuild.stale === true,
+     'build: and a probe can read it without opening anything');
+
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST } });
+  T.ensureButton();
+  ok(tip().indexOf('newer build') > 0,
+     'build: a list without the field does not silently clear a warning that is true');
+}
+
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);

@@ -25,8 +25,9 @@ function Invoke-Patch {
         if (-not $js) {
             Write-Miss 'webview message-listener anchor not found'
         } else {
-            $parts = @('format', 'store', 'samples', 'prompt', 'run', 'handle')
+            $parts = @('stamp', 'format', 'store', 'samples', 'prompt', 'run', 'handle')
             $hostJs = ($parts | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "host/$_.js") }) -join ''
+            $hostJs = Expand-JsTokens $hostJs ([ordered]@{ '__CCSTAMP__' = $script:CcStamp })
             Write-Text $Ctx.Js ("/* AUTOFOLLOWUPHOST */`n" + $hostJs.Trim() + "`n" + $js)
             Write-Ok 'host responder store + CLI runner + __ccaf hook'
         }
@@ -49,7 +50,8 @@ function Invoke-Patch {
         '__USERMSG__' = "userMessage_$($Ctx.MsgHash)"
         '__THINK__'   = $Ctx.ThinkingClass
         '__TOOLUSE__' = $Ctx.ToolUseClass
-        '__TOOLRES__' = $Ctx.ToolResultClass
+        '__TOOLRES__' = $Ctx.ToolResultClass;
+        '__CCSTAMP__' = $script:CcStamp
     })
     Add-ScriptAfterMarker $Ctx $script '/* AUTOFOLLOWUP */' 'auto follow-up JS' @('/* QUEUE */')
 }

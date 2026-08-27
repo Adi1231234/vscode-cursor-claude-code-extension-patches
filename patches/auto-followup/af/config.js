@@ -57,6 +57,9 @@
   var slot = null;         /* {message, why, invalid} awaiting send, or null */
   var stopped = null;      /* the stop reason once the loop has ended */
   var paused = false;     /* held by hand, still armed - see setPaused */
+  /* {running, onDisk, stale} from the host, so the panel can say when the
+     bundle on disk is newer than the code this window is running. */
+  var buildInfo = null;
   var pending = false;     /* a run is in flight */
   var lastSeen = "";       /* the reply already answered, so one turn is not answered twice */
   var wasBusy = false;
