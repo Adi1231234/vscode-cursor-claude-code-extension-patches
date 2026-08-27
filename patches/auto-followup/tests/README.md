@@ -1,10 +1,11 @@
 # Tests
 
-Plain node, no framework and no install. Run them from anywhere:
+Plain node, no framework and no install:
 
-    node patches/auto-followup/tests/host.test.js     # 21 checks
-    node patches/auto-followup/tests/loop.test.js     # 36 checks
-    node tools/check-injected.mjs auto-followup       # the template-literal rule
+    node patches/auto-followup/tests/run-all.mjs      # 120 checks, all five
+
+Or one at a time: `host.test.js` (27), `loop.test.js` (36), `ui.test.js` (40),
+`host-run.test.js` (17), and `node tools/check-injected.mjs auto-followup`.
 
 **`host.test.js`** exercises the responder folder against a temporary
 `CLAUDE_CONFIG_DIR`: seeding, the parser and its round trip, unknown front-matter
@@ -13,6 +14,21 @@ escape the folder is refused rather than sanitised. It also drives `extract` and
 `shape` over the outputs a model really produces - fenced JSON, prose then JSON,
 pure prose, broken JSON, an empty stop string, junk in the claims array, and
 braces inside the message.
+
+**`ui.test.js`** renders. The button in all three states and both counter forms,
+the picker with and without responders, every pane of the dialog, saving,
+deleting an armed responder, and the lane in each state it can be in. These all
+run inside a click handler or inside `tick()`, and `tick()` is wrapped in
+try/catch - so a throw in any of them is silent and permanent rather than loud.
+That is the whole reason they are tested. It also covers two races: an edit to
+the armed responder reaching the counter, and a send that fails *after* a disarm
+not resurrecting the slot.
+
+**`host-run.test.js`** checks the prompt `run.js` composes - that the rules, the
+stop condition and the message are all in it, that claims appear only when the
+setting asks for them, that `full-session` adds the transcript, and that the
+message being answered comes last. It also spawns the CLI for real with a bad
+model name, to prove a failure comes back as a verdict rather than a hang.
 
 **`loop.test.js`** runs the panel script itself against `dom-stubs.js` and drives
 the whole loop: that it does not answer a reply which predates arming, that one

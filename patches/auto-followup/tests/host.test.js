@@ -44,6 +44,23 @@ ok(S.remove('tmp-one') && S.read('tmp-one')===null,'delete works');
 ok(S.save({id:'../evil',rules:'x'})===false,'traversal id refused');
 ok(S.save({id:'a/b',rules:'x'})===false,'slash id refused');
 ok(S.read('../../etc/passwd')===null,'traversal read refused');
+
+// 8. line endings and stray bytes - these files are hand-edited on Windows, and
+//    git rewrites them to CRLF on checkout even though serialize() writes LF.
+const NLc = String.fromCharCode(10), CRc = String.fromCharCode(13), BOMc = String.fromCharCode(0xFEFF);
+const LFfile = ['---','name: n','description: d','context: full-session','max_turns: 5',
+                'autosend: true','model: opus','---','','## rules','RULE','','## stop','STOP',''].join(NLc);
+const CRLFfile = LFfile.split(NLc).join(CRc + NLc);
+const cr = F.parse('x', CRLFfile);
+ok(cr.name==='n' && cr.max_turns==='5' && cr.context==='full-session','CRLF front matter parses');
+ok(cr.rules==='RULE' && cr.stop==='STOP','CRLF sections parse');
+const bo = F.parse('x', BOMc + LFfile);
+ok(bo.name==='n' && bo.rules==='RULE','a leading BOM is tolerated');
+const bc = F.parse('x', BOMc + CRLFfile);
+ok(bc.name==='n' && bc.rules==='RULE','BOM and CRLF together');
+ok(F.parse('x', LFfile.replace('max_turns: 5','max_turns: 5   ')).max_turns==='5','a trailing space on a value is trimmed');
+ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).description==='a: b: c','a colon inside a value survives');
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 fs.rmSync(dir,{recursive:true,force:true});
 process.exit(fail?1:0);

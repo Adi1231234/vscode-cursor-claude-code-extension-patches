@@ -61,8 +61,14 @@
       b.innerHTML = icon("loop") +
         (want ? '<span class="__afCn"></span>' : "") +
         '<span class="__afTip"></span>';
-      if (want) txt(b.querySelector(".__afCn"), want);
     }
+    /* Both lookups are guarded, and the guard is not defensive noise: paintButton
+       runs on every tick from inside tick()'s try/catch, so if innerHTML ever
+       fails to produce these - a stricter CSP, a sanitiser - an unguarded write
+       would throw every tick, silently, and freeze the button in a stale state
+       with nothing in the console to say why. */
+    var cn = b.querySelector(".__afCn");
+    if (cn) txt(cn, want);
     var tip = b.querySelector(".__afTip");
     if (tip) {
       txt(tip, tipText());

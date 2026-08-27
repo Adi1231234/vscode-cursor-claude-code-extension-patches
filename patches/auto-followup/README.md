@@ -106,9 +106,7 @@ one that does this every time is visible rather than merely slow.
 
 ## Tests
 
-    node patches/auto-followup/tests/host.test.js     # 21 checks
-    node patches/auto-followup/tests/loop.test.js     # 36 checks
-    node tools/check-injected.mjs auto-followup       # the template-literal rule
+    node patches/auto-followup/tests/run-all.mjs      # 120 checks
 
 See tests/README.md. The last one is not optional for a change in `af/`: this
 script is injected into a template literal, so a backslash is consumed before the
