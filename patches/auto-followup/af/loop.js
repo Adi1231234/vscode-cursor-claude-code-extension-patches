@@ -25,7 +25,7 @@
     meta = findResponder(id);
     turns = 0; slot = null; stopped = null; approved = false;
     lastSeen = lastAssistant();          /* the reply already on screen is not ours to answer */
-    try { localStorage.setItem(ARM_KEY + sid, id); } catch (e) {}
+    try { localStorage.setItem(keyFor(ARM_KEY), id); } catch (e) {}
     log("armed", id);
     renderAll();
   }
@@ -34,7 +34,7 @@
     if (pending) cancelRun();
     armed = null; meta = null; slot = null; pending = false; approved = false;
     stopped = reason || null;
-    try { localStorage.removeItem(ARM_KEY + sid); } catch (e) {}
+    try { localStorage.removeItem(keyFor(ARM_KEY)); } catch (e) {}
     log("disarmed", reason || "by hand");
     renderAll();
   }
@@ -54,7 +54,7 @@
           if (typeof c === "string") return c;
           if (Array.isArray(c)) {
             return c.filter(function (b) { return b && b.type === "text"; })
-                    .map(function (b) { return b.text || ""; }).join("\n");
+                    .map(function (b) { return b.text || ""; }).join(NL);
           }
         }
       }
@@ -77,12 +77,12 @@
         if (typeof c === "string") t = c;
         else if (Array.isArray(c)) {
           t = c.filter(function (b) { return b && b.type === "text"; })
-               .map(function (b) { return b.text || ""; }).join("\n");
+               .map(function (b) { return b.text || ""; }).join(NL);
         }
         if (t.trim()) out.push((m.role === "user" ? "HUMAN: " : "CLAUDE: ") + t.trim());
       });
     } catch (e) {}
-    var all = out.join("\n\n");
+    var all = out.join(NL + NL);
     return all.length > MAX_TRANSCRIPT ? all.slice(-MAX_TRANSCRIPT) : all;
   }
 

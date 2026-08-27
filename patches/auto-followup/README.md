@@ -104,6 +104,17 @@ the message and the line is marked invalid. A responder that answers usefully in
 prose is worth more than a turn lost to a missing brace, and the log records it so
 one that does this every time is visible rather than merely slow.
 
+## Tests
+
+    node patches/auto-followup/tests/host.test.js     # 21 checks
+    node patches/auto-followup/tests/loop.test.js     # 36 checks
+    node tools/check-injected.mjs auto-followup       # the template-literal rule
+
+See tests/README.md. The last one is not optional for a change in `af/`: this
+script is injected into a template literal, so a backslash is consumed before the
+browser sees it, and neither `node --check` of the fragment nor of the patched
+bundle can see that.
+
 ## What is on screen
 
 The button left of the queue's add button is the only place the state lives,

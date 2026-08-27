@@ -14,8 +14,16 @@
      Stored per session, in localStorage, the same store and the same keying the
      queue uses for its items. It is a cue and not an archive: MAX_CLAIMS keeps the
      oldest lines falling off rather than growing the prompt without bound. */
+  /* Both per-session stores key the same way, through here. sid is empty for the
+     moment before the first tick reads it, and on any build that does not expose a
+     session id at all; without the fallback those conversations would share one
+     key and read each other's state. */
+  function keyFor(prefix) {
+    return prefix + (sid || "none");
+  }
+
   function claimsKey() {
-    return CLAIM_KEY + (sid || "none");
+    return keyFor(CLAIM_KEY);
   }
 
   function readClaims() {
@@ -36,11 +44,20 @@
   /* Numbered by the turn that produced them, because the number is what makes a
      contradiction legible: "[5] identical" against "[11] 3% different" says where
      to look, and a bare pair of claims does not. */
+  /* Strips the "[7] " a stored line carries, so the same assertion is recognised
+     whichever turn recorded it. Written with indexOf rather than a regex because
+     the escapes a regex needs here do not survive the template literal - see the
+     note in the config section. */
+  function unnumbered(line) {
+    var c = line.indexOf("] ");
+    return (line.charAt(0) === "[" && c > 0) ? line.slice(c + 2) : line;
+  }
+
   function addClaims(newOnes) {
     if (!newOnes || !newOnes.length) return;
     var have = readClaims();
     var seen = {};
-    have.forEach(function (l) { seen[l.replace(/^\[\d+\]\s*/, "")] = 1; });
+    have.forEach(function (l) { seen[unnumbered(l)] = 1; });
     newOnes.forEach(function (c) {
       var body = String(c).trim();
       if (!body || seen[body]) return;         /* the same assertion restated is not new */

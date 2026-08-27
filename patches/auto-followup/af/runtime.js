@@ -27,7 +27,7 @@
     sid = now;
     armed = null; meta = null; slot = null; stopped = null; turns = 0; pending = false;
     try {
-      var saved = localStorage.getItem(ARM_KEY + sid);
+      var saved = localStorage.getItem(keyFor(ARM_KEY));
       if (saved) {
         armed = saved;
         meta = findResponder(saved);

@@ -35,6 +35,15 @@
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */
 
+  /* This whole script is injected into a template literal, so every backslash is
+     evaluated before the browser ever sees it: a "
+" written here arrives as a
+     real newline and breaks the string it sits in, and a regex escape silently
+     loses its backslash and changes what the pattern matches. Neither is visible
+     to node --check of the fragment or of the patched bundle. See CLAUDE.md.
+     Hence this, and character classes instead of escapes everywhere below. */
+  var NL = String.fromCharCode(10);
+
   var armed = null;        /* the responder id, or null when off */
   var meta = null;         /* its parsed fields, from the host list */
   var list = [];           /* every responder the host knows about */
