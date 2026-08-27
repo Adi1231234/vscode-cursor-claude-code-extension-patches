@@ -36,7 +36,7 @@ function Invoke-Patch {
     # Anchored on the queue's own marker: this patch calls window.__qAuto, which
     # queue/flush-init.js defines, so it has to be injected after it. apply.ps1
     # runs prompt-queue first for the same reason.
-    $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'dialog', 'dialog-form', 'loop', 'runtime')
+    $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'dialog', 'dialog-form', 'dialog-foot', 'loop', 'runtime')
     $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "af/$_.js") }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce })
     Add-ScriptAfterMarker $Ctx $script '/* AUTOFOLLOWUP */' 'auto follow-up JS' @('/* QUEUE */')

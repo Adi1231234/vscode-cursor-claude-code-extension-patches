@@ -83,6 +83,7 @@
        busy()    a turn is running.
        panel()   the queue panel node, or null - the lane renders inside it.
        send(t)   send one text now, by the same path a queued item takes.
+       log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
      Guarded so the first definition wins, like every other shared global here.
 
      send() cannot go through sendNow: that one takes an item already in Q and
@@ -113,7 +114,8 @@
     paused: function () { return paused; },
     busy: function () { return isBusy(); },
     panel: function () { return panel && panel.isConnected ? panel : null; },
-    send: sendText
+    send: sendText,
+    log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} }
   };
 
   /* ---------- Init ---------- */

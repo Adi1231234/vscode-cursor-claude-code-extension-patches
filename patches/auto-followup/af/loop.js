@@ -8,8 +8,14 @@
      the queue being non-empty, which is what would have made it silently fail:
      the slot is filled *after* a turn ends, so at the moment stop is pressed
      there is often nothing queued at all. */
+  /* Fails closed. meta is null for the moment between restoring an armed
+     responder from localStorage and the host's list arriving, and answering
+     "yes, send without asking" during that window would skip the one review the
+     user asked for. Unknown means hold. */
   function autosend() {
-    return !meta || String(meta.autosend) === "true" || approved;
+    if (approved) return true;
+    if (!meta) return false;
+    return String(meta.autosend) === "true";
   }
 
   var approved = false;
@@ -56,11 +62,35 @@
     return "";
   }
 
+  /* The whole conversation as plain turns, for context: full-session. Capped
+     from the end, because the recent part is what a follow-up is about and an
+     unbounded transcript would grow the responder's cost without bound. */
+  function transcript() {
+    var out = [];
+    try {
+      var s = globalThis.__ccStore();
+      var ms = s && s.messages && s.messages.value;
+      if (!Array.isArray(ms)) return "";
+      ms.forEach(function (m) {
+        if (!m || (m.role !== "assistant" && m.role !== "user")) return;
+        var c = m.content, t = "";
+        if (typeof c === "string") t = c;
+        else if (Array.isArray(c)) {
+          t = c.filter(function (b) { return b && b.type === "text"; })
+               .map(function (b) { return b.text || ""; }).join("\n");
+        }
+        if (t.trim()) out.push((m.role === "user" ? "HUMAN: " : "CLAUDE: ") + t.trim());
+      });
+    } catch (e) {}
+    var all = out.join("\n\n");
+    return all.length > MAX_TRANSCRIPT ? all.slice(-MAX_TRANSCRIPT) : all;
+  }
+
   function contextFor() {
     var mode = (meta && meta.context) || "last-message+claims";
     var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [] };
     if (mode === "last-message+claims") ctx.claims = readClaims();
-    else if (mode === "full-session") { ctx.claims = readClaims(); ctx.full = true; }
+    else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
     return ctx;
   }
 

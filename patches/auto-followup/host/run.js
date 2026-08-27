@@ -47,6 +47,13 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
              "the message below. You were not given the reasoning behind them.",
              ctx.claims.join("\n"));
     }
+    /* context: full-session. Deliberately last and deliberately labelled: a
+       responder given the reasoning tends to be persuaded by it, so a responder
+       that asks for this is choosing depth over independence and should be able
+       to see that it did. */
+    if (ctx.transcript) {
+      p.push("", "# The conversation so far", ctx.transcript.trim());
+    }
     p.push("", "# Claude's message, which you are answering", (ctx.text || "").trim());
     return p.join("\n");
   }

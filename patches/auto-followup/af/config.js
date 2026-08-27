@@ -33,6 +33,7 @@
   var CLAIM_KEY = "ccAfClaims:";   /* + session id */
   var ARM_KEY = "ccAfArmed:";      /* + session id */
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
+  var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */
 
   var armed = null;        /* the responder id, or null when off */
   var meta = null;         /* its parsed fields, from the host list */
@@ -86,6 +87,10 @@
     return window.__qAuto || null;
   }
 
+  /* Through the queue's own ring, so Ctrl+Alt+L shows both patches in one place
+     and there is not a second log to know about. window.__ccLog does not exist -
+     ccLog lives inside the queue's IIFE - which is why this goes through the
+     __qAuto surface rather than guessing at a global. */
   function log(a, b, c) {
-    try { if (window.__ccLog) window.__ccLog("autofollowup", a, b, c); } catch (e) {}
+    try { var q = qApi(); if (q && q.log) q.log(a, b, c); } catch (e) {}
   }

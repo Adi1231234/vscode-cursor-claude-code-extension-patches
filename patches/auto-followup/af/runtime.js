@@ -28,7 +28,14 @@
     armed = null; meta = null; slot = null; stopped = null; turns = 0; pending = false;
     try {
       var saved = localStorage.getItem(ARM_KEY + sid);
-      if (saved) { armed = saved; meta = findResponder(saved); lastSeen = lastAssistant(); }
+      if (saved) {
+        armed = saved;
+        meta = findResponder(saved);
+        lastSeen = lastAssistant();
+        /* The list may not have arrived yet, and until it does maxTurns and the
+           approval gate have nothing to read. Ask again rather than run blind. */
+        if (!meta) requestList();
+      }
     } catch (e) {}
     renderAll();
   }

@@ -65,7 +65,10 @@ The responder returns them in the same call that produces the message, so the
 ledger costs no extra model call. It is deliberately **not** written by Claude:
 Claude is the only participant with file tools, so "have it written to a file"
 means the party being checked keeps the record of its own claims and decides what
-goes into it. `Export claims` in the dialog writes it out when you want it.
+goes into it. `Export claims` writes it out when you want it, and `Clear` empties it. The
+ledger belongs to the conversation and not to the arming, so turning a responder
+off does not wipe it - what Claude asserted stays true across an off and on
+again.
 
 ## Why a slot of its own and not a queue item
 
