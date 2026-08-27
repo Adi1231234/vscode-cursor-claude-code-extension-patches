@@ -1,1 +1,22 @@
-["config", "bridge", "once", "claims", "persist", "button", "confirm", "menu", "lane", "transcript", "dialog", "dialog-form", "dialog-foot", "live-parse", "live", "live-view", "loop", "runtime"]
+[
+  "config",
+  "bridge",
+  "once",
+  "claims",
+  "persist",
+  "button",
+  "confirm",
+  "menu",
+  "lane",
+  "transcript",
+  "fit",
+  "dialog",
+  "dialog-pick",
+  "dialog-form",
+  "dialog-foot",
+  "live-parse",
+  "live",
+  "live-view",
+  "loop",
+  "runtime"
+]

@@ -125,8 +125,30 @@ try{
   ok(!!setting,'keys: a setting is rendered');
   ok(setting.getAttribute('tabindex')==='0','keys: a setting is a tab stop');
   ok(setting.getAttribute('role')==='button','keys: and announces itself as a control');
+  const dlgBox = document.createElement('div');
+  dlgBox._rect = {left:21,top:13,right:321,bottom:770,width:300,height:757};
+  setting._rect = {left:172,top:422,right:312,bottom:469,width:140,height:47};
+  setting._closest = dlgBox;
   keys(setting,'Enter');
   ok(!!q('.__afDrop'),'keys: Enter opens the dropdown');
+
+  // The list belongs to the dialog, not to the panel. It used to be clamped to
+  // the window, so at a narrow panel it ran out over the dialog's own header and
+  // past both its edges. Geometry the stub can express: a 300-wide dialog at
+  // x=21, a field low inside it, and a list too tall to open downward.
+  {
+    const box = {left:21,top:13,right:321,bottom:770,width:300,height:757};
+    const dropped = q('.__afDrop');
+    const setLeft = parseFloat(dropped.style.left), setTop = parseFloat(dropped.style.top);
+    ok(setLeft >= box.left && setLeft + 200 <= box.right,
+       'drop: the list stays inside the dialog horizontally, got left ' + setLeft);
+    ok(setTop >= box.top && setTop + 120 <= box.bottom,
+       'drop: and inside it vertically, got top ' + setTop);
+    ok(dropped.style.minWidth === '140px',
+       'drop: and is at least as wide as the field it opens under, got ' + dropped.style.minWidth);
+    ok(parseFloat(dropped.style.maxWidth) <= box.width,
+       'drop: and never wider than the dialog, got ' + dropped.style.maxWidth);
+  }
 
   keys(document,'Escape');
   ok(!q('.__afDrop'),'layer: Escape closes the dropdown');
