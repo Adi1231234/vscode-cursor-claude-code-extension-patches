@@ -32,6 +32,15 @@ const SCRIPTS = {
             "schedule-modal", "render-panel", "row-menu", "render-rows",
             "resize-input", "stop-pause", "flush-init"]
   },
+  "shared-lib": {
+    dir: "lib/js/",
+    order: ["ccRow", "ccStore", "ccCopyText", "ccWtResolve"],
+    /* Each of these is its own file, injected into somebody else's script -
+       concatenating them is not a program, so only the escape scan applies.
+       They were not scanned at all before, and ccRow.js shipped a swallowed
+       backslash because of it. */
+    escapesOnly: true
+  },
   "auto-followup": {
     dir: "patches/auto-followup/af/",
     /* Read, not repeated. This list lived in five places; once.js was added to
@@ -91,6 +100,8 @@ function check(name) {
   const body = evaluated.slice(evaluated.indexOf(">") + 1)
                         .split("</" + "script>").join("");
   let parses = true;
+  if (spec.escapesOnly) parses = true;
+  else
   try {
     new Function(body);
   } catch (e) {
