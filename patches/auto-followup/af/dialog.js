@@ -139,8 +139,8 @@
     box.appendChild(head);
 
     var body = el("div", "__afDlgBody");
-    body.appendChild(editPane());
     body.appendChild(listPane());
+    body.appendChild(editPane());
     box.appendChild(body);
     box.appendChild(footer());
     dlg.appendChild(box);

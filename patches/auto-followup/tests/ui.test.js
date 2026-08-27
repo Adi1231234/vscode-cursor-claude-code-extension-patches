@@ -321,6 +321,24 @@ try{
      'firstopen: the responders appear without a second click - got ' + JSON.stringify(got));
   T.toggleMenu({ currentTarget: T.btn() });
 }
+
+// The list is the master and the pane is the detail; in a left-to-right interface
+// the master goes on the left. It also puts the tab order in the order the eye
+// travels - pick a responder, then edit it.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const body = document.querySelector('.__afDlgBody');
+  const kids = body.children.map(n => String(n.className || '').split(/\s+/).filter(c => /__afList|__afEdit/.test(c))[0]).filter(Boolean);
+  ok(kids.join(' ') === '__afList __afEdit',
+     'rail: the list comes before the editor - got ' + kids.join(' '));
+
+  const stops = [...document.querySelectorAll('.__afDlgBody [tabindex="0"], .__afDlgBody textarea, .__afDlgBody input')];
+  const firstRail = stops.findIndex(e => String(e.className || '').indexOf('__afLItem') >= 0);
+  const firstField = stops.findIndex(e => String(e.className || '').indexOf('__afIn') >= 0 || e.tagName === 'TEXTAREA');
+  ok(firstRail >= 0 && firstField >= 0 && firstRail < firstField,
+     'rail: a responder is reached before the fields it edits - rail at ' + firstRail + ', field at ' + firstField);
+  T.openDialog();
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

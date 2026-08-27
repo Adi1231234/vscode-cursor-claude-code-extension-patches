@@ -73,7 +73,7 @@
 .__afPane{padding:14px;min-width:0}
 
 /* the rail: one column of files, and which one is open is not a guess */
-.__afList{flex:none;width:224px;padding:10px;background:var(--afChrome);border-inline-start:1px solid var(--afLine);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.__afList{flex:none;width:224px;padding:10px;background:var(--afChrome);border-inline-end:1px solid var(--afLine);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
 .__afLItem{position:relative;display:flex;align-items:flex-start;gap:9px;padding:8px 9px 8px 11px;border-radius:6px;font-size:12px;cursor:pointer;transition:background .1s ease}
 .__afLItem::before{content:"";position:absolute;inset-inline-start:0;top:7px;bottom:7px;width:2px;border-radius:2px;background:transparent}
 .__afLItem:hover{background:rgba(128,128,128,.1)}
@@ -189,7 +189,7 @@
   .__afDlgBody { flex-direction: column; }
   .__afList {
     order: -1; width: auto; flex: 0 0 auto; max-height: 168px;
-    border-inline-start: none; border-bottom: 1px solid var(--afLine);
+    border-inline-end: none; border-bottom: 1px solid var(--afLine);
   }
   .__afNew { margin-top: 6px; }
   .__afEdit { min-width: 0; }
