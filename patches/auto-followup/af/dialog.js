@@ -33,11 +33,11 @@
 
   /* The overlay has to be told how tall the screen is.
 
-     The zoom patch sets `zoom` on <body>, and in Chromium a zoomed ancestor
-     becomes the containing block for a fixed-position descendant - so `inset: 0`
+     The zoom patch sets zoom on <body>, and in Chromium a zoomed ancestor
+     becomes the containing block for a fixed-position descendant - so inset:0
      stopped meaning the viewport and started meaning the body box, which is
-     shorter. And `vh` inside a zoomed subtree is a viewport unit measured in the
-     unzoomed space, so a `max-height: 90vh` rendered at 90vh times the zoom.
+     shorter. And vh inside a zoomed subtree is a viewport unit measured in the
+     unzoomed space, so a a 90vh cap rendered at 90vh times the zoom.
 
      Measured in a live panel at zoom 1.3: viewport 759px, overlay 584px, dialog
      729px, top at -51px - clipped off the top of the screen and off the bottom,

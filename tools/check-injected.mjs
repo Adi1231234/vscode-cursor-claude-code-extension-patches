@@ -96,6 +96,18 @@ function check(name) {
   }
   const filled = src.replace(/\$\{(__[A-Z]+__)\}/g, (m, t) => "x".repeat(m.length))
                     .replace(/__[A-Z]+__/g, (m) => "x".repeat(m.length));
+  const ticks = [];
+  for (const f of spec.order) {
+    const text = fs.readFileSync(path.join(root, spec.dir, f + ".js"), "utf8");
+    text.split(String.fromCharCode(10)).forEach((line, n) => {
+      if (line.indexOf(String.fromCharCode(96)) >= 0) ticks.push(f + ".js:" + (n + 1) + " " + line.trim().slice(0, 80));
+    });
+  }
+  if (ticks.length) {
+    console.log(`  ${name}: a backtick closes the template literal this is injected into - the file stops parsing and the extension never loads:`);
+    for (const t of ticks) console.log(`    ${t}`);
+    return false;
+  }
   let evaluated;
   try {
     evaluated = eval("`" + filled.split("`").join(BS + "`") + "`");
