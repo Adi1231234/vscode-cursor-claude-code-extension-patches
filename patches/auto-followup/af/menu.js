@@ -80,7 +80,8 @@
 
     if (!list.length) {
       var empty = el("div", "__afEmpty");
-      txt(empty, "No responders yet.");
+      /* Never say "you have none" about something never asked for. */
+      txt(empty, listSeen ? "No responders yet." : "Loading…");
       m.appendChild(empty);
     } else {
       list.forEach(function (r) { m.appendChild(menuItem(r)); });

@@ -373,6 +373,25 @@ any point: armed with a reply on screen, `0/20` became `1/20` and the follow-up
 appeared in the lane. Then paused, a reply arrived while it was held and the
 counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
 
+## The picker is never empty on the first open
+
+The panel asks the host for the responders when its script runs - and in a real
+panel that request is simply lost. Measured twelve seconds after a reload, with
+the button on screen and the store resolvable: **no list had ever arrived**. The
+first click asked again, the answer came back in 24ms, and the menu had already
+been built - empty. That is the whole of "the first time I open it there is
+nothing in it, the second time there is".
+
+So `tick()` keeps asking, every half second, until the host answers once. No cap:
+it only runs while there is no list at all, which is a state nothing works in,
+and a cap would put the bug back exactly where it hurts - an extension host busy
+for a few seconds at startup. One answer stops it, even an empty one.
+
+Measured again after the change: twelve seconds after a reload, with no click,
+the list is there; and the first open shows all of it in its first frame rather
+than filling in 60ms later. The menu also stops claiming "No responders yet"
+before it has ever been answered - it says Loading until then.
+
 ## The picker asks before it throws work away
 
 While a loop is running, two clicks in the picker cost something that cannot be
