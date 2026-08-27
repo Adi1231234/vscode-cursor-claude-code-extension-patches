@@ -136,5 +136,12 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
            "\n\n## stop\n" + (r.stop || "").trim() + "\n";
   }
 
-  return { parse: parse, serialize: serialize, DEFAULTS: DEFAULTS };
+  /* The editor edits the section as written; the loop reads the parsed list. The
+     panel is given both and parses neither, so '## once' means one thing. */
+  function onceToText(list) {
+    return onceText({ once: list }).replace(NL + NL + "## once" + NL, "");
+  }
+
+  return { parse: parse, serialize: serialize, DEFAULTS: DEFAULTS,
+           onceToText: onceToText, parseOnce: parseOnce };
 })();

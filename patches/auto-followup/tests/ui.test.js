@@ -6,6 +6,8 @@ require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 const B=path.resolve(__dirname,'..','af')+'/';
 const order=JSON.parse(require('fs').readFileSync(B+'order.json','utf8'));
+const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
+eval(fs.readFileSync(LIBROW,'utf8'));
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
 src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
@@ -26,9 +28,21 @@ let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const run=(m,f)=>{ try{ f(); pass++; } catch(e){ fail++; console.log('  THREW: '+m+' -> '+e.message); } };
 const T=globalThis.__t, S=()=>T.state();
-const LIST=[
-  {id:'perf-skeptic',name:'perf-skeptic',description:'d',context:'last-message+claims',max_turns:'20',autosend:'false',model:'sonnet',rules:'r',stop:'s'},
-  {id:'unl',name:'unl',description:'',context:'full-session',max_turns:'unlimited',autosend:'true',model:'opus',rules:'r',stop:'s'}];
+/* The responder list as the host really sends it: parsed by format.js from the
+   shipped sample, with the same derived fields store.js adds. It used to be a
+   hand-written object, and a hand-written fixture only ever contains the fields
+   whoever wrote it remembered - the goal and the once chain were both missing,
+   so three tests passed against a responder that could not exist. */
+const HOSTG={};
+for(const f of ['format.js','samples.js'])
+  (new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host',f),'utf8')))(HOSTG);
+const asHostSends=(id)=>{
+  const r=HOSTG.__ccAfFormat.parse(id,HOSTG.__ccAfSamples.find(s=>s.id===id).text);
+  r.onceText=HOSTG.__ccAfFormat.onceToText(r.once);
+  return r;
+};
+const LIST=[asHostSends('perf-skeptic'),
+  Object.assign(asHostSends('plan-drift'),{id:'unl',name:'unl',max_turns:'unlimited',autosend:'true',model:'opus'})];
 
 globalThis.__tick();
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
@@ -108,6 +122,142 @@ T.disarm('stopped by hand');
 resolveSend(false);
 globalThis.setTimeout(function(){
   ok(S().slot===null,'a failed send does not resurrect the slot after a disarm');
+
+// Layering and the keyboard. Both of these were found by driving a real panel:
+// every control in the dialog was a div with a click handler, so none of it was
+// reachable without a mouse, and Escape took the dialog out from under an open
+// dropdown - discarding the edits and leaving the dropdown on screen with
+// nothing behind it.
+try{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const q=(s)=>document.querySelector(s);
+  const keys=(el,key)=>el.dispatchEvent(new globalThis.KeyboardEvent('keydown',{key:key,bubbles:true}));
+
+  const setting=q('.__afF');
+  ok(!!setting,'keys: a setting is rendered');
+  ok(setting.getAttribute('tabindex')==='0','keys: a setting is a tab stop');
+  ok(setting.getAttribute('role')==='button','keys: and announces itself as a control');
+  keys(setting,'Enter');
+  ok(!!q('.__afDrop'),'keys: Enter opens the dropdown');
+
+  keys(document,'Escape');
+  ok(!q('.__afDrop'),'layer: Escape closes the dropdown');
+  ok(!!T.dlg(),'layer: and leaves the dialog open, with the edits still in it');
+
+  keys(document,'Escape');
+  ok(!T.dlg(),'layer: a second Escape closes the dialog');
+  ok(!q('.__afDrop'),'layer: closing the dialog never leaves a dropdown behind it');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const item=q('.__afLItem');
+  ok(item.getAttribute('tabindex')==='0','keys: a responder in the rail is a tab stop');
+  const add=[...document.querySelectorAll('.__afNew')][0];
+  ok(add && add.getAttribute('tabindex')==='0','keys: so is + New responder');
+  ok(q('.__afX').getAttribute('aria-label')==='Close','keys: the close control has a name');
+  const stops=document.querySelectorAll('.__afDlg [tabindex="0"], .__afDlg button, .__afDlg textarea, .__afDlg input');
+  ok(stops.length>=12,'keys: every control is reachable, got '+stops.length);
+  T.openDialog();
+}catch(e){ fail++; console.log('  THREW in keyboard block: '+e.message); }
+
+// The dialog edits the whole file. Two of its four sections had no field at all,
+// and survived only because serialize writes back what it was given - so a
+// responder could be opened, saved, and still be showing half of itself.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const heads=[...document.querySelectorAll('.__afBoxHead')].map(e=>e.textContent);
+  ok(heads.length===4,'sections: four boxes on the pane, got '+heads.length);
+  const tas=[...document.querySelectorAll('.__afTa')];
+  ok(tas.length===4,'sections: four text areas, got '+tas.length);
+  ok(!!document.querySelector('.__afPair'),'sections: the two short ones share a row');
+  ok(!!document.querySelector('.__afGrow'),'sections: the rules box still takes the room');
+
+  const d=T.draft();
+  ok(typeof d.onceText==='string','sections: the once chain arrives as editable text');
+  ok(/name: frame/.test(d.onceText),'sections: and carries the chain, got '+String(d.onceText).slice(0,20));
+  ok(typeof d.goal==='string' && d.goal.length>0,'sections: the goal arrives too');
+
+  // saving hands the text back; the host parses it, so a bad pattern never
+  // reaches the loop as an object nobody checked
+  d.onceText='name: a'+String.fromCharCode(10)+'when: [0-9]'+String.fromCharCode(10)+'ask: how many?';
+  T.saveDraft();
+  const sent=globalThis.sent.filter(m=>m.op==='save').pop();
+  ok(sent && sent.responder && sent.responder.onceText.indexOf('how many?')>=0,
+     'sections: the edited once text reaches the host');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const save=[...document.querySelectorAll('.__afFoot button')].pop();
+  ok(save.textContent==='Saved','dirty: an untouched draft says Saved, got '+save.textContent);
+  const ta=document.querySelectorAll('.__afTa')[1];
+  ta.value='changed'; (ta.listeners.input||[]).forEach(f=>f({}));
+  T.renderDialog();
+  const save2=[...document.querySelectorAll('.__afFoot button')].pop();
+  ok(save2.textContent==='Save','dirty: an edited draft says Save, got '+save2.textContent);
+  ok(String(save2.className).indexOf('__afDirty')>=0,'dirty: and is marked as such');
+  T.openDialog();
+}
+
+// Two patches, one slot. background-tasks' indicator anchors with the same rule
+// this button used - "be the element immediately before .__qAdd" - and only one
+// element can be, so each timer displaced the other about three times a second.
+//
+// The shared form fixture cannot show this: it overrides querySelector and
+// insertBefore with stand-ins that record the node and ignore ordering, which is
+// exactly the mechanism under test. So this builds a real one.
+{
+  const realForm = (kids) => {
+    const f = document.createElement('form');
+    for (const c of kids) { const e = document.createElement('button'); e.className = c; f.appendChild(e); }
+    const input = document.createElement('div');
+    input.closest = () => f;
+    globalThis.__ccInput = () => input;
+    return f;
+  };
+  const order = (f) => f.children.map(n => String(n.className || '').split(/\s+/)[0]).join(' ');
+  const savedInput = globalThis.__ccInput;
+
+  // prompt-queue and background-tasks register these when they are installed
+  globalThis.window.__ccRow.rank('__qLog', 20);
+  globalThis.window.__ccRow.rank('__bgInd', 30);
+  globalThis.window.__ccRow.rank('__qAdd', 40);
+
+  let f = realForm(['__bgInd', '__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
+     'anchor: the shared order puts it first in the row - got ' + order(f));
+
+  const settled = order(f);
+  T.ensureButton(); T.ensureButton(); T.ensureButton();
+  ok(order(f) === settled, 'anchor: three more passes move nothing - got ' + order(f));
+
+  f = realForm(['__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qAdd sendButton_X',
+     'anchor: with no indicator it sits before the add button - got ' + order(f));
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qAdd sendButton_X', 'anchor: and stays there - got ' + order(f));
+
+  // the indicator appearing later must not shift this button either
+  f.insertBefore(Object.assign(document.createElement('button'), { className: '__bgInd' }),
+                 f.children.find(n => n.className === '__qAdd'));
+  T.ensureButton(); T.ensureButton();
+  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
+     'anchor: an indicator appearing later takes its own rank - got ' + order(f));
+
+  // The whole point: once the row is in rank order, further passes write nothing.
+  // The old rule wrote on every pass forever whenever a second patch was present.
+  f = realForm(['__bgInd', '__qLog', '__qAdd', 'sendButton_X']);
+  T.ensureButton();
+  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X',
+     'anchor: three injected buttons land in rank order - got ' + order(f));
+  const real = f.insertBefore.bind(f);
+  let writes = 0;
+  f.insertBefore = (n, r) => { writes++; return real(n, r); };
+  for (let i = 0; i < 20; i++) T.ensureButton();
+  ok(writes === 0, 'anchor: twenty further passes write nothing at all - got ' + writes + ' writes');
+  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X', 'anchor: and the order holds');
+
+  globalThis.__ccInput = savedInput;
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

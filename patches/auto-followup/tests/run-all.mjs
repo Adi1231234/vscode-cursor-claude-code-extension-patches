@@ -15,11 +15,23 @@ const jobs = [
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "auto-followup"]]
 ];
 
+const NL = String.fromCharCode(10);
 let bad = 0;
 for (const [name, args] of jobs) {
   try {
     const out = execFileSync(process.execPath, args, { encoding: "utf8", cwd: root });
-    console.log(`  ${name.padEnd(18)} ${out.trim().split("\n").pop().trim()}`);
+    const last = out.trim().split(NL).pop().trim();
+    /* A suite that dies quietly still exits 0. One of them threw inside a
+       setTimeout, which took its own summary line down with it: no output at
+       all, exit code 0, and reported here as passing. A suite has to say how
+       many assertions it ran before it is believed. */
+    if (!/passed|\bok\b/.test(last)) {
+      bad++;
+      console.log(`  ${name.padEnd(18)} NO RESULT - the suite printed no summary`);
+      console.log(out);
+      continue;
+    }
+    console.log(`  ${name.padEnd(18)} ${last}`);
   } catch (e) {
     bad++;
     console.log(`  ${name.padEnd(18)} FAILED`);

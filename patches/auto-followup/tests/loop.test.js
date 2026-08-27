@@ -2,6 +2,8 @@ require('./dom-stubs.js');
 const fs=require('fs');
 const B=require('path').resolve(__dirname,'..','af')+'/';
 const order=JSON.parse(fs.readFileSync(B+'order.json','utf8'));
+const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
+eval(fs.readFileSync(LIBROW,'utf8'));
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
 // expose internals for the test only

@@ -28,13 +28,30 @@
     return "Auto follow-up — off";
   }
 
+  /* Where this button belongs in the footer row. Ranks are spaced so a later
+     patch can land between two of them without renumbering anything. */
+  if (window.__ccRow) window.__ccRow.rank("__afBtn", 10);
+
   function ensureButton() {
     var e = qInp();
     if (!e) return;
     var form = e.closest("form");
     if (!form) return;
     var add = form.querySelector(".__qAdd");
-    var anchor = add || form.querySelector('[class*="sendButton"]');
+    var send = form.querySelector('[class*="sendButton"]');
+    /* One shared order instead of competing absolutes.
+
+       Every injected button used to assert "be the element immediately before
+       .__qAdd", and only one element can be - so two patches with that rule
+       evicted each other for as long as both were on screen. Measured in a live
+       panel: forty moves each in three seconds, alternating between two orders
+       about every 150 ms.
+
+       ccRow keeps the ranks and does the placing, so this file states where this
+       button belongs and nothing about who else is in the row. Without it - a
+       bundle where only this patch is installed - the old rule is still correct,
+       because with one injected button there is nobody to argue with. */
+    var anchor = send || add;
     if (!anchor || !anchor.parentNode) return;
 
     var b = form.querySelector(".__afBtn");
@@ -46,7 +63,12 @@
       form.__afBtn = b;
     }
     paintButton(b);
-    if (anchor.previousElementSibling !== b) anchor.parentNode.insertBefore(b, anchor);
+    /* Attach first: place() only orders nodes that are already in the row, so a
+       button that has just been created - or one React has taken out - has to be
+       put back before there is anything to sort. */
+    if (b.parentNode !== anchor.parentNode) anchor.parentNode.insertBefore(b, anchor);
+    if (window.__ccRow) window.__ccRow.place(anchor.parentNode, send || add);
+    else if (anchor.previousElementSibling !== b) anchor.parentNode.insertBefore(b, anchor);
   }
 
   function paintButton(b) {

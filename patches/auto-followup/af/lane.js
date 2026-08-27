@@ -43,10 +43,10 @@
 
   function stateNote() {
     var api = qApi();
-    if (!slot) return pending ? "כותב…" : "";
-    if (api && api.paused()) return "מושהה";
-    if (api && api.count()) return "ממתין לתור";
-    if (!autosend()) return "ממתין לאישור";
+    if (!slot) return pending ? "writing…" : "";
+    if (api && api.paused()) return "paused";
+    if (api && api.count()) return "waiting for the queue";
+    if (!autosend()) return "waiting for approval";
     return "";
   }
 
@@ -94,7 +94,7 @@
 
     if (slot.why) {
       var why = el("div", "__afWhy");
-      txt(why, "נבחר: " + slot.why);
+      txt(why, "chose: " + slot.why);
       laneNode.appendChild(why);
     }
   }

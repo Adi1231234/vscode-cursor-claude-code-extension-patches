@@ -38,7 +38,7 @@
     }
     it.appendChild(dot);
     it.appendChild(t);
-    on(it, "click", function () {
+    press(it, function () {
       closeMenu();
       if (armed === r.id) disarm(null); else arm(r.id);
     });
@@ -48,7 +48,7 @@
   function plainItem(label, fn) {
     var it = el("div", "__afItem __afPlain");
     txt(it, label);
-    on(it, "click", function () { closeMenu(); fn(); });
+    press(it, function () { closeMenu(); fn(); });
     return it;
   }
 

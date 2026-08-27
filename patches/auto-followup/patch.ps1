@@ -40,7 +40,8 @@ function Invoke-Patch {
     # The message selectors are the same detected names copy-message uses: the
     # transcript is read from the DOM, because nothing in the app exposes a
     # message list on the session store.
-    $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "af/$_.js") }) -join ''
+    $script = (@((Get-LibJsPath 'ccRow.js')) + ($order | ForEach-Object { Join-Path $PSScriptRoot "af/$_.js" }) |
+        ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{
         '__NONCE__'   = $Ctx.Nonce
         '__MSG__'     = "message_$($Ctx.MsgHash)"
