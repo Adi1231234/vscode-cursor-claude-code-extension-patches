@@ -4,26 +4,8 @@
    permanent rather than loud. That is exactly why they are tested. */
 require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
-const B=path.resolve(__dirname,'..','af')+'/';
-const order=JSON.parse(require('fs').readFileSync(B+'order.json','utf8'));
-const LIBROW=require('path').resolve(__dirname,'..','..','..','lib','js','ccRow.js');
-eval(fs.readFileSync(LIBROW,'utf8'));
-let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('')
-  .split(String.fromCharCode(13)+String.fromCharCode(10)).join(String.fromCharCode(10));
-src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
-src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
-src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
-         .split('__THINK__').join('thinking_X').split('__TOOLUSE__').join('toolUse_X')
-         .split('__TOOLRES__').join('toolResult_X');
-src=src.replace('  requestList();'+String.fromCharCode(10)+'  setInterval(',
- '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'+
- 'approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
- 'ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,'+
- 'dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},'+
- 'btn:function(){return globalThis.__form.__afSlot;},'+
- 'state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims()};}};'
- +String.fromCharCode(10)+'  requestList();'+String.fromCharCode(10)+'  setInterval(');
-eval(src);
+require('./load-panel.js').loadPanel(
+  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims()};}}");
 
 let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};

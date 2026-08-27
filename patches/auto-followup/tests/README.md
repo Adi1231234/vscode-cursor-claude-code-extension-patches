@@ -2,10 +2,16 @@
 
 Plain node, no framework and no install:
 
-    node patches/auto-followup/tests/run-all.mjs      # 120 checks, all five
+    node patches/auto-followup/tests/run-all.mjs      # 243 checks, all four
 
-Or one at a time: `host.test.js` (27), `loop.test.js` (36), `ui.test.js` (40),
-`host-run.test.js` (17), and `node tools/check-injected.mjs auto-followup`.
+Or one at a time: `host.test.js` (48), `loop.test.js` (62), `ui.test.js` (108),
+`host-run.test.js` (25), plus `node tools/check-injected.mjs auto-followup` and
+`node tools/check-ps1.mjs`.
+
+Three of these load the injected panel script, and they load it through
+`load-panel.js` - one assembly step, not three copies of one. A test that
+assembles the bundle itself is a test that can pass against a bundle the
+product never ships.
 
 **`host.test.js`** exercises the responder folder against a temporary
 `CLAUDE_CONFIG_DIR`: seeding, the parser and its round trip, unknown front-matter
@@ -76,6 +82,17 @@ Citing the ledger by number - "in [3] you wrote ... and in [4]" - is the stronge
 evidence it was read rather than merely attached, and it happens in some runs and
 not others. It is printed, never asserted. A check that fails two runs in three is
 worse than no check.
+
+**`e2e/live-e2e.mjs`** is the only test that runs both ends at once: the panel
+asks for a run, the real CLI answers, and the real panel renders what came
+back. It is what the two halves apart could not catch - a host and a panel
+that each work and do not agree on the message between them. Not in
+`run-all.mjs`; see `e2e/README.md`, which also lists two things `dom-stubs.js`
+does that quietly kill a real spawn.
+
+**`panel/`** holds the checks that need a browser rather than the stub -
+contrast, layout at narrow widths, keyboard order, and the button's stability
+under a MutationObserver. See `panel/README.md`.
 
 ## One thing the stubs get right on purpose
 
