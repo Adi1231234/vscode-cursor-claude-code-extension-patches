@@ -41,3 +41,16 @@ matched none of twelve real turning points.
 The first version of it read child text nodes only and reported zero. A textarea
 whose value is set from JavaScript never updates its child text node, so the box
 on screen was full of text the check could not see.
+
+`flicker.js` watches the composer button for six seconds and reports how many
+times it was inserted or removed, how many distinct positions and widths it took,
+and the gaps between mutations. A settled button returns one position, one width
+and zero mutations.
+
+It was written for a button that jumped three times a second. Two patches were
+anchoring with the same rule - be the element immediately before `.__qAdd` - and
+only one element can be, so each timer evicted the other. The numbers name the
+cause without guessing: bursts at the tick period with the two actors a few
+milliseconds apart, exactly two DOM orders differing only in their order, and an
+oscillation one button-width wide. It only reproduces while a background task is
+running, because that is when the other button exists.
