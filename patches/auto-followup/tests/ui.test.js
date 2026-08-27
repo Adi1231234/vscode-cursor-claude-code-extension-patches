@@ -339,6 +339,31 @@ try{
      'rail: a responder is reached before the fields it edits - rail at ' + firstRail + ', field at ' + firstField);
   T.openDialog();
 }
+
+// A section heading is two words and must never break across lines. The paired
+// boxes get half the pane, and a flex row with no rules about who gives way
+// breaks whatever is cheapest - which was "STOP" / "WHEN".
+//
+// The stub has no CSS engine, so asserting getComputedStyle here would only
+// confirm a fake. What can be checked honestly is the rule that ships and the
+// text it has to fit.
+{
+  const css = fs.readFileSync(require('path').resolve(__dirname, '..', 'followup.css'), 'utf8');
+  const rule = (sel) => (css.split(sel + '{')[1] || '').split('}')[0];
+  const head = rule('.__afBoxHead');
+  ok(/white-space:nowrap/.test(head), 'heads: the heading is set never to wrap');
+  const hint = rule('.__afBoxHead span');
+  ok(/text-overflow:ellipsis/.test(hint) && /white-space:nowrap/.test(hint),
+     'heads: the hint is the one that gives way');
+  ok(/min-width:0/.test(hint), 'heads: and is allowed to shrink, or it cannot give way');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead span')].map(e => e.textContent);
+  ok(paired.length === 2, 'heads: two boxes share the row, got ' + paired.length);
+  ok(paired.every(t => t.length <= 28),
+     'heads: their hints are written to fit half a pane - got ' + JSON.stringify(paired));
+  T.openDialog();
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

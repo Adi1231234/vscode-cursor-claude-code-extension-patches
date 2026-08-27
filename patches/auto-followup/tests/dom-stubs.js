@@ -105,15 +105,15 @@ function __afDispatch(target, ev) {
    under an open dropdown were both found by driving a real panel, because
    nothing here could see them.
 
-   Simple selectors only, which is all the panel code and its tests use: a tag, a
-   .class, an [attr] or [attr="value"], several of those on one element, and a
-   comma-separated list. No combinators - a descendant selector is answered as if
-   only its last part were written, which is honest for a stub as long as nobody
-   relies on the ancestor part to exclude a match. */
-function __afMatches(el, sel) {
-  const parts = String(sel).trim().split(/\s+/);
-  const last = parts[parts.length - 1];
-  const atoms = last.match(/^[a-zA-Z]+|\.[^.[\]]+|\[[^\]]+\]/g) || [];
+   Simple selectors, plus descendant combinators: a tag, a .class, an [attr] or
+   [attr="value"], several of those on one element, a space-separated chain of
+   them, and a comma-separated list. No child or sibling combinators.
+
+   The chain matters. Answering a descendant selector as if only its last part
+   were written looked like an acceptable shortcut and was not: a test asking for
+   '.__afPair .__afBoxHead span' got every span in the document. */
+function __afMatchesOne(el, part) {
+  const atoms = part.match(/^[a-zA-Z]+|\.[^.[\]]+|\[[^\]]+\]/g) || [];
   return atoms.every((a) => {
     if (a[0] === '.') return String(el.className || '').split(/\s+/).indexOf(a.slice(1)) >= 0;
     if (a[0] === '[') {
@@ -124,6 +124,18 @@ function __afMatches(el, sel) {
     }
     return String(el.tagName || '').toLowerCase() === a.toLowerCase();
   });
+}
+
+function __afMatches(el, sel) {
+  const parts = String(sel).trim().split(/\s+/);
+  if (!__afMatchesOne(el, parts[parts.length - 1])) return false;
+  let n = el.parentNode;
+  for (let i = parts.length - 2; i >= 0; i--) {
+    while (n && !__afMatchesOne(n, parts[i])) n = n.parentNode;
+    if (!n) return false;
+    n = n.parentNode;
+  }
+  return true;
 }
 
 function __afWalk(root) {
