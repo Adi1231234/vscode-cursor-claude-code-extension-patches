@@ -24,8 +24,8 @@ description: Challenges measurements and keeps digging
 context: last-message+claims
 max_turns: 20
 autosend: false
-model: sonnet
-effort: default
+model: opus
+effort: max
 ---
 
 ## rules

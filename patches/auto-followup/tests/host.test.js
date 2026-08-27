@@ -148,15 +148,23 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
 }
 
 
-// effort: a level the CLI accepts without validating it - --effort banana is
-// taken in silence - so the only way in is the dialog's list, and a file that
-// predates the key has to keep behaving exactly as it did.
+// model and effort: the pair a responder is given when its file does not name
+// them. It is deliberately the strongest and the slowest - this is the second
+// reader, and a cheap one that agrees with the first is worth nothing. The CLI
+// does not validate a level (--effort banana is taken in silence), which is why
+// the only way in is the dialog's list.
 {
   const bare = F.parse('x', ['---', 'name: x', '---', '## rules', 'r'].join(NL));
-  ok(bare.effort === 'default', 'effort: a file without the key reads as default, got ' + bare.effort);
+  ok(bare.model === 'opus', 'model: a file without the key reads as opus, got ' + bare.model);
+  ok(bare.effort === 'max', 'effort: a file without the key reads as max, got ' + bare.effort);
   const round = F.parse('x', F.serialize(Object.assign({}, bare, { effort: 'xhigh' })));
   ok(round.effort === 'xhigh', 'effort: it survives a save and a re-read, got ' + round.effort);
-  ok(F.serialize(bare).indexOf('effort: default') > 0, 'effort: and it is written into the front matter');
+  ok(F.serialize(bare).indexOf('effort: max') > 0, 'effort: and it is written into the front matter');
+  // 'default' stays meaningful as an explicit choice: it is the one level that
+  // passes no flag, so a responder can still be left on whatever the CLI is set
+  // to. settings-live.mjs is where that is checked against a real argv.
+  const off = F.parse('x', F.serialize(Object.assign({}, bare, { effort: 'default' })));
+  ok(off.effort === 'default', 'effort: default survives being chosen on purpose');
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
