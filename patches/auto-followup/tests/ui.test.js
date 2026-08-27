@@ -464,6 +464,31 @@ try{
   }
   T.disarm(null);
 }
+
+// The clock. Measured against the real CLI, the first delta arrived 16.2 s into
+// an 18.1 s run - so most of what this view shows is a wait, and a wait with no
+// number on it reads as nothing happening.
+{
+  globalThis.__qAutoState.count = 0; globalThis.__qAutoState.busy = false; globalThis.__qAutoState.paused = false;
+  T.disarm(null); T.arm('perf-skeptic');
+  globalThis.__msgs = [{ role: 'user', content: 'go' },
+                       { role: 'assistant', content: 'the clock turn: 44.1 s on the new path' }];
+  T.maybeRun();
+  const run = globalThis.sent.filter(m => m.op === 'run').pop();
+  T.openLive();
+  const count = () => document.querySelector('.__afLiveCount').textContent;
+  ok(/\d+s$/.test(count()), 'clock: the header carries elapsed seconds, got ' + JSON.stringify(count()));
+  ok(!/chars/.test(count()), 'clock: with nothing written yet it shows only the time, got ' + count());
+  ok(/waiting for the first words/.test(document.querySelector('.__afLiveEmpty').textContent),
+     'clock: and says nothing has been written rather than looking empty');
+
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'chunk', rid: run.rid, kind: 'text', text: 'on what input?' } });
+  ok(/14 chars · \d+s/.test(count()), 'clock: once words arrive it shows both, got ' + count());
+
+  T.openLive();   // closed
+  ok(!document.querySelector('.__afLiveDlg'), 'clock: closing stops the view');
+  T.disarm(null);
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

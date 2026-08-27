@@ -18,6 +18,7 @@
   var liveChars = 0;
   var liveStart = 0;
   var liveNode = null;
+  var liveTimer = 0;
   var LIVE_MAX = 262144;
 
   function liveReset(rid) {
@@ -52,6 +53,12 @@
     document.body.appendChild(liveNode);
     fitLive();
     window.addEventListener("resize", fitLive);
+    /* Measured against the real CLI: the first delta arrived 16.2 s into an 18.1 s
+       run, and the whole answer was written in the 1.1 s after it. Most of what
+       this view shows is a wait, and a wait with no number on it reads as nothing
+       happening - the clock is the difference between "it is stuck" and "it has
+       not started talking yet". */
+    liveTimer = setInterval(function () { try { renderLive(); } catch (e) {} }, 1000);
     document.addEventListener("keydown", onLiveKey, true);
     renderLive();
   }
@@ -59,6 +66,7 @@
   function closeLive() {
     if (liveNode && liveNode.parentNode) liveNode.parentNode.removeChild(liveNode);
     liveNode = null;
+    if (liveTimer) { clearInterval(liveTimer); liveTimer = 0; }
     window.removeEventListener("resize", fitLive);
     document.removeEventListener("keydown", onLiveKey, true);
   }
@@ -112,7 +120,8 @@
     txt(st, liveState());
     head.appendChild(st);
     var count = el("span", "__afLiveCount");
-    txt(count, liveChars ? (liveChars + " chars") : "");
+    var secs = liveStart ? Math.max(0, Math.round((Date.now() - liveStart) / 1000)) : 0;
+    txt(count, (liveChars ? liveChars + " chars · " : "") + secs + "s");
     head.appendChild(count);
     var x = el("span", "__afX");
     txt(x, "✕");
@@ -124,8 +133,8 @@
     var body = el("div", "__afLiveBody");
     if (!liveParts.length) {
       var empty = el("div", "__afLiveEmpty");
-      txt(empty, pending ? "waiting for the first words…"
-                         : "nothing has been written this turn yet");
+      txt(empty, pending ? "waiting for the first words - nothing has been written yet"
+                         : "nothing was written this turn");
       body.appendChild(empty);
     } else {
       for (var i = 0; i < liveParts.length; i++) {
