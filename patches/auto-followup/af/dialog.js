@@ -110,7 +110,7 @@
     while (findResponder(id)) { n += 1; id = "responder-" + n; }
     return {
       id: id, name: id, description: "", context: "last-message+claims",
-      max_turns: "20", autosend: "false", model: "sonnet", effort: "default",
+      max_turns: "20", autosend: "false", model: "opus", effort: "max",
       rules: "", stop: "", extra: {}, isNew: true
     };
   }

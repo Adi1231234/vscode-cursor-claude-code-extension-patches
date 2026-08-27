@@ -10,7 +10,8 @@
        context: last-message+claims        (or last-message / full-session)
        max_turns: 20                       (or 'unlimited')
        autosend: false
-       model: sonnet
+       model: opus
+       effort: max
        ---
 
        ## rules
@@ -35,11 +36,16 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
     context: "last-message+claims",
     max_turns: "20",
     autosend: "false",
-    model: "sonnet",
-    /* "default" means the flag is not passed at all, so every responder written
-       before this key existed keeps running exactly as it did - on whatever
-       effort the CLI is configured for. */
-    effort: "default"
+    model: "opus",
+    /* The pair a responder gets unless it says otherwise. This is the second
+       reader in the room and the whole point of it is to catch what the first
+       one missed, so it is given the strongest model and the longest thinking
+       rather than the cheapest. It costs: measured on one turn of perf-skeptic
+       at sonnet, low answered in 125 output tokens and 8.7 s and max in 3043
+       and 44.5 s. A responder that only has to notice a number can be turned
+       down in its own file, and "default" as an effort passes no flag at all.
+       An older file that names neither key reads as this pair too. */
+    effort: "max"
   };
 
   function section(body, tag) {
