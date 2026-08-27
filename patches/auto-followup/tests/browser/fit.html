@@ -1,0 +1,102 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>does the dialog fit</title>
+<style>
+ body{background:#141414;color:#ddd;font:12px Consolas,monospace;margin:0;padding:14px}
+ iframe{border:1px solid #333;background:#1f1f1f;display:block;margin:8px 0}
+ table{border-collapse:collapse;font-size:11.5px}
+ td,th{padding:2px 9px;text-align:right;border-bottom:1px solid #262626}
+ th{opacity:.55;font-weight:600;text-align:right}
+ .bad{color:#f14c4c;font-weight:700}.good{color:#6a9955}
+ h1{font-size:13px;font-weight:600;margin:0 0 4px}
+ p{opacity:.6;max-width:70ch;line-height:1.6}
+</style></head><body>
+<h1>does the dialog fit</h1>
+<p>The dialog is position:fixed, so it is laid out against the viewport - and an
+iframe has a viewport of whatever size it is given. That is the whole trick here:
+no emulation, no CDP, no editor. Every row is a real layout at a real size, with
+the panel's own zoom applied the way patches/zoom applies it.</p>
+<p>A row fails if any edge of the dialog leaves the viewport, if the header or the
+footer cannot be reached, or if the body collapses to nothing.</p>
+<iframe id="f" src="harness.html" width="1100" height="620"></iframe>
+<div id="out">running…</div>
+<script>
+const SIZES = [[1400,900],[1102,620],[900,520],[760,430],[640,420],[510,300],[420,300],[340,620]];
+const ZOOMS = [1, 1.25, 1.5, 2];
+const BODY_FLOOR = 40;   /* below this the body is not a pane, it is a line */
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function probe(win, zoom) {
+  const doc = win.document, de = doc.documentElement, b = doc.body;
+  b.style.zoom = zoom === 1 ? '' : String(zoom);
+  doc.querySelectorAll('.__afOverlay,.__afMenu').forEach((n) => n.remove());
+  doc.querySelector('button.__afBtn').click();
+  [...doc.querySelectorAll('.__afItem')].find((n) => n.textContent.indexOf('Manage') >= 0).click();
+  win.dispatchEvent(new win.Event('resize'));
+
+  const dl = doc.querySelector('.__afDlg');
+  if (!dl) return { err: 'no dialog' };
+  const head = dl.querySelector('.__afDlgHead'), foot = dl.lastElementChild;
+  const body = dl.querySelector('.__afDlgBody');
+  const x = dl.getBoundingClientRect();
+  /* The footer is reachable if it is on screen, or if scrolling the dialog
+     brings it on screen. Anything else is a button nobody can press. */
+  const inView = (n) => { const r = n.getBoundingClientRect();
+    return r.top >= -1 && r.bottom <= de.clientHeight + 1; };
+  /* Measure the header before touching scrollTop. An earlier version of this
+     scrolled to the bottom for the footer and then read the header, and reported
+     ten clipped headers that were the probe scrolling them away. */
+  dl.scrollTop = 0;
+  const headOk = inView(head);
+  /* What matters is not that the whole footer bar fits on screen at once - at a
+     tiny size it wraps into a column taller than the screen and never will. It is
+     that every button in it can be brought into view and pressed. */
+  const reach = (n) => {
+    if (inView(n)) return true;
+    dl.scrollTop += n.getBoundingClientRect().top - dl.getBoundingClientRect().top;
+    return inView(n);
+  };
+  const buttons = [...foot.querySelectorAll('[role="button"],button')];
+  const footOk = buttons.length > 0 && buttons.every(reach);
+  dl.scrollTop = 0;
+  return {
+    off: [Math.max(0, Math.round(-x.top)), Math.max(0, Math.round(x.bottom - de.clientHeight)),
+          Math.max(0, Math.round(-x.left)), Math.max(0, Math.round(x.right - de.clientWidth))],
+    dlg: [Math.round(x.width), Math.round(x.height)],
+    bodyH: Math.round(body.getBoundingClientRect().height),
+    headOk: headOk,
+    footOk: footOk
+  };
+}
+
+(async () => {
+  const f = document.getElementById('f'), rows = [];
+  for (const [w, h] of SIZES) {
+    f.width = w; f.height = h;
+    await wait(90);
+    for (const z of ZOOMS) {
+      let r;
+      try { r = probe(f.contentWindow, z); } catch (e) { r = { err: e.message }; }
+      const bad = r.err || r.off.some((n) => n > 0) || !r.headOk || !r.footOk || r.bodyH < BODY_FLOOR;
+      rows.push({ w, h, z, ...r, bad });
+      await wait(20);
+    }
+    try { f.contentWindow.document.body.style.zoom = ''; } catch (e) {}
+  }
+  const bad = rows.filter((r) => r.bad);
+  const cell = (v, isBad) => '<td' + (isBad ? ' class="bad"' : '') + '>' + v + '</td>';
+  document.getElementById('out').innerHTML =
+    '<table><tr><th>viewport</th><th>zoom</th><th>dialog</th><th>off T/B/L/R</th>'
+    + '<th>body</th><th>header</th><th>footer</th></tr>'
+    + rows.map((r) => '<tr>' + cell(r.w + 'x' + r.h) + cell(r.z)
+        + cell(r.err ? r.err : r.dlg.join('x'))
+        + cell(r.err ? '-' : r.off.join('/'), !r.err && r.off.some((n) => n > 0))
+        + cell(r.err ? '-' : r.bodyH, !r.err && r.bodyH < BODY_FLOOR)
+        + cell(r.headOk ? 'in' : 'CLIPPED', !r.headOk)
+        + cell(r.footOk ? 'reachable' : 'UNREACHABLE', !r.footOk) + '</tr>').join('')
+    + '</table><p class="' + (bad.length ? 'bad' : 'good') + '">'
+    + (bad.length ? bad.length + ' of ' + rows.length + ' fail' : 'all ' + rows.length + ' fit') + '</p>';
+  window.__fit = { rows, failed: bad.length, total: rows.length };
+})();
+</script>
+</body></html>

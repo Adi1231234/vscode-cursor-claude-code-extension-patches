@@ -100,12 +100,19 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
   --afLine:var(--vscode-contrastBorder,currentColor);
   --afEdge:var(--vscode-contrastBorder,currentColor);
 }
-.__afDlg{display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+.__afDlg{display:flex;flex-direction:column;width:min(880px,calc(100% - 28px));max-height:100%;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow-y:auto;overflow-x:hidden}
 .__afDlgHead{display:flex;align-items:center;gap:10px;padding:12px 15px 11px;border-bottom:1px solid var(--afLine)}
 .__afDlgHead h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em;flex:1;direction:ltr;text-align:start}
 .__afX{opacity:.42;font-size:13px;line-height:1;cursor:pointer;padding:3px 5px;border-radius:4px}
 .__afX:hover{opacity:1;background:rgba(128,128,128,.16)}
-.__afDlgBody{display:flex;min-height:0;flex:1}
+/* The two rules that keep the dialog inside the screen when the screen runs out.
+   The body is what gives way first - its panes scroll - but a flex item with
+   min-height:0 gives way all the way to nothing, and then the footer is pushed
+   past the box and clipped by the overflow. Measured at 510x300 under zoom 2:
+   body 0px, footer 219px tall against a 247px dialog, Save and Cancel gone.
+   So the body keeps a floor, and past that floor the dialog scrolls as a whole
+   rather than swallowing its own footer. */
+.__afDlgBody{display:flex;min-height:150px;flex:1}
 .__afPane{padding:14px;min-width:0}
 
 /* the rail: one column of files, and which one is open is not a guess */
