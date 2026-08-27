@@ -40,7 +40,7 @@ globalThis.__ccAfSamples = globalThis.__ccAfSamples || [
       "a proof, or the next item.",
       "",
       "## once",
-      "when: [0-9]+([.][0-9]+)? ?(ms|sec[a-z]*|min[a-z]*|s)([^a-z]|$)",
+      "when: [0-9]+([.][0-9]+)? ?(ms|sec[a-z]*|min[a-z]*|s([^a-z]|$)|שניות|שנ['׳]|מילישניות|דקות)",
       "ask: what real input was that measured on, and how many seconds does a person",
       "  actually wait for it?",
       "",

@@ -57,17 +57,35 @@ function pendingOnce(done, text) {
 }
 
 const seen = moments.map(() => []);
+const errors = [];
+let retried = 0;
+const call = (m, once) => new Promise(res => R.run(resp,
+  { text: m.assistant, cwd: tmpdir(), claims: [], asked: [], once, needFirst: !!once }, res));
 const gated = moments.map(() => 0);
 for (let k = 0; k < RUNS; k++) {
-  const done = new Set();
+  let done = new Set(), day = '';
   for (let i = 0; i < moments.length; i++) {
+    /* A once-question is spent for one arming, and these moments span five days.
+       Carrying one ledger across all of them gagged the 26th with a question put
+       on the 16th - which read as the responder losing its best move. */
+    const d = moments[i].ts.slice(0, 10);
+    if (d !== day) { day = d; done = new Set(); }
     const once = pendingOnce(done, moments[i].assistant);
     if (once) { done.add(once.id); gated[i]++; }
-    const r = await new Promise(res => R.run(resp,
-      { text: moments[i].assistant, cwd: tmpdir(), claims: [], asked: [],
-        once, needFirst: !!once }, res));
+    /* One retry after a pause. Twenty-four consecutive calls came back empty in
+       one run and two of the four sessions scored as moves that were never made,
+       so a transient failure must cost a pause and not a whole measurement.
+       Retries are counted and printed: a run that needed many of them is a run
+       whose conditions were not what the table says. */
+    let r = await call(moments[i], once);
+    if (r.error) {
+      retried++;
+      await new Promise(z => setTimeout(z, 20000));
+      r = await call(moments[i], once);
+    }
+    if (r.error) errors.push(String(r.error).slice(0, 200));
     seen[i].push(r.error ? ['error'] : moveOf((r.message || '') + ' ' + (r.why || '')));
-    process.stderr.write('.');
+    process.stderr.write(r.error ? '!' : '.');
   }
 }
 
@@ -86,4 +104,15 @@ moments.forEach((m, i) => {
   console.log(`     bot moves  : ${flat.join(' | ')}${gated[i] ? '   [gate fired ' + gated[i] + '/' + RUNS + ']' : ''}`);
   console.log(`     ${top[1] === RUNS ? 'STABLE  ' : 'VARIES  '} ${top[0]} ${top[1]}/${RUNS}   matched the human ${hit}/${RUNS}`);
 });
+/* Printed before the totals, because the totals are void without it. A discarded
+   error reads as a move: half of one run came back empty and the table it printed
+   looked like a finding until the counts were read. */
+if (errors.length) {
+  const tally = {};
+  errors.forEach(e => { tally[e] = (tally[e] || 0) + 1; });
+  console.log('');
+  console.log(`  ${errors.length} of ${moments.length * RUNS} calls FAILED - the table above is NOT a measurement:`);
+  Object.entries(tally).forEach(([e, n]) => console.log(`    ${n}x  ${e}`));
+}
+if (retried) console.log(`  ${retried} call(s) needed a retry.`);
 console.log(`\n  ${stable}/${moments.length} moments stable, ${matched}/${moments.length} matched the human on a majority of runs`);

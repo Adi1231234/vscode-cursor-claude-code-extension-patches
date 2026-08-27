@@ -87,6 +87,11 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   const ps=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text);
   ok(ps.once.length===2,'once: shipped perf responder carries both questions, got '+ps.once.length);
   ok(new RegExp(ps.once[0].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
+  // asserting only the English form is how the frame question came to be dead on
+  // every one of twelve real turning points while the suite stayed green
+  ok(new RegExp(ps.once[0].when,'i').test('הפרומפט לוקח 21.8 שניות'),'once: frame question triggers on a duration written in Hebrew');
+  ok(new RegExp(ps.once[0].when,'i').test('זה 500 מילישניות'),'once: and on milliseconds written in Hebrew');
+  ok(!new RegExp(ps.once[0].when,'i').test('18 shared layers'),'once: a bare count is not a duration');
   ok(new RegExp(ps.once[1].when,'i').test('that is 12% faster'),'once: factor question triggers on a percent');
   // or it takes the turn the frame question exists for
   ok(!new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: a bare duration does not reach the factor question');
