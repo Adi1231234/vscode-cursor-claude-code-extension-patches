@@ -23,6 +23,13 @@ import { staticChecks, bundleChecks } from './checks.mjs';
 import { idempotency, missingAnchor, throwingPatch } from './apply.mjs';
 
 const fresh = process.argv.includes('--fresh');
+/* Everything except the width section works on a bundle alone, and the editor is
+   the part most likely to be unavailable for reasons that have nothing to do with
+   a patch - a VS Code installer holding the vscode-updating mutex will stop every
+   launch for as long as any window is open, which is hours on a working machine.
+   Without this the whole suite is lost to that, including the guard and
+   template-literal checks that would have caught a real defect. */
+const noEditor = process.argv.includes('--no-editor');
 const port = Number((process.argv.find((a) => a.startsWith('--port=')) || '').split('=')[1] || DEFAULT_PORT);
 const version = (process.argv.find((a) => a.startsWith('--version=')) || '').split('=')[1] || detectVersion();
 const lay = layout(version, port);
@@ -50,7 +57,9 @@ if (fresh) {
 }
 const up = lab('up');
 const started = !/already running, reusing it/.test(up);
-check('the lab is up with a panel', /"panelWidth"/.test(up), up.trim().split('\n').slice(-2).join(' '));
+/* With --no-editor the bundle still has to be patched - that is what every check
+   below reads - so 'up' runs either way and only the panel is not required. */
+if (!noEditor) check('the lab is up with a panel', /"panelWidth"/.test(up), up.trim().split('\n').slice(-2).join(' '));
 if (started) {
     check('every site patched, nothing missed', /sites patched/.test(up) && !/\[miss\]/.test(up),
         (up.match(/apply\.ps1[^\n]*|\[miss\][^\n]*/g) || []).join(' | '));
@@ -60,14 +69,15 @@ if (started) {
     console.log('SKIP  the launch checks - this lab was already up (--fresh to start a new one)');
 }
 check('nothing of the lab is on your desktop', ownWindows() === 0, `${ownWindows()} window(s) visible`);
-check('the port belongs to this lab', (await waitForPort(port, 1)) && (await portOwner(port)).includes(lay.dir));
+if (!noEditor) check('the port belongs to this lab', (await waitForPort(port, 1)) && (await portOwner(port)).includes(lay.dir));
 
 head('the patched bundles');
 bundleChecks(check, lay);
 
 head('the panel width');
-const panel = (await claudePanels(port))[0];
-if (!panel) check('a Claude panel is serving', false);
+const panel = noEditor ? null : (await claudePanels(port))[0];
+if (noEditor) console.log('   (--no-editor: skipped)');
+else if (!panel) check('a Claude panel is serving', false);
 else {
     for (const want of [300, 1200, 150, 620]) {
         const w = await setWidth(port, panel, want);

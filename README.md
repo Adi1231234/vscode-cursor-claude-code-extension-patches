@@ -45,7 +45,13 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode · ⚙️ [Background tasks + live logs](patches/background-tasks) · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button).
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode · ⚙️ [Background tasks + live logs](patches/background-tasks) · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup).
+
+🔁 **Auto follow-up** — a second model reads what Claude just wrote and types
+your next message. You write one file that says how to answer for you
+(`~/.claude/responders/*.md`), arm it with one click in the composer footer, and
+it keeps going until its stop condition is met or you press stop. See
+[patches/auto-followup](patches/auto-followup).
 
 🔄 **Restart Claude** — an icon in the panel header, next to Session history. It
 reloads **that one panel** and the CLI process behind it, then comes back on the

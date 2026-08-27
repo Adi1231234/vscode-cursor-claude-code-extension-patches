@@ -40,14 +40,24 @@ const EDITOR_SETTINGS = {
 
 const CLI_SETTINGS = { remoteControlAtStartup: false };
 
+/* Each editor reads argv.json from its own folder under the home directory, and
+   the lab's home is redirected, so writing all three costs nothing and is what
+   makes `--code <a fork>` work: Cursor reads `.cursor/argv.json` and never looks
+   at `.vscode/argv.json`, so with only the latter the editor starts and simply
+   never opens the CDP port - which reads as the lab being broken. */
+const ARGV_DIRS = ['.vscode', '.cursor', '.vscode-insiders'];
+
 export async function write(lay, port) {
     await mkdir(join(lay.ud, 'User'), { recursive: true });
-    await mkdir(join(lay.home, '.vscode'), { recursive: true });
     await mkdir(join(lay.home, '.claude'), { recursive: true });
     await mkdir(lay.proj, { recursive: true });
 
     await writeFile(join(lay.ud, 'User', 'settings.json'), JSON.stringify(EDITOR_SETTINGS, null, 2));
-    await writeFile(join(lay.home, '.vscode', 'argv.json'), JSON.stringify({ 'remote-debugging-port': String(port) }, null, 2));
+    const argv = JSON.stringify({ 'remote-debugging-port': String(port) }, null, 2);
+    for (const d of ARGV_DIRS) {
+        await mkdir(join(lay.home, d), { recursive: true });
+        await writeFile(join(lay.home, d, 'argv.json'), argv);
+    }
     await writeFile(join(lay.home, '.claude', 'settings.json'), JSON.stringify(CLI_SETTINGS, null, 2));
     await writeFile(join(lay.proj, 'readme.txt'), 'Scratch folder for the patch lab.\n');
     await copyAuth(lay);

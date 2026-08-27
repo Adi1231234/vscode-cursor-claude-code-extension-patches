@@ -12,7 +12,18 @@ node tools/lab/lab.mjs repatch          # pristine again -> apply.ps1 -> real re
 node tools/lab/lab.mjs down [--purge]   # stop it (--purge also deletes the profile)
 
 node tools/lab/selftest/run.mjs         # is the patcher + the lab still sound?
+node tools/lab/selftest/run.mjs --no-editor   # ...when the editor cannot start
 ```
+
+**When the editor will not start**, `--no-editor` runs everything that reads the
+bundle rather than the panel: every module and patch parses, every guard landed,
+the injected scripts survive their template literal, `apply.ps1` is idempotent,
+a throwing patch is reported without stopping the others, and a missing anchor
+writes nothing. Only the width section needs a panel. The reason this exists:
+a VS Code installer holding the `vscode-updating` mutex blocks every launch for as
+long as any window is open - hours on a working machine - and without the flag
+that takes the other thirty checks down with it, including the ones that would
+have caught a real defect.
 
 **If you have just arrived:** `node tools/lab/selftest/run.mjs --fresh` builds a
 lab from nothing and checks the whole chain - every module and patch parses, every
@@ -28,6 +39,14 @@ edit-and-look loop is `repatch` + `eval`; the editor stays up between them.
 Run it from the repo root as written, or from anywhere with the full path to
 `lab.mjs` - it finds the repo from its own location. The script you hand `eval`
 is resolved against *your* working directory, so a relative path is fine.
+
+**`--code <a fork>` gets further than it did but does not finish.** The CLI shim
+is found by name and in either place a fork puts it, and the lab's `argv.json` is
+written for all three editor folders, so Cursor installs the extension, gets its
+bundle patched and starts cleanly. It still does not open the CDP port from the
+lab's redirected home, so there is no panel to drive and `up` stops there. Left in
+because those two were plain bugs either way, and because the failure is now one
+specific thing rather than "the system cannot find the path specified".
 
 Flags: `--version 2.1.241` (default: the newest version installed on this
 machine), `--port N` (default 9555), `--width N` (panel width for `up` /

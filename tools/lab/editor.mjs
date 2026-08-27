@@ -13,7 +13,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { launchOnDesktop } from './desktop.mjs';
 import { powershell, quote } from './powershell.mjs';
 
@@ -38,11 +38,37 @@ export function codeExe() {
     return hit;
 }
 
+/* The CLI shim beside the executable, named after it: Code.exe -> bin/code.cmd,
+   Cursor.exe -> bin/cursor.cmd. It was hard-coded to code.cmd, which is the one
+   thing in this repository that was VS Code only - every patch here supports
+   Cursor, and --code <path to Cursor.exe> failed on "The system cannot find the
+   path specified" rather than on anything real.
+
+   That matters beyond tidiness: VS Code holds a global `<name>-updating` mutex
+   while an installer is running, and every launch of *that* editor blocks for as
+   long as it is held - which on a machine with windows open is hours. A fork has
+   its own mutex, so pointing the lab at one is the way to keep testing.
+
+   Two things vary, so both are searched: the shim is named after the executable,
+   and it does not sit in the same place. VS Code puts code.cmd in `bin` beside
+   Code.exe; Cursor puts cursor.cmd under `resources/app/bin`. */
+function cliFor(exe) {
+    const name = basename(exe).replace(/\.exe$/i, '').toLowerCase();
+    const dirs = [join(exe, '..', 'bin'), join(exe, '..', 'resources', 'app', 'bin')];
+    for (const d of dirs) {
+        for (const n of [`${name}.cmd`, 'code.cmd']) {
+            const p = join(d, n);
+            if (existsSync(p)) return p;
+        }
+    }
+    throw new Error(`no CLI shim beside ${exe} - looked for ${name}.cmd and code.cmd in ${dirs.join(' and ')}`);
+}
+
 /* `Code.exe --install-extension` never returns - the executable is the GUI, and
-   the arguments only mean "CLI" to `bin/code.cmd`, which re-runs the same binary
-   with ELECTRON_RUN_AS_NODE. Anything that has to finish goes through here. */
+   the arguments only mean "CLI" to that shim, which re-runs the same binary with
+   ELECTRON_RUN_AS_NODE. Anything that has to finish goes through here. */
 export function runCli(args) {
-    const cli = join(codeExe(), '..', 'bin', 'code.cmd');
+    const cli = cliFor(codeExe());
     return new Promise((resolve, reject) => {
         const p = spawn('cmd.exe', ['/c', cli, ...args], { windowsHide: true });
         let out = '';

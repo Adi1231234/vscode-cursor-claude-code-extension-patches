@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>auto-followup harness</title>
+<style>
+/* the panel's own variables, as VS Code sets them */
+:root{--vscode-foreground:#cccccc;--vscode-input-background:rgba(128,128,128,.08);
+ --vscode-input-border:rgba(128,128,128,.35);--vscode-menu-background:#252526;
+ --vscode-menu-border:rgba(128,128,128,.35);--vscode-menu-foreground:#ccc;
+ --app-claude-orange:#d97757;--vscode-editorWarning-foreground:#cca700;
+ --vscode-errorForeground:#f14c4c;--app-ghost-button-hover-background:rgba(128,128,128,.16);
+ --corner-radius-medium:6px;--app-monospace-font-family:Consolas,monospace;}
+body{background:#1f1f1f;color:#ccc;font:13px -apple-system,"Segoe UI",sans-serif;margin:0;padding:16px}
+#transcript{max-height:160px;overflow:auto;opacity:.5;font-size:11px;border-bottom:1px solid #333;padding-bottom:8px;margin-bottom:12px}
+form{border:1px solid var(--vscode-input-border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:6px;align-items:center}
+.sendButton_x{width:26px;height:26px;border-radius:5px;background:var(--app-claude-orange);border:none}
+.__qAdd{width:26px;height:26px;border-radius:5px;background:transparent;border:none;color:#ccc}
+[contenteditable]{min-height:20px;outline:none;opacity:.4}
+#log{margin-top:14px;font:11px Consolas,monospace;white-space:pre-wrap;color:#8a8}
+/*CSS*/
+</style></head><body>
+
+<div id="transcript">
+  <div class="message_07S1Yg"><div class="userMessage_07S1Yg">תעשה את זה מהר יותר</div></div>
+  <div class="message_07S1Yg">
+    <div class="thinking_aHyQPQ">this should be stripped out</div>
+    <div>Landed the q6_K kernel. Prompt processing went from 28.0 s to 21.8 s, +27%.
+The output is byte-identical. Measured on visit_quarter.txt.</div>
+    <div class="toolUse_uq5aLg">Bash(this too)</div>
+  </div>
+</div>
+
+<form>
+  <div aria-label="Message input" contenteditable="true">כתוב הודעה…</div>
+  <div class="row">
+    <span style="opacity:.5;font-size:11px">Opus 5</span>
+    <span style="flex:1"></span>
+    <button class="__qAdd" type="button">+</button>
+    <button class="sendButton_x" type="button"></button>
+  </div>
+</form>
+
+<div id="log"></div>
+
+<script>
+/* Everything the panel gives the script, and nothing more. The store is a stable
+   object because ccStore caches - proved necessary by a test that failed on a
+   stub which did not. */
+window.__harness = { sent: [], log: [] };
+function hlog(s){ window.__harness.log.push(s);
+  document.getElementById('log').textContent = window.__harness.log.join(String.fromCharCode(10)); }
+
+const RESPONDERS = [
+ {id:'perf-skeptic',name:'perf-skeptic',description:'מערער על מדידות',
+  context:'last-message+claims',max_turns:'20',autosend:'false',model:'sonnet',
+  rules:'A claim of sameness without an input count: ask whether that is evidence or proof.',
+  stop:'Every item in the budget has landed or been priced.'},
+ {id:'picky-reviewer',name:'picky-reviewer',description:'edge cases',context:'last-message',
+  max_turns:'12',autosend:'false',model:'sonnet',rules:'r',stop:'s'},
+ {id:'plan-drift',name:'plan-drift',description:'still the plan?',context:'full-session',
+  max_turns:'unlimited',autosend:'true',model:'opus',rules:'r',stop:'s'}];
+
+const store = {
+  connection:{ value:{ send(m){
+    window.__harness.sent.push(m); hlog('-> host: '+m.op);
+    if(m.op==='list') setTimeout(()=>window.postMessage({type:'__ccaf',op:'list',items:RESPONDERS},'*'),0);
+  }}},
+  interrupt(){ hlog('interrupt() called'); },
+  cwd:{value:'C:/proj'}
+};
+globalThis.__ccStore = () => store;
+globalThis.__ccInput = () => document.querySelector('[aria-label="Message input"][contenteditable]');
+window.__qAuto = {
+  count:()=>0, paused:()=>false, busy:()=>false, panel:()=>null,
+  sid:()=>'harness-session', log:(a,b,c)=>hlog('log: '+[a,b,c].filter(Boolean).join(' ')),
+  send:(t)=>{ hlog('SENT TO CLAUDE: '+t); window.__harness.lastSend=t; return Promise.resolve(true); }
+};
+</script>
+
+<!--SCRIPT-->
+
+</body></html>
