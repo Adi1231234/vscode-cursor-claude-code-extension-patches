@@ -45,7 +45,7 @@ session id, because that is what a real reload does - see the README section on
 surviving a reload.
 
 **`loop.test.js`** runs the panel script itself against `dom-stubs.js` and drives
-the whole loop: that it does not answer a reply which predates arming, that one
+the whole loop: that pressing play answers the reply already on screen, that one
 turn produces one run and never two, that the context carries what the responder's
 `context` setting says and nothing more, that `autosend: false` holds the first
 message until it is approved, that the user's queue and the user's pause each

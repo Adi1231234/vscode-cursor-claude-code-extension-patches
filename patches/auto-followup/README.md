@@ -347,6 +347,25 @@ user's next message, while they were away, with the loop carrying on afterwards.
 Note that `subtype` stays `"success"` in that case, so `is_error` is the field
 that separates them. A CLI failure ends the arming with the reason on the button.
 
+## Play means start now
+
+Arming used to set `lastSeen` to whatever was on screen, on the reasoning that a
+reply already sitting there was not the loop's to answer. In use that reads as
+the feature not working: you switch it on, nothing happens, and it only wakes up
+after you have sent Claude a message yourself and waited for that to finish.
+
+So the reply on screen when you press play **is** the one it answers, and
+resuming from a pause is a play too - whatever Claude said while it was held is
+answered as soon as it comes back. If the last thing in the conversation is your
+own message there is nothing to answer yet and it waits, which is the same wait
+as before for a different reason. A reply that was already answered is not
+answered twice: `lastSeen` still holds it.
+
+Measured in a real editor at opus/max, with nothing typed into the composer at
+any point: armed with a reply on screen, `0/20` became `1/20` and the follow-up
+appeared in the lane. Then paused, a reply arrived while it was held and the
+counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
+
 ## Three brakes, and a fourth that is not one
 
 The stop condition ends the task, `max_turns` ends the arming, and the stop

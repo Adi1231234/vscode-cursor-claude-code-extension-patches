@@ -25,7 +25,14 @@
     meta = findResponder(id);
     turns = 0; slot = null; stopped = null; approved = false; paused = false;
     clearFirst();                          /* a new arming asks it again */
-    lastSeen = lastAssistant();          /* the reply already on screen is not ours to answer */
+    /* Play means start now. It used to set lastSeen to whatever was on screen,
+       so arming did nothing until the next reply arrived - which meant sending
+       Claude a message yourself and waiting for it to finish before the loop
+       you had just started did anything at all. Now the reply that is on screen
+       when you press play is the one it answers, and if the last thing in the
+       conversation is your own message there is nothing to answer yet and it
+       waits, which is the same wait as before. */
+    lastSeen = "";
     try { localStorage.setItem(keyFor(ARM_KEY), id); } catch (e) {}
     log("armed", id);
     renderAll();
@@ -36,21 +43,21 @@
      arming again from the menu. A pause is for the ordinary case of wanting to
      say something yourself for a turn or two.
 
-     Resuming sets lastSeen to what is on screen now, the same thing arming
-     does, so the conversation held while paused is not answered retroactively -
-     the loop picks up at the next reply. And a follow-up that was waiting when
-     the pause started is dropped unless it is still answering the last thing
-     Claude said, for the reason the queue does not restore held items: a
-     message written three turns ago is answering a conversation that has moved
-     on. */
+     Resuming is a play too, so it does not touch lastSeen: whatever Claude
+     said while the loop was held is answered as soon as it comes back. Only if
+     nothing new was said - the last reply is the one already answered - does it
+     wait, which is right.
+
+     A follow-up that was waiting when the pause started is dropped unless it is
+     still answering the last thing Claude said, for the reason the queue does
+     not restore held items: a message written three turns ago is answering a
+     conversation that has moved on. */
   function setPaused(v) {
     var was = paused;
     paused = !!v;
     if (was === paused) return;
     if (!paused) {
-      var now = lastAssistant();
-      if (slot && lastSeen !== now) slot = null;
-      lastSeen = now;
+      if (slot && lastSeen !== lastAssistant()) slot = null;
     }
     log(paused ? "paused" : "resumed");
     renderAll();
