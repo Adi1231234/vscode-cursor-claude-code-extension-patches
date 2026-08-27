@@ -46,6 +46,10 @@
 .__qMenuIcon{flex:none;width:14px;height:14px;display:flex;align-items:center;justify-content:center;opacity:.85}
 .__qMenuIcon svg{width:14px;height:14px;display:block}
 .__qMenuDanger:hover:not(:disabled){color:var(--vscode-errorForeground,#f14c4c)}
+/* The one thing that separates a written line from a typed one. A glyph and a
+   tooltip rather than a colour alone, and no layout of its own - the row is the
+   same row. */
+.__qAi{flex:none;width:13px;text-align:center;font-size:10px;line-height:1;opacity:.75;color:var(--app-claude-orange,#d97757);cursor:default;user-select:none}
 .__qCheck{flex:none;box-sizing:border-box;width:15px;height:15px;border:1.5px solid color-mix(in srgb,var(--vscode-foreground,#cccccc) 32%,transparent);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;line-height:1;color:transparent;transition:background .12s ease,border-color .12s ease}
 .__qCheck:hover{border-color:color-mix(in srgb,var(--vscode-foreground,#cccccc) 55%,transparent)}
 .__qCheck.__qOn{background:color-mix(in srgb,var(--vscode-foreground,#cccccc) 26%,transparent);border-color:transparent;color:var(--vscode-foreground,#cccccc)}

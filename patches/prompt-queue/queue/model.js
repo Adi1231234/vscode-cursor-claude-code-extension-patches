@@ -1,6 +1,10 @@
   /* ---------- Queue model ---------- */
-  function enqueue(text, files) {
-    Q.push({ id: ++idc, text: text, files: files });
+  /* "auto" marks an item a responder wrote rather than the user. It changes
+     nothing about how the item behaves - same position, same menu, same
+     everything - and only puts a mark on the row, because where a line came
+     from is worth knowing and is not worth a second kind of item. */
+  function enqueue(text, files, auto) {
+    Q.push({ id: ++idc, text: text, files: files, auto: !!auto });
   }
 
   /* Identity-based, not index-based: the row menu can outlive a queue shift
@@ -29,7 +33,8 @@
       start: it.start || null,
       dur: it.dur || null,
       missed: !!it.missed,
-      rearm: !!it.rearm
+      rearm: !!it.rearm,
+      auto: !!it.auto        /* a copy of a written line was still written */
     });
     render();
   }

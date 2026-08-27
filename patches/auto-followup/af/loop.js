@@ -93,7 +93,32 @@
     if (m.claims && m.claims.length) addClaims(m.claims);
     if (m.stop) { slot = null; disarm(m.stop); return; }
     if (!m.message) { log("empty message, nothing to send"); renderAll(); return; }
-    slot = { message: m.message, why: m.why || "", invalid: !!m.invalid };
+    /* Into the queue, as an ordinary item.
+
+       It used to sit in a lane of its own, below the queue, on the reasoning that
+       a follow-up written for turn N and sent three turns later answers a
+       conversation that has moved on. That is true, and it is also the same risk
+       every queued line carries - the queue is where a person already expects to
+       edit, reorder, duplicate or delete what is about to be sent, and a second
+       place with a fraction of those is worse than the risk.
+
+       So it goes in at the end like anything else, marked as written rather than
+       typed, and a responder that asks before sending parks it skipped: present
+       and one click from going.
+
+       The lane stays as the fallback for a bundle whose queue patch predates
+       __qAuto.add - there the follow-up would otherwise be dropped in silence. */
+    var api = qApi();
+    var queued = false;
+    if (api && typeof api.add === "function") {
+      /* An answer that did not parse is parked skipped whatever the responder
+         says: it is the one case where what was written is not what the format
+         asked for, and that is worth a look before it goes anywhere. */
+      try { queued = api.add(m.message, { off: !autosend() || !!m.invalid }); }
+      catch (e) { queued = false; }
+    }
+    slot = queued ? null
+                  : { message: m.message, why: m.why || "", invalid: !!m.invalid };
     var max = maxTurns();
     if (max && turns >= max) log("last turn of", String(max));
     renderAll();

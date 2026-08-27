@@ -41,6 +41,13 @@
     });
     row.appendChild(buildNav(i));
     row.appendChild(buildRowMenu(it));
+    if (it.auto) {
+      var ai = el("span", "__qAi");
+      ai.textContent = "✦";
+      ai.title = "Written by a responder, not by you";
+      ai.setAttribute("aria-label", "written by a responder");
+      row.appendChild(ai);
+    }
     row.appendChild(check);
     row.appendChild(num);
     row.appendChild(text);

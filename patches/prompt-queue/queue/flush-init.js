@@ -117,7 +117,23 @@
     panel: function () { return panel && panel.isConnected ? panel : null; },
     send: sendText,
     log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },
-    sid: function () { return _curSid || ""; }
+    sid: function () { return _curSid || ""; },
+
+    /* Put a line in the queue as an ordinary item. Not through the composer:
+       commitComposerToQueue pauses the queue on an idle add, which is exactly
+       when a responder writes, so going that way would hold the queue every
+       time. This is the same push the composer ends in, without that.
+
+       off:true parks it as skipped - present, editable, one click from being
+       sent - which is what a responder set to ask before sending needs. */
+    add: function (text, opts) {
+      if (!text || !String(text).trim()) return false;
+      opts = opts || {};
+      enqueue(String(text), [], true);
+      if (opts.off) Q[Q.length - 1].off = true;
+      render();
+      return true;
+    }
   };
 
   /* ---------- Init ---------- */
