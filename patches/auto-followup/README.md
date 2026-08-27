@@ -347,6 +347,33 @@ user's next message, while they were away, with the loop carrying on afterwards.
 Note that `subtype` stays `"success"` in that case, so `is_error` is the field
 that separates them. A CLI failure ends the arming with the reason on the button.
 
+## Three brakes, and a fourth that is not one
+
+The stop condition ends the task, `max_turns` ends the arming, and the stop
+button ends it now. **Pause** is none of those: it holds the loop and keeps
+everything - the arming, the turn count, the claims and the once-ledger - which
+is exactly what turning it off costs you. It is in the picker, above Manage,
+because wanting to say something yourself for a turn or two is the thing that
+happens often.
+
+While it is held the button keeps its shape and its count and loses its accent,
+and the tooltip reads `Auto follow-up · <name> · paused` - colour is not the
+only carrier, and the menu item itself reads Resume.
+
+Two decisions inside it:
+
+- **Resuming does not answer what was said while it was held.** `lastSeen` is
+  set to whatever is on screen at that moment, the same thing arming does, so
+  the loop picks up at the *next* reply rather than reaching back into the
+  conversation you paused it to have.
+- **An approval already given still goes.** Pressing play is you, not the loop,
+  so `maybeSend` holds only the automatic path. A play button that silently does
+  nothing is worse than no pause.
+
+Measured in a real editor at opus/max: paused, two real replies arrived and the
+counter stayed `0/20` with nothing in the lane and nothing typed; resumed, the
+next reply took it to `1/20` with the follow-up waiting in the lane.
+
 ## Installing it over an already-patched bundle
 
 This patch adds `window.__qAuto` to **prompt-queue**, and everything here gates on

@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})}");
+  "{arm:arm,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -225,5 +225,39 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   globalThis.window.__qAuto.sid = sidWas;
   globalThis.__tick();
 }
+
+// Pause: held by hand, still armed. The case is wanting to say something
+// yourself for a turn or two without losing the count, the arming and the
+// once-ledger, which is what turning it off costs.
+{
+  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'a first reply'}];
+  T.arm('perf-skeptic');
+  globalThis.sent.length=0;
+  T.setPaused(true);
+  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'a reply while paused'}];
+  T.maybeRun();
+  ok(!globalThis.sent.some(m=>m.op==='run'),'pause: no run is asked for while paused');
+  ok(S().armed==='perf-skeptic','pause: and it is still armed');
+
+  // resuming does not answer the conversation that happened while it was held
+  T.setPaused(false);
+  T.maybeRun();
+  ok(!globalThis.sent.some(m=>m.op==='run'),'resume: the reply that was on screen is not answered');
+  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'a reply after resuming'}];
+  T.maybeRun();
+  ok(globalThis.sent.some(m=>m.op==='run'),'resume: the next reply is');
+
+  // an approval already given is you, not the loop, so it still goes
+  const rid=globalThis.sent.filter(m=>m.op==='run').pop().rid;
+  globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:rid,message:'a follow-up',why:'w',claims:[],stop:null}});
+  T.setPaused(true);
+  globalThis.__sentText=null;
+  T.maybeSend();
+  ok(!globalThis.__sentText,'pause: an unapproved follow-up is held');
+  T.approve();
+  T.maybeSend();
+  ok(globalThis.__sentText==='a follow-up','pause: pressing play still sends, got '+globalThis.__sentText);
+}
+
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

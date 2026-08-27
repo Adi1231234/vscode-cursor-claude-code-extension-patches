@@ -20,8 +20,8 @@ require('./dom-stubs.js');
 const { loadPanel } = require('./load-panel.js');
 
 const EXPOSE =
-  '{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'
-  + 'approve:approve,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,'
+  '{arm:arm,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'
+  + 'approve:approve,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,paused:paused,'
   + 'pending:pending,lastSeen:lastSeen,approved:approved,meta:meta})}';
 
 let pass = 0, fail = 0;
@@ -135,6 +135,32 @@ globalThis.__tick();
 list();
 ok(T7.state().armed === null,
    'a different conversation is not adopted, got ' + T7.state().armed);
+
+
+/* A pause is a state like any other: holding the loop, reloading the window and
+   finding it running again would send a follow-up into the conversation someone
+   paused it to have. */
+globalThis.__sid = 'paused-before';
+globalThis.__msgs = [{ role: 'user', content: 'the paused chat' },
+                     { role: 'assistant', content: 'the paused answer' }];
+let T8 = loadPanel(EXPOSE);
+globalThis.__tick();
+list();
+T8.arm('perf-skeptic');
+T8.setPaused(true);
+ok(T8.state().paused === true, 'paused before the reload');
+
+globalThis.__sid = 'paused-after';
+let T9 = loadPanel(EXPOSE);
+globalThis.__tick();
+list();
+ok(T9.state().armed === 'perf-skeptic', 'reload: still armed');
+ok(T9.state().paused === true, 'reload: and still paused, got ' + T9.state().paused);
+globalThis.sent.length = 0;
+reply('a new reply while it was reloading');
+T9.maybeRun();
+ok(!globalThis.sent.some((m) => m.op === 'run'),
+   'reload: a paused loop does not start answering because the window came back');
 
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

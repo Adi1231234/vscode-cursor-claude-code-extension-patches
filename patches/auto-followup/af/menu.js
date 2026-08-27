@@ -84,6 +84,13 @@
     }
 
     m.appendChild(el("div", "__afSep"));
+    /* Above Manage, because holding it for a turn is the thing that happens
+       often and editing a responder is the thing that does not. */
+    if (armed && !stopped) {
+      m.appendChild(plainItem(paused ? "Resume" : "Pause", function () {
+        setPaused(!paused);
+      }));
+    }
     m.appendChild(plainItem("Manage responders…", openDialog));
     if (armed || stopped) m.appendChild(plainItem("Turn off", function () { disarm(null); }));
 
