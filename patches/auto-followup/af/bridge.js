@@ -66,6 +66,7 @@
     if (!m || m.type !== "__ccaf") return;
     if (m.op === "list") {
       list = Array.isArray(m.items) ? m.items : [];
+      listSeen = true;
       if (m.build) {
         buildInfo = m.build;
         /* Readable from a console or a probe without opening anything. */

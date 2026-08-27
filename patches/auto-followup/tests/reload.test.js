@@ -201,5 +201,40 @@ TB.setPaused(false);
 TB.maybeRun();
 ok(globalThis.sent.some((m) => m.op === 'run'), 'resume: one click and it runs');
 
+
+/* A panel that has never been answered keeps asking.
+
+   The request sent when the script loads is lost in a real panel: measured
+   twelve seconds after a reload, with the button on screen and the store
+   resolvable, no list had ever arrived. The first click asked again and the
+   answer came back in 24ms - after the menu had been built, empty. That is the
+   whole of 'the first time I open it there is nothing in it'. */
+globalThis.__sid = 'never-answered';
+globalThis.sent.length = 0;
+const TC = loadPanel(EXPOSE);
+ok(globalThis.sent.some((m) => m.op === 'list'), 'list: it asks once when the script runs');
+
+/* The first tick establishes the session, and syncSession asks for a list of its
+   own on the way through - so the tick that proves the retry is the SECOND one,
+   with the session already settled and nothing else left to ask. A first version
+   of this check passed with the retry removed entirely. */
+globalThis.__tick();
+const realNow = Date.now;
+let now = realNow();
+Date.now = () => now;
+now += 600;
+globalThis.sent.length = 0;
+globalThis.__tick();
+ok(globalThis.sent.some((m) => m.op === 'list'),
+   'list: a settled panel with no answer yet keeps asking');
+
+/* one answer stops it, even an empty one - the panel now knows what it has */
+globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: [] } });
+now += 5000;
+globalThis.sent.length = 0;
+globalThis.__tick();
+ok(!globalThis.sent.some((m) => m.op === 'list'), 'list: an answer stops the asking');
+Date.now = realNow;
+
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

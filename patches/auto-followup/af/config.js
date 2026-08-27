@@ -53,6 +53,8 @@
   var armed = null;        /* the responder id, or null when off */
   var meta = null;         /* its parsed fields, from the host list */
   var list = [];           /* every responder the host knows about */
+  var listSeen = false;    /* has the host ever answered with one - see tick */
+  var askedListAt = 0;
   var turns = 0;           /* how many follow-ups this arming has produced */
   var slot = null;         /* {message, why, invalid} awaiting send, or null */
   var stopped = null;      /* the stop reason once the loop has ended */

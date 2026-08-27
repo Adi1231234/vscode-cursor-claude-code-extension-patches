@@ -51,6 +51,23 @@
   function tick() {
     syncSession();
     hookStop();
+    /* Keep asking until the host answers once.
+
+       The request at the bottom of this file is sent the moment the script
+       runs, and measured in a real panel it is simply lost: twelve seconds
+       after a reload, with the button on screen and the store resolvable, no
+       list had ever arrived. The first click asked again and the answer came
+       back in 24ms - after the menu had been built, empty. That is the whole
+       of "the first time I open it there is nothing in it".
+
+       Half a second between attempts, and no cap: this only runs while there
+       is no list at all, which is a state nothing works in. A cap would put
+       the bug back in exactly the window where it hurts - an extension host
+       busy for a few seconds at startup. */
+    if (!listSeen && Date.now() - askedListAt > 500) {
+      askedListAt = Date.now();
+      requestList();
+    }
     ensureButton();
     var busy = qApi() ? qApi().busy() : false;
     if (busy) { wasBusy = true; idleAt = 0; renderLane(); saveState(); return; }
