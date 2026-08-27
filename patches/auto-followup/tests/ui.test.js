@@ -26,9 +26,21 @@ let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const run=(m,f)=>{ try{ f(); pass++; } catch(e){ fail++; console.log('  THREW: '+m+' -> '+e.message); } };
 const T=globalThis.__t, S=()=>T.state();
-const LIST=[
-  {id:'perf-skeptic',name:'perf-skeptic',description:'d',context:'last-message+claims',max_turns:'20',autosend:'false',model:'sonnet',rules:'r',stop:'s'},
-  {id:'unl',name:'unl',description:'',context:'full-session',max_turns:'unlimited',autosend:'true',model:'opus',rules:'r',stop:'s'}];
+/* The responder list as the host really sends it: parsed by format.js from the
+   shipped sample, with the same derived fields store.js adds. It used to be a
+   hand-written object, and a hand-written fixture only ever contains the fields
+   whoever wrote it remembered - the goal and the once chain were both missing,
+   so three tests passed against a responder that could not exist. */
+const HOSTG={};
+for(const f of ['format.js','samples.js'])
+  (new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host',f),'utf8')))(HOSTG);
+const asHostSends=(id)=>{
+  const r=HOSTG.__ccAfFormat.parse(id,HOSTG.__ccAfSamples.find(s=>s.id===id).text);
+  r.onceText=HOSTG.__ccAfFormat.onceToText(r.once);
+  return r;
+};
+const LIST=[asHostSends('perf-skeptic'),
+  Object.assign(asHostSends('plan-drift'),{id:'unl',name:'unl',max_turns:'unlimited',autosend:'true',model:'opus'})];
 
 globalThis.__tick();
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
@@ -144,6 +156,43 @@ try{
   ok(stops.length>=12,'keys: every control is reachable, got '+stops.length);
   T.openDialog();
 }catch(e){ fail++; console.log('  THREW in keyboard block: '+e.message); }
+
+// The dialog edits the whole file. Two of its four sections had no field at all,
+// and survived only because serialize writes back what it was given - so a
+// responder could be opened, saved, and still be showing half of itself.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const heads=[...document.querySelectorAll('.__afBoxHead')].map(e=>e.textContent);
+  ok(heads.length===4,'sections: four boxes on the pane, got '+heads.length);
+  const tas=[...document.querySelectorAll('.__afTa')];
+  ok(tas.length===4,'sections: four text areas, got '+tas.length);
+  ok(!!document.querySelector('.__afPair'),'sections: the two short ones share a row');
+  ok(!!document.querySelector('.__afGrow'),'sections: the rules box still takes the room');
+
+  const d=T.draft();
+  ok(typeof d.onceText==='string','sections: the once chain arrives as editable text');
+  ok(/name: frame/.test(d.onceText),'sections: and carries the chain, got '+String(d.onceText).slice(0,20));
+  ok(typeof d.goal==='string' && d.goal.length>0,'sections: the goal arrives too');
+
+  // saving hands the text back; the host parses it, so a bad pattern never
+  // reaches the loop as an object nobody checked
+  d.onceText='name: a'+String.fromCharCode(10)+'when: [0-9]'+String.fromCharCode(10)+'ask: how many?';
+  T.saveDraft();
+  const sent=globalThis.sent.filter(m=>m.op==='save').pop();
+  ok(sent && sent.responder && sent.responder.onceText.indexOf('how many?')>=0,
+     'sections: the edited once text reaches the host');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const save=[...document.querySelectorAll('.__afFoot button')].pop();
+  ok(save.textContent==='Saved','dirty: an untouched draft says Saved, got '+save.textContent);
+  const ta=document.querySelectorAll('.__afTa')[1];
+  ta.value='changed'; (ta.listeners.input||[]).forEach(f=>f({}));
+  T.renderDialog();
+  const save2=[...document.querySelectorAll('.__afFoot button')].pop();
+  ok(save2.textContent==='Save','dirty: an edited draft says Save, got '+save2.textContent);
+  ok(String(save2.className).indexOf('__afDirty')>=0,'dirty: and is marked as such');
+  T.openDialog();
+}
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
 },0);

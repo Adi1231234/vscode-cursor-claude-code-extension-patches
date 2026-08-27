@@ -47,7 +47,9 @@ globalThis.__ccAfStore = globalThis.__ccAfStore || (function () {
     if (!f) return null;
     try {
       if (fs.statSync(f).size > MAX_FILE) return null;
-      return globalThis.__ccAfFormat.parse(id, fs.readFileSync(f, "utf8"));
+      var r = globalThis.__ccAfFormat.parse(id, fs.readFileSync(f, "utf8"));
+      r.onceText = globalThis.__ccAfFormat.onceToText(r.once);
+      return r;
     } catch (e) { return null; }
   }
 
@@ -68,6 +70,10 @@ globalThis.__ccAfStore = globalThis.__ccAfStore || (function () {
     var f = fileFor(r && r.id);
     if (!f) return false;
     ensureRoot();
+    /* The dialog hands back the section as text. Parsing it here rather than in
+       the panel is what keeps a bad regex from ever reaching the loop as an
+       object nobody validated. */
+    if (typeof r.onceText === "string") r.once = globalThis.__ccAfFormat.parseOnce(r.onceText);
     try { fs.writeFileSync(f, globalThis.__ccAfFormat.serialize(r), "utf8"); return true; }
     catch (e) { return false; }
   }

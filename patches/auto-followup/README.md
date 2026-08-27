@@ -128,6 +128,29 @@ Two moments are still not what the human did. On "explain it simply, no analogie
 the responder asks for a proof: it has no move for not being understood, and that
 may be right for a responder whose subject is measurement.
 
+
+### The dialog edits the whole file
+
+`## goal` and the `## once` chain had no field. They survived a save only because
+`serialize` writes back what it was handed, so the dialog showed half a responder
+and nothing said which half.
+
+All four sections are on the pane now, in the order the prompt is built from them.
+The two short prose sections share a row; rules and the once chain each take the
+full width - one because it is what anybody actually writes in, the other because
+its lines are `when` / `ask` pairs that wrap badly in half a pane. Every empty box
+carries a placeholder, because an empty box with a heading says nothing about what
+belongs in it.
+
+The once chain is edited as the text of the section and parsed **in the host**, by
+the same `parseOnce` the file format uses. The panel never parses it, so a pattern
+that does not compile cannot reach the loop as an object nobody checked, and
+`## once` means one thing in one place.
+
+Save says whether there is anything to save. It read "Save" on an untouched draft,
+so the only way to find out was to press it - which on an untouched draft is a
+write nobody asked for.
+
 ## The four settings
 
 - **`context`** decides what the responder is worth, and it is the one to

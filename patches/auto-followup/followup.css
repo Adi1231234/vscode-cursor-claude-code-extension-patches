@@ -64,7 +64,7 @@
    is the type ramp doing the work - 10px tracked uppercase at .40 for a label,
    12px at full for a value. Before, both sat at .45 and read as one thing. */
 .__afOverlay{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(1.5px)}
-.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,93vw);max-height:86vh;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
+.__afDlg{--afChrome:var(--app-menu-background,var(--vscode-menu-background,#252526));--afPaper:color-mix(in srgb,var(--vscode-foreground,#ccc) 5%,var(--app-menu-background,#252526));--afField:color-mix(in srgb,var(--vscode-foreground,#ccc) 1%,var(--app-menu-background,#252526));--afLine:color-mix(in srgb,var(--vscode-foreground,#ccc) 13%,transparent);--afEdge:color-mix(in srgb,var(--vscode-foreground,#ccc) 16%,transparent);--afAcc:var(--app-claude-orange,#d97757);display:flex;flex-direction:column;width:min(880px,93vw);max-height:90vh;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--afChrome);border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:10px;box-shadow:0 18px 48px rgba(0,0,0,.55);overflow:hidden}
 .__afDlgHead{display:flex;align-items:center;gap:10px;padding:12px 15px 11px;border-bottom:1px solid var(--afLine)}
 .__afDlgHead h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.01em;flex:1;direction:ltr;text-align:start}
 .__afX{opacity:.42;font-size:13px;line-height:1;cursor:pointer;padding:3px 5px;border-radius:4px}
@@ -85,7 +85,7 @@
 .__afNew:hover{opacity:1;border-color:var(--afAcc);color:var(--afAcc)}
 
 /* the document */
-.__afEdit{flex:1;display:flex;flex-direction:column;gap:13px;background:var(--afPaper)}
+.__afEdit{flex:1;display:flex;flex-direction:column;gap:12px;background:var(--afPaper)}
 .__afIdRow{display:flex;gap:9px}
 .__afIdRow>.__afFi:first-child{flex:0 0 168px}
 .__afFi{display:flex;flex-direction:column;gap:3px;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:6px 10px 7px;transition:border-color .1s ease}
@@ -121,13 +121,13 @@
 
 /* a section of the file, and the accent rule that says so */
 .__afBox{display:flex;flex-direction:column;gap:6px;min-height:0}
-.__afGrow{flex:1}
+.__afGrow{flex:none}
 .__afBoxHead{display:flex;align-items:baseline;gap:8px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;opacity:.92;padding-inline-start:9px;position:relative}
 .__afBoxHead::before{content:"";position:absolute;inset-inline-start:0;top:1px;height:9px;width:2px;border-radius:2px;background:color-mix(in srgb,var(--afAcc) 60%,transparent)}
 .__afBoxHead span{text-transform:none;letter-spacing:0;font-weight:400;opacity:.8;font-size:11px}
 .__afTa{width:100%;box-sizing:border-box;resize:none;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:10px 12px;color:inherit;font:inherit;font-size:11.5px;line-height:1.75;outline:none;transition:border-color .1s ease}
-.__afGrow .__afTa{flex:1;min-height:150px}
-.__afShort .__afTa{height:66px}
+
+
 .__afTa:focus{border-color:var(--afAcc);box-shadow:0 0 0 1px color-mix(in srgb,var(--afAcc) 45%,transparent)}
 
 .__afFoot{display:flex;align-items:center;gap:9px;padding:11px 15px;background:var(--afChrome);border-top:1px solid var(--afLine)}
@@ -148,3 +148,28 @@
    would - the dialog was reachable by keyboard and impossible to follow. */
 .__afDlg [role="button"]:focus-visible,.__afDlg [role="option"]:focus-visible,.__afMenu [role="button"]:focus-visible,.__afDrop [role="option"]:focus-visible{outline:2px solid var(--app-claude-orange,#d97757);outline-offset:1px;border-radius:5px}
 .__afTa:focus-visible,.__afIn:focus-visible{outline:none}
+
+/* ---- layout: four sections in a pane that scrolls ----
+   The pane held two boxes and stretched to fit them. With four it has to scroll,
+   or the box people actually write in gets squeezed to nothing by the ones they
+   read once. The rules box keeps flex:1 and a real floor; everything else is
+   sized to its content. */
+.__afEdit{overflow-y:auto;overflow-x:hidden}
+.__afPair{display:flex;gap:11px;align-items:stretch}
+.__afPair>.__afBox{flex:1 1 0;min-width:0}
+.__afEdit>*{flex:none}
+.__afShort .__afTa{height:84px}
+.__afGrow .__afTa{height:196px}
+.__afOnce .__afTa{height:112px}
+.__afMono .__afTa{font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));font-size:11px;line-height:1.6;direction:ltr;text-align:start}
+
+/* The rail listed three items and then pushed 'new' to the floor, which put a
+   void in the middle of the dialog and read as something missing. */
+.__afList{justify-content:flex-start}
+.__afNew{margin-top:8px}
+
+/* Save carries whether there is anything to save. It was always the same button
+   whether the draft had been touched or not. */
+.__afPri:disabled,.__afPri.__afClean{background:color-mix(in srgb,var(--app-claude-orange,#d97757) 30%,transparent);color:inherit;font-weight:500;cursor:default}
+.__afDirty::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-inline-end:7px;vertical-align:middle;opacity:.75}
+.__afTa::placeholder{opacity:.45;font-style:italic}

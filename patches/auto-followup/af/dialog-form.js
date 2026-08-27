@@ -82,7 +82,7 @@
     return i;
   }
 
-  function box(title, hint, value, set, cls) {
+  function box(title, hint, value, set, cls, placeholder) {
     var wrap = el("div", "__afBox" + (cls ? " " + cls : ""));
     var head = el("div", "__afBoxHead");
     head.dir = "auto";
@@ -91,6 +91,9 @@
     wrap.appendChild(head);
     var ta = el("textarea", "__afTa");
     ta.dir = "auto";
+    /* An empty section used to be an empty box with a heading. The placeholder
+       is the only thing that says what belongs in it. */
+    if (placeholder) ta.placeholder = placeholder;
     ta.value = value || "";
     ta.spellcheck = false;
     ta.addEventListener("input", function () { set(ta.value); markDirty(); });
@@ -128,10 +131,35 @@
       function (v) { draft.autosend = v; }));
     fields.appendChild(field("model", draft.model, MODELS, function (v) { draft.model = v; }));
     pane.appendChild(fields);
+    /* The four sections of the file, in the order the prompt is built from them,
+       so the dialog reads as the thing it edits. Two of them - the goal and the
+       once chain - had no field at all: they survived a save because serialize
+       writes them back untouched, which meant the dialog quietly showed half a
+       responder and nothing said so.
 
-    pane.appendChild(box("מה להקליד", "לפי מה שקלוד בדיוק כתב", draft.rules,
-      function (v) { draft.rules = v; }, "__afGrow"));
-    pane.appendChild(box("מתי לעצור", "מחזיר STOP והלולאה נגמרת", draft.stop,
-      function (v) { draft.stop = v; }, "__afShort"));
+       The two short prose sections share a row because they are short and the
+       dialog is wide. Rules and the once chain each take the full width - one
+       because it is the thing anybody actually writes, the other because its
+       lines are when/ask pairs that wrap badly in half a pane. */
+    var pair = el("div", "__afPair");
+    pair.appendChild(box("\u05dc\u05d0\u05df \u05d7\u05d5\u05ea\u05e8\u05d9\u05dd",
+      "\u05de\u05e2\u05dc \u05dc\u05db\u05dc \u05d4\u05db\u05dc\u05dc\u05d9\u05dd",
+      draft.goal, function (v) { draft.goal = v; }, "__afShort",
+      "\u05dc\u05d0\u05df \u05d4\u05dc\u05d5\u05dc\u05d0\u05d4 \u05d4\u05d6\u05d5 \u05d7\u05d5\u05ea\u05e8\u05ea, \u05d1\u05de\u05e9\u05e4\u05d8 \u05d0\u05d5 \u05e9\u05e0\u05d9\u05d9\u05dd"));
+    pair.appendChild(box("\u05de\u05ea\u05d9 \u05dc\u05e2\u05e6\u05d5\u05e8",
+      "\u05de\u05d7\u05d6\u05d9\u05e8 STOP",
+      draft.stop, function (v) { draft.stop = v; }, "__afShort",
+      "\u05d4\u05ea\u05e0\u05d0\u05d9 \u05e9\u05d1\u05d5 \u05d0\u05d9\u05df \u05d8\u05e2\u05dd \u05dc\u05e9\u05d0\u05d5\u05dc \u05e2\u05d5\u05d3"));
+    pane.appendChild(pair);
+
+    pane.appendChild(box("\u05de\u05d4 \u05dc\u05d4\u05e7\u05dc\u05d9\u05d3",
+      "\u05dc\u05e4\u05d9 \u05de\u05d4 \u05e9\u05e7\u05dc\u05d5\u05d3 \u05d1\u05d3\u05d9\u05d5\u05e7 \u05db\u05ea\u05d1",
+      draft.rules, function (v) { draft.rules = v; }, "__afGrow",
+      "\u05de\u05ea\u05d9 \u05dc\u05e2\u05e9\u05d5\u05ea \u05de\u05d4, \u05de\u05e6\u05d1 \u05d5\u05de\u05d4\u05dc\u05da \u05d1\u05db\u05dc \u05e9\u05d5\u05e8\u05d4"));
+
+    pane.appendChild(box("\u05e9\u05d0\u05dc\u05d5\u05ea \u05e4\u05e2\u05dd \u05d0\u05d7\u05ea",
+      "\u05e0\u05e9\u05d0\u05dc\u05d5\u05ea \u05d1\u05ea\u05d5\u05e8 \u05e9\u05d1\u05d5 \u05d4\u05d3\u05e4\u05d5\u05e1 \u05de\u05ea\u05d0\u05d9\u05dd, \u05d5\u05dc\u05d0 \u05e9\u05d5\u05d1",
+      draft.onceText, function (v) { draft.onceText = v; }, "__afOnce __afMono",
+      ["name: frame", "when: [0-9]+ ?s", "after: ", "ask: what was that measured on?"].join(NL)));
     return pane;
   }

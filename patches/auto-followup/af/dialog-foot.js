@@ -51,7 +51,18 @@
     on(del, "click", deleteDraft);
     var cancel = el("button", "__afB __afGhost"); cancel.type = "button"; txt(cancel, "Cancel");
     on(cancel, "click", closeDialog);
-    var save = el("button", "__afB __afPri"); save.type = "button"; txt(save, "Save");
+    /* Save says whether there is anything to save. It looked identical whether
+       the draft had been touched or not, so the only way to find out was to
+       press it - and on an untouched draft that is a write nobody asked for. */
+    /* Save says whether there is anything to save. It looked identical whether
+       the draft had been touched or not, so the only way to find out was to
+       press it - and on an untouched draft that is a write nobody asked for.
+       The dot is drawn by CSS rather than added as a node, so the label stays a
+       plain string that a test can read. */
+    var live = dirty || (draft && draft.isNew);
+    var save = el("button", "__afB __afPri" + (live ? " __afDirty" : " __afClean"));
+    save.type = "button";
+    txt(save, live ? "Save" : "Saved");
     on(save, "click", saveDraft);
     f.appendChild(del); f.appendChild(cancel); f.appendChild(save);
     return f;
