@@ -38,6 +38,26 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     if (ctx.transcript) {
       p.push("", "# The conversation so far", ctx.transcript.trim());
     }
+    /* What was actually sent, from the panel's own record rather than anything
+       the responder reports about itself.
+
+       Two designs failed before this one, and both failed the same way. Asking it
+       to return the questions still open produced a freshly worded question every
+       turn, so nothing matched and the count stayed at one. Giving each one an id
+       and asking for the id back produced o1, o2, o3, o4 - it wrote a new question
+       instead of returning the id it had been handed. A fresh process will not
+       keep books. It will read what is put in front of it. */
+    if (ctx.asked && ctx.asked.length) {
+      p.push("", "# What you have already sent, oldest first",
+             ctx.asked.join("\n"),
+             "",
+             "You wrote those. If what you are about to send asks for the same thing",
+             "as one of them, then it was asked and not answered, and asking a third",
+             "time in new words is how that goes on forever. Say plainly that it is",
+             "the Nth time, name the exact thing you asked for, and ask for that or",
+             "for an admission that it is not available - or drop it and say in 'why'",
+             "that you dropped it and why. Do not repeat yourself in silence.");
+    }
     p.push("", "# Claude's message, which you are answering", (ctx.text || "").trim());
     return p.join("\n");
   }

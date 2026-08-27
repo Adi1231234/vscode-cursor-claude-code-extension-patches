@@ -53,6 +53,15 @@ const SCENARIOS = [
    'The repack is riskier - it touches the upload path and two kernels. Worth about 2 s.',
    'I could also look at the FFN, but the kernel is already at 90% of its instruction ceiling.',
   ]},
+{ id: 5, name: 'the frame question is answered on the first turn',
+  asks: 'does the gate lift, or does it keep asking something already answered?',
+  replies: [
+   'A real visit is 1,058 words, 2,746 tokens, and the doctor waits 98.7 s for it today. '
+   + 'Prefill is the whole of that wait.',
+   'I landed the layer skip: 98.7 s to 62.1 s on that same real visit, byte-identical.',
+   'Output isolation is in as well. I estimate about 4% from it, and the budget is now handled.',
+   'Nothing else is above 1%. We are done.',
+  ]},
 ];
 
 function unnumbered(l){ const c=l.indexOf('] '); return (l.charAt(0)==='['&&c>0)?l.slice(c+2):l; }
@@ -63,29 +72,39 @@ function addClaims(have, fresh, turn){
 }
 const run1 = (resp, ctx) => new Promise(res => R.run(resp, ctx, res));
 
+/* The panel's open-question ledger, same behaviour as af/claims.js: the count is
+   kept here and not by the responder, because a model asked to maintain a counter
+   across independent calls loses it. */
 /* Objective repetition: content words shared with an earlier follow-up. Not a
-   judgement about quality, just whether the same ground is being covered. */
+   judgement about quality, only whether the same ground is being covered again. */
 function overlap(a, b){
-  const w = s => new Set(String(s).toLowerCase().split(/[^a-z\u0590-\u05ff0-9%.]+/).filter(x => x.length > 2));
+  const w = s => new Set(String(s).toLowerCase().split(/[^a-z֐-׿0-9%.]+/).filter(x => x.length > 2));
   const A = w(a), B = w(b);
   if (!A.size || !B.size) return 0;
   let n = 0; for (const x of A) if (B.has(x)) n++;
   return n / Math.min(A.size, B.size);
 }
 
+/* The panel's own record of what it sent - kept here, not reported by the
+   responder, for the reasons prompt.js sets out. */
+const MAX_ASKED = 5;
+const showAsked = a => a.slice(-MAX_ASKED);
+
 async function runScenario(sc){
   const resp = F.parse('perf-skeptic', SAMPLE.text);
   resp.context = 'last-message+claims';
-  const claims = [], msgs = [];
+  const claims = [], msgs = [], asked = [];
   console.log(`\n${'='.repeat(78)}\n  ${sc.id}. ${sc.name}\n  asks: ${sc.asks}\n`);
   for (let i = 0; i < sc.replies.length; i++){
     console.log(`  CLAUDE ${i+1}: ${sc.replies[i]}`);
-    const r = await run1(resp, { text: sc.replies[i], cwd: tmpdir(), claims: claims.slice() });
+    const r = await run1(resp, { text: sc.replies[i], cwd: tmpdir(),
+                                 claims: claims.slice(), asked: showAsked(asked) });
     if (r.error){ console.log(`  ERROR: ${r.error}`); break; }
     addClaims(claims, r.claims, i+1);
     if (r.stop){ console.log(`  -> STOP: ${r.stop}\n`); msgs.push({stop:r.stop}); break; }
     console.log(`  -> ${r.message}`);
     console.log(`     why: ${r.why}`);
+    asked.push(`[turn ${i+1}] ${r.message}`);
     const rep = msgs.filter(m => m.message).map(m => overlap(m.message, r.message));
     const worst = rep.length ? Math.max(...rep) : 0;
     if (worst > 0.5) console.log(`     [repeats an earlier follow-up, overlap ${(worst*100)|0}%]`);
@@ -93,7 +112,7 @@ async function runScenario(sc){
     msgs.push({ message: r.message, why: r.why, overlap: worst });
   }
   const reps = msgs.filter(m => m.overlap > 0.5).length;
-  console.log(`  claims recorded: ${claims.length}   repeated follow-ups: ${reps}   stopped: ${msgs.some(m=>m.stop) ? 'yes' : 'no'}`);
+  console.log(`  claims: ${claims.length}   repeated follow-ups: ${reps}   stopped: ${msgs.some(m=>m.stop) ? 'yes' : 'no'}`);
   return { sc, msgs, claims };
 }
 

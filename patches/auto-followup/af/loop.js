@@ -41,7 +41,7 @@
 
   function contextFor() {
     var mode = (meta && meta.context) || "last-message+claims";
-    var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [] };
+    var ctx = { text: lastAssistant(), cwd: cwdHint(), claims: [], asked: readAsked() };
     if (mode === "last-message+claims") ctx.claims = readClaims();
     else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
     return ctx;
@@ -83,6 +83,7 @@
     if (!api || api.busy() || api.paused() || api.count()) return;
     var text = slot.message;
     slot = null;
+    recordAsked(text);          /* what was sent, so the next turn can see it */
     renderAll();
     Promise.resolve(api.send(text)).then(function (ok) {
       if (!ok) { slot = { message: text, why: "", invalid: false }; renderAll(); }

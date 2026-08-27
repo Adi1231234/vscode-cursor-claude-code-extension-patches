@@ -69,6 +69,37 @@
 
   function clearClaims() {
     writeClaims([]);
+    try { localStorage.removeItem(keyFor(ASKED_KEY)); } catch (e) {}
+  }
+
+  /* ---------- The other ledger: what the panel actually sent ----------
+     The claims ledger records what Claude asserted. This one records what the
+     responder sent, and the panel keeps it from its own send path - nothing is
+     asked of the responder, because nothing can be. Two designs that did ask it
+     both failed: told to return its still-open questions it reworded them every
+     turn so nothing matched, and given ids to hand back it wrote a new question
+     instead. It will not keep books; it will read what is put in front of it.
+
+     Kept short on purpose. The point is to recognise "I asked this already", and
+     the last few are enough for that. */
+  function askedKey() {
+    return keyFor(ASKED_KEY);
+  }
+
+  function readAsked() {
+    try {
+      var raw = localStorage.getItem(askedKey());
+      var v = raw ? JSON.parse(raw) : [];
+      return Array.isArray(v) ? v : [];
+    } catch (e) { return []; }
+  }
+
+  function recordAsked(text) {
+    var t = String(text || "").trim();
+    if (!t) return;
+    var have = readAsked();
+    have.push("[turn " + turns + "] " + t);
+    try { localStorage.setItem(askedKey(), JSON.stringify(have.slice(-MAX_ASKED))); } catch (e) {}
   }
 
   function exportClaims() {

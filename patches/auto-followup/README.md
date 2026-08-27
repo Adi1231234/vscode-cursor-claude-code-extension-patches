@@ -56,6 +56,23 @@ delete; nothing recreates them.
   the rest of that arming flow. `true` never stops.
 - **`model`** which model runs the responder, through the Claude CLI.
 
+## The two ledgers
+
+**What Claude asserted** - short lines numbered by the turn that produced them.
+The responder returns them in the same call that produces the message, so it
+costs no extra model call, and it is deliberately not written by Claude, who is
+the only participant with file tools and would otherwise keep the record of its
+own claims.
+
+**What the panel sent** - the last five follow-ups, kept by the panel from its own
+send path. Nothing is asked of the responder for this, because nothing can be:
+told to return the questions still open it reworded them every turn so nothing
+matched, and given ids to hand back it wrote a new question instead of returning
+the id. A fresh process will not keep books; it will read what is put in front of
+it. Without this the responder asks the same question four times in new words and
+never escalates - measured, and then measured again after the fix, where it says
+"that's four times now, I'm not asking a fifth" and drops the claim as unverified.
+
 ## The claims ledger
 
 Short lines, numbered by the turn that produced them, in `localStorage` under the
