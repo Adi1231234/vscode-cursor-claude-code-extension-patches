@@ -17,9 +17,10 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ps = `
 $ErrorActionPreference = 'Stop'
+$root = '${root.replace(/'/g, "''")}'
 $bad = 0
 Get-ChildItem -LiteralPath '${root.replace(/'/g, "''")}' -Recurse -Filter *.ps1 |
-  Where-Object { $_.FullName -notlike '*node_modules*' -and $_.FullName -notlike '*.git*' } |
+  Where-Object { $_.FullName -notlike '*node_modules*' -and $_.FullName -notlike (Join-Path $root '.git*') -and $_.FullName -notlike (Join-Path $root '.claude-wt*') -and $_.FullName -notlike (Join-Path $root '.claude\worktrees*') } |
   ForEach-Object {
     $e = $null
     $null = [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$e)
