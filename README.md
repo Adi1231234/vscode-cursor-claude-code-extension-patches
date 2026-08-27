@@ -50,6 +50,15 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
   beside it, nothing here can undo that - reinstall the extension in the editor
   (or delete its folder and let the editor download it again) and run once more.
 
+- **`tools/which-build.mjs`** — which windows are running the bundle that is on
+  disk and which need a reload. `Developer: Reload Window` restarts **one**
+  window's extension host; every other window keeps the code it loaded when it
+  started, and nothing says so. Every patched bundle now carries a stamp
+  (`ccAfStamp:"<utc> <sha>"`), the panel compares the one it is running with the
+  one in the file and puts *a newer build is installed, reload this window* on the
+  button, and this tool answers the same question from outside - including for a
+  window patched before the stamp existed, which cannot answer for itself.
+
 *Add a patch* = drop `patches/<name>/patch.ps1` defining `Invoke-Patch`, add its name to the list in `apply.ps1`. Nothing else.
 
 ## ✨ Features

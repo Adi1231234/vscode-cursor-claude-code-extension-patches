@@ -23,6 +23,14 @@
   }
 
   function tipText() {
+    /* Said here because this is the one thing always on screen. Twice a change
+       was applied, the window reloaded, and the old behaviour still showed -
+       with no way to tell whether the reload had missed this window or the
+       change had missed the mark. Now the window says which. */
+    if (buildInfo && buildInfo.stale) {
+      return "Auto follow-up - a newer build is installed, reload this window"
+           + " (running " + buildInfo.running + ", on disk " + buildInfo.onDisk + ")";
+    }
     if (stopped) return "STOP — " + stopped;
     if (armed) return "Auto follow-up · " + (meta ? meta.name : armed)
                       + (paused ? " · paused" : "");

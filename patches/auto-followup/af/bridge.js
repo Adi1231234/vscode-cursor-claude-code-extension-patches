@@ -66,6 +66,12 @@
     if (!m || m.type !== "__ccaf") return;
     if (m.op === "list") {
       list = Array.isArray(m.items) ? m.items : [];
+      if (m.build) {
+        buildInfo = m.build;
+        /* Readable from a console or a probe without opening anything. */
+        try { window.__ccBuild = m.build; } catch (e) {}
+        if (m.build.stale) log("a newer build is on disk", m.build.onDisk, "running " + m.build.running);
+      }
       meta = armed ? findResponder(armed) : null;
       /* An armed responder whose file was deleted outside the dialog must not
          keep running against a definition nobody can see any more. */

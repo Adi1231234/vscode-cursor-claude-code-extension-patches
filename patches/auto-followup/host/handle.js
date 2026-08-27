@@ -58,20 +58,28 @@ globalThis.__ccAf = globalThis.__ccAf || (function () {
     } catch (e) {}
   }
 
-  function sendList(wv) {
+  /* One shape, built once: the two senders below were the same object typed
+     twice, and the second copy lost a field the first had within a day. */
+  function listMsg() {
     globalThis.__ccAfStore.seedIfEmpty(globalThis.__ccAfSamples);
-    post(wv, { type: "__ccaf", op: "list", items: globalThis.__ccAfStore.list(),
-               root: globalThis.__ccAfStore.root() });
+    var build = null;
+    /* Which build this host is running, against what the last apply wrote. A
+       window that has not been reloaded since is exactly the case the panel has
+       to be able to say out loud. */
+    try { build = globalThis.__ccAfBuild.state(); } catch (e) {}
+    return { type: "__ccaf", op: "list", items: globalThis.__ccAfStore.list(),
+             root: globalThis.__ccAfStore.root(), build: build };
   }
+
+  function sendList(wv) { post(wv, listMsg()); }
 
   /* Not just the window that saved: the same responder can be armed in several,
      and the others have no way to know the file changed. */
   function broadcastList(wv) {
     remember(wv);
+    var msg = listMsg();
     for (var i = panels.length - 1; i >= 0; i--) {
-      if (!post(panels[i], { type: "__ccaf", op: "list",
-                             items: globalThis.__ccAfStore.list(),
-                             root: globalThis.__ccAfStore.root() })) panels.splice(i, 1);
+      if (!post(panels[i], msg)) panels.splice(i, 1);
     }
   }
 

@@ -57,6 +57,15 @@ $order = @(
 # a wall of [miss] otherwise reads like a broken patcher.
 $minTested = [version]'2.1.220'
 
+# One value per run, written into every injected script. It is what lets a
+# panel say "the bundle on disk is newer than the code I am running" instead of
+# leaving someone to reload and wonder - see patches/auto-followup/host/stamp.js.
+$stampSha = ""
+try { $stampSha = (& git -C $here rev-parse --short HEAD 2>$null) } catch {}
+$script:CcStamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mmZ") +
+                  $(if ($stampSha) { " " + $stampSha.Trim() } else { "" })
+Write-Info "build stamp: $script:CcStamp"
+
 $script:failures = @()
 
 foreach ($Ctx in $installs) {
