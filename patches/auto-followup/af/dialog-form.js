@@ -98,7 +98,7 @@
     txt(head, title);
     if (hint) { var s = el("span"); txt(s, hint); head.appendChild(s); }
     wrap.appendChild(head);
-    var ta = el("textarea", "__afTa");
+    var ta = el("textarea", "__afTa __ccScroll");
     ta.dir = "auto";
     /* An empty section used to be an empty box with a heading. The placeholder
        is the only thing that says what belongs in it. */
@@ -112,7 +112,7 @@
   }
 
   function editPane() {
-    var pane = el("div", "__afPane __afEdit");
+    var pane = el("div", "__afPane __afEdit __ccScroll");
     if (!draft) return pane;
 
     var idrow = el("div", "__afIdRow");

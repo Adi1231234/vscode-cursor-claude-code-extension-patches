@@ -131,7 +131,7 @@
     head.appendChild(x);
     box.appendChild(head);
 
-    var body = el("div", "__afLiveBody");
+    var body = el("div", "__afLiveBody __ccScroll");
     if (!liveParts.length) {
       var empty = el("div", "__afLiveEmpty");
       txt(empty, pending ? "waiting for the first words - nothing has been written yet"

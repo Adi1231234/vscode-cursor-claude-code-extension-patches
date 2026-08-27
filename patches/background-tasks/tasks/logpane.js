@@ -15,7 +15,7 @@
     paneHead = el("div", "__bgPaneHead");
     paneEl.appendChild(paneHead);
     paneEl.appendChild(buildTools());
-    paneBody = el("div", "__bgLog");
+    paneBody = el("div", "__bgLog __ccScroll");
     paneBody.tabIndex = 0;
     paneBody.addEventListener("scroll", onPaneScroll);
     var wrapper = el("div", "__bgLogWrap");

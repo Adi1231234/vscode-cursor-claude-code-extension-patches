@@ -149,7 +149,11 @@ blocks stay LTR.
 ## Layout
 
 - `tasks.css` (tokens + indicator + shared primitives), `shell.css`, `rows.css`,
-  `log.css`, `feed.css`, `scroll.css` - all `__bg*` scoped, each with its own guard.
+  `log.css`, `feed.css` - all `__bg*` scoped, each with its own guard. The
+  scrollbars come from `lib/css/ccScroll.css` now, shared with the queue and the
+  responders dialog: the copy that lived here was inert, because something above
+  every element in this webview sets `scrollbar-color` and Chromium then ignores
+  every `::-webkit-scrollbar` rule. The shared file releases it first.
   The design tokens live on `.__bgRoot`, which both the dialog and the composer
   indicator carry
 - `tasks/*.js` - the panel script, concatenated in the explicit order in `patch.ps1`
