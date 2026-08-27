@@ -81,3 +81,11 @@ not `__afDlgBody`, and its height is fixed - and not measured. And the probe
 itself was wrong once: it scrolled to the bottom to find the footer and then read
 the header, and reported ten clipped headers that were the probe scrolling them
 away.
+
+## What the browser cannot answer
+
+Zoom. Chrome and the Electron VS Code ships disagree about what a rect means under
+CSS zoom, and the dialog's own scale detection was built on that difference.
+`fit.html` was 32 of 32 green while the same build hung a third of the dialog out
+of a real panel. Anything about zoom is checked with `tests/panel/fit.js` in the
+lab as well - see `tests/panel/README.md`.
