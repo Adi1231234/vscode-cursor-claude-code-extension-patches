@@ -375,12 +375,32 @@ counter stayed at `1/20`; resumed, and it went to `2/20` answering that reply.
 
 ## The picker is never empty on the first open
 
-The panel asks the host for the responders when its script runs - and in a real
-panel that request is simply lost. Measured twelve seconds after a reload, with
-the button on screen and the store resolvable: **no list had ever arrived**. The
-first click asked again, the answer came back in 24ms, and the menu had already
-been built - empty. That is the whole of "the first time I open it there is
-nothing in it, the second time there is".
+The panel had no responders to show because it had never been told any, and it
+had never been told because **it cannot speak to the host when its script runs**.
+
+The only sanctioned route to the extension host is the app's own session store -
+`connection.value.send()` - and that store is on no global: `lib/js/ccStore.js`
+finds it by walking the React fiber tree **up from the composer input**. The
+injected script runs before the app has rendered one, so there is no input, no
+store, and nowhere for the message to go. Measured in a real panel, with the
+failure saying which half was missing:
+
+    12.604  bridge send failed  list  no composer input yet
+    12.915  bridge send failed  list  no composer input yet
+    13.506  bridge ready after 902ms
+
+So the request at load did not race and sometimes lose. It lost every time, by
+about a second. Nothing retried it, so the panel stayed listless until the first
+click asked again - the answer arrived 24ms later, and the menu had already been
+built empty. That is the whole of "the first time I open it there is nothing in
+it, the second time there is".
+
+The call at load is gone: it could not work, and it left a line in the log saying
+so. `tick()` owns it and keeps asking, every half second, until the host answers
+once. No cap: it only runs while there is no list at all, which is a state
+nothing works in, and a cap would put the bug back exactly where it hurts - an
+extension host busy for a few seconds at startup. One answer stops it, even an
+empty one.
 
 So `tick()` keeps asking, every half second, until the host answers once. No cap:
 it only runs while there is no list at all, which is a state nothing works in,
