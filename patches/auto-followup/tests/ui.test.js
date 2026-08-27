@@ -572,6 +572,75 @@ try{
      'build: a list without the field does not silently clear a warning that is true');
 }
 
+
+/* The picker is one click deep, and two of those clicks throw work away while a
+   loop is running: another responder restarts the count and the once-ledger, and
+   turning it off does that and kills a run in flight. Neither is recoverable. */
+{
+  /* Removing the node does not clear the script own menuNode, so the first call
+     can be read as "close". Ask again when nothing opened - an earlier version of
+     this helper silently returned an empty list and the block died inside a
+     setTimeout the stub swallows. */
+  const openPicker = () => {
+    const m = document.querySelector(".__afMenu");
+    if (m && m.parentNode) m.parentNode.removeChild(m);
+    T.toggleMenu({ currentTarget: T.btn() });
+    if (!document.querySelector(".__afMenu")) T.toggleMenu({ currentTarget: T.btn() });
+    return [...document.querySelectorAll(".__afMenu .__afItem")];
+  };
+  /* Two responders, put there by this block: what the picker holds by now is
+     whatever the blocks above left in it. */
+  globalThis.__onMsg({ data: { type: '__ccaf', op: 'list', items: LIST } });
+  /* A responder row keeps its name in a nested element, and the stub textContent
+     does not walk children - matching on it found every row empty. */
+  const deepText = (n) => [(n._text || ""), ...[...(n.children || [])].map(deepText)].join(" ");
+  const pick = (name) => openPicker().find((it) => deepText(it).indexOf(name) >= 0);
+  const confirmBox = () => document.querySelector('.__afConfirm');
+  const clickIn = (box, label) => {
+    const b = [...box.querySelectorAll('.__afB')].find(n => n.textContent.trim() === label);
+    if (b) b.click();
+    return !!b;
+  };
+
+  /* nothing armed: no question, it just arms */
+  T.disarm(null);
+  pick('perf-skeptic').click();
+  ok(!confirmBox(), 'confirm: arming from nothing does not ask');
+  ok(S().armed === 'perf-skeptic', 'confirm: and it armed');
+
+  /* armed: switching asks first, and does not switch until it is answered */
+  pick('unl').click();
+  ok(!!confirmBox(), 'confirm: switching while armed asks first');
+  ok(S().armed === 'perf-skeptic', 'confirm: and nothing changed while it asks');
+  ok(deepText(confirmBox()).indexOf('unl') > 0,
+     'confirm: it names what would replace it');
+  ok(clickIn(confirmBox(), 'Cancel'), 'confirm: Cancel is offered');
+  ok(!confirmBox(), 'confirm: cancelling closes it');
+  ok(S().armed === 'perf-skeptic', 'confirm: and leaves the arming alone');
+
+  pick('unl').click();
+  clickIn(confirmBox(), 'Switch');
+  ok(!confirmBox(), 'confirm: confirming closes it');
+  ok(S().armed === 'unl', 'confirm: and switches, got ' + S().armed);
+
+  /* Turn off asks too, and Escape is a cancel */
+  pick('Turn off').click();
+  ok(!!confirmBox(), 'confirm: Turn off asks while armed');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  ok(!confirmBox(), 'confirm: Escape closes it');
+  ok(S().armed === 'unl', 'confirm: and does not turn it off');
+
+  pick('Turn off').click();
+  clickIn(confirmBox(), 'Turn off');
+  ok(S().armed === null, 'confirm: confirming turns it off');
+
+  /* Pause changes nothing that cannot be undone, so it never asks */
+  T.arm('perf-skeptic');
+  (pick('Pause') || { click() {} }).click();
+  ok(!confirmBox(), 'confirm: pausing does not ask');
+  ok(S().paused === true, 'confirm: it just pauses');
+}
+
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);

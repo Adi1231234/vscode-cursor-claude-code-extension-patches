@@ -73,6 +73,7 @@
 
   function onLiveKey(ev) {
     if (ev.key !== "Escape") return;
+    if (confirmOpen()) return;   /* the confirm is above this one */
     ev.preventDefault();
     ev.stopPropagation();
     closeLive();

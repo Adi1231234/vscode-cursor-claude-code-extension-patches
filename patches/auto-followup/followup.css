@@ -182,6 +182,13 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 
 .__afTa:focus{border-color:var(--afAcc);box-shadow:0 0 0 1px color-mix(in srgb,var(--afAcc) 45%,transparent)}
 
+/* The confirm reuses the dialog's planes and only narrows them: it is one
+   sentence and two buttons, and a box the width of the editor would read as a
+   different kind of thing than it is. */
+.__afConfirmOv{z-index:2147483200}
+.__afConfirm{width:min(430px,calc(100% - 28px));height:auto}
+.__afConfirmBody{padding:14px 15px 4px;font-size:12px;line-height:1.65;background:var(--afPaper)}
+.__afConfirm .__afFoot{justify-content:flex-end}
 .__afFoot{display:flex;align-items:center;gap:9px;padding:11px 15px;background:var(--afChrome);border-top:1px solid var(--afLine)}
 .__afSpacer{flex:1}
 .__afLink{font-size:11.5px;opacity:.8;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

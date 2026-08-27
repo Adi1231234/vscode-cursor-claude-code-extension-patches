@@ -29,6 +29,9 @@
        later, so leaving the event alone is what lets the topmost layer take it.
        Escape used to close the dialog underneath while the view stayed up. */
     if (liveOpen()) return;
+    /* and the confirm sits above both. Registration order decides which capture
+       handler runs first, and this one was registered before it. */
+    if (confirmOpen()) return;
     ev.preventDefault();
     ev.stopPropagation();
     if (dropOpen()) { closeDrop(); return; }
