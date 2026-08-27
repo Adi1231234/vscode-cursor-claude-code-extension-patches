@@ -19,6 +19,15 @@
   var MAXES = [["20", ""], ["50", ""], ["unlimited", "until the stop condition is met"]];
   var TOGGLE = [["false", "shows you the message first"], ["true", "sends without stopping"]];
   var MODELS = [["sonnet", ""], ["opus", ""], ["haiku", ""]];
+  /* How hard the model is asked to think, not which model. The two are
+     independent: a cheap model at high effort and an expensive one at low are
+     both reasonable answers to "this responder only has to notice a number".
+     "default" passes no flag at all and leaves the CLI's own setting alone. */
+  var EFFORTS = [
+    ["default", "whatever the CLI is set to"],
+    ["low", "a quick read"], ["medium", ""], ["high", ""],
+    ["xhigh", ""], ["max", "thinks the longest, costs the most"]
+  ];
 
   function markDirty() { dirty = true; }
 
@@ -130,6 +139,8 @@
     fields.appendChild(field("autosend", draft.autosend === "true" ? "true" : "false", TOGGLE,
       function (v) { draft.autosend = v; }));
     fields.appendChild(field("model", draft.model, MODELS, function (v) { draft.model = v; }));
+    fields.appendChild(field("effort", draft.effort || "default", EFFORTS,
+      function (v) { draft.effort = v; }));
     pane.appendChild(fields);
 
     /* The four sections of the file, in the order the prompt is built from them,

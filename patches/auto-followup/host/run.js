@@ -115,6 +115,11 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
        it is still the only thing the contract is read from. */
     var args = ["-p", "--output-format", "stream-json", "--include-partial-messages", "--verbose"];
     if (r.model) args.push("--model", r.model);
+    /* Measured on one prompt at sonnet: low answered in 40 output tokens and
+       11.1 s, max in 1220 and 19.1 s. The CLI does not validate the level -
+       --effort banana is accepted in silence - which is why the only way to set
+       it is the dialog's list. */
+    if (r.effort && r.effort !== "default") args.push("--effort", r.effort);
     var child;
     try {
       child = cp.spawn("claude", args, {

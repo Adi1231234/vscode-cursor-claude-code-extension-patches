@@ -150,6 +150,10 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
    a fourth cell empty - and an empty cell in this scheme is a block of the line
    colour with nothing in it. Four settings in two columns is 2x2 at any width. */
 .__afFields{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--afEdge);border:1px solid var(--afEdge);border-radius:7px;overflow:hidden}
+/* Five settings in a two-column grid leaves the last one alone on its row, and
+   a half-width box beside an empty cell reads as something failing to render.
+   It takes the whole row instead. */
+.__afFields > :last-child:nth-child(odd){grid-column:1 / -1}
 .__afF{display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:7px 11px 8px;background:var(--afField);font-size:11px;cursor:pointer;transition:background .1s ease}
 .__afF:hover{background:color-mix(in srgb,var(--vscode-foreground,#ccc) 9%,var(--afField))}
 .__afF label{opacity:.72;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;direction:ltr;flex:none}
