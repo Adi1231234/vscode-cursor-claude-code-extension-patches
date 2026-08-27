@@ -30,6 +30,8 @@ const MOVES = [
   ['deeper',    /תמשיך|אל תעצור|keep going|don.t stop|תבנה|build it|עד הסוף/i],
   ['nextaxis',  /ציר הבא|next axis|מה הבא|תמחר|priced|what.*next/i],
   ['factor',    /פי כמה|פי \d|factor|order of magnitude/i],
+  ['assumption',/לא סגור|סגור באמת|סגורה באמת|טענה גורפת|טענה חזקה|באמת סגור|סגור לחלוטין|היה צריך להיות נכון|בדקת בפועל|או שזו הנחה|assumed|would have to be true|actually checked/i],
+  ['cost',      /מה זה עולה|במה זה עולה|מי משלם|על חשבון|what does it cost|who pays|at the expense/i],
 ];
 const moveOf = t => { const h = MOVES.filter(([, re]) => re.test(t)).map(([n]) => n); return h.length ? h : ['other']; };
 
@@ -42,6 +44,7 @@ const RUNS = Number(process.argv[3]) || 4;
 const FROM = Number(process.argv[4]) || 0;
 const COUNT = Number(process.argv[5]) || sample_.length;
 const moments = sample_.slice(FROM, FROM + COUNT);
+const before = sample_.slice(0, FROM);   /* seen by the ledger, not measured */
 
 /* Which question fires where, decided before a single call goes out.
 
@@ -60,14 +63,14 @@ const moments = sample_.slice(FROM, FROM + COUNT);
 function plan() {
   const out = [];
   let done = [], day = '';
-  for (const m of moments) {
+  for (const m of before.concat(moments)) {
     const d = m.ts.slice(0, 10);
     if (d !== day) { day = d; done = []; }
     const hit = ONCE.pending(resp, m.assistant, done);
     if (hit) done.push(hit.id);
     out.push(hit);
   }
-  return out;
+  return out.slice(before.length);
 }
 
 const gates = plan();
@@ -99,6 +102,12 @@ moments.forEach((m, i) => {
   console.log(`     human move : ${hm.join('+')}   ${JSON.stringify(m.human.slice(0, 70))}`);
   console.log(`     bot moves  : ${flat.join(' | ')}${gates[i] ? '   [gate: ' + gates[i].ask.slice(0, 40) + ']' : ''}`);
   console.log(`     ${top[1] === RUNS ? 'STABLE  ' : 'VARIES  '} ${top[0]} ${top[1]}/${RUNS}   matched the human ${hit}/${RUNS}`);
+  /* SHOW=1 prints what was actually sent. A label is a classifier's opinion, and
+     when a rules change moved every moment into 'other' the labels could not say
+     whether the move had got better or had simply stopped being recognised. */
+  if (process.env.SHOW) results[i].forEach((r, n) => {
+    console.log(`       [${n + 1}] ${String(r.message || '(stop) ' + r.stop).replace(/\s+/g, ' ').slice(0, 200)}`);
+  });
 });
 
 /* Above the totals, because the totals are void without it. */

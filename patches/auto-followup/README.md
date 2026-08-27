@@ -100,6 +100,34 @@ That is the rule this patch keeps rediscovering: whatever the mechanism can
 decide, the mechanism decides. The claims ledger, the record of what was sent,
 and this are all the same lesson.
 
+
+### The fallback that ate the other rules
+
+`## rules` is a list, and one entry - "an axis closed with a measurement: ask for
+the next axis and what it is priced at" - matches almost any message reporting a
+number. Measured over twelve turning points it was the move on seven of them,
+including the one where the human wrote "by what factor can this be cut".
+
+The fix was not a sharper wording of that rule but demoting it: it is now labelled
+the last resort, with the measurement written into the rule itself, and two moves
+were added that the transcripts show the human actually making - refusing a claim
+that something is closed or exhausted, and asking what a reported gain costs.
+
+Measured after: **the fallback appears in none of forty-eight samples**, against
+seven of twelve moments before.
+
+It is replaced by a new most-common move - challenging an unearned claim of
+closure - which now appears on nine of twelve. That is one dominant default for
+another, and worth saying plainly. The reason for preferring it is not its
+frequency: it keeps pressure on the claim in front of it, where asking for the
+next axis accepts the frame it was handed and moves on. In this project's own
+history, the largest win came from reopening a closure statement that had been
+believed for four days.
+
+Two moments are still not what the human did. On "explain it simply, no analogies"
+the responder asks for a proof: it has no move for not being understood, and that
+may be right for a responder whose subject is measurement.
+
 ## The four settings
 
 - **`context`** decides what the responder is worth, and it is the one to
