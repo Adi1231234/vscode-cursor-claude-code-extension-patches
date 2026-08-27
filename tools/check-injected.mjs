@@ -34,8 +34,9 @@ const SCRIPTS = {
   },
   "auto-followup": {
     dir: "patches/auto-followup/af/",
-    order: ["config", "bridge", "claims", "button", "menu", "lane", "transcript", "dialog",
-            "dialog-form", "dialog-foot", "loop", "runtime"]
+    /* Read, not repeated. This list lived in five places; once.js was added to
+       four of them and this one kept scanning a bundle the patch no longer ships. */
+    order: JSON.parse(fs.readFileSync("patches/auto-followup/af/order.json", "utf8"))
   }
 };
 

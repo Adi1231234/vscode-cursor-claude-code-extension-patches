@@ -26,8 +26,7 @@ const repo = join(patch, '..', '..');
 
 /* The same order patch.ps1 concatenates, and the same substitutions - with the
    hashes read out of a live panel over CDP rather than invented. */
-const ORDER = ['config','bridge','claims','button','menu','lane','transcript','dialog',
-               'dialog-form','dialog-foot','loop','runtime'];
+const ORDER = JSON.parse(readFileSync(join(patch, 'af', 'order.json'), 'utf8'));
 const SUBS = {
   __NONCE__: 'testnonce',
   __MSG__: 'message_07S1Yg',

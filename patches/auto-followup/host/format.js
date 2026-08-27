@@ -29,6 +29,7 @@
    section names to get one running. */
 globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
   var NL = String.fromCharCode(10);
+  var KEYS = ["when", "ask", "name", "after"];
   var DEFAULTS = {
     first_question: "",
     context: "last-message+claims",
@@ -69,7 +70,7 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
       if (!line) return flush();
       var c = line.indexOf(":");
       var k = c > 0 ? line.slice(0, c).trim().toLowerCase() : "";
-      if (k === "when" || k === "ask") { cur[k] = line.slice(c + 1).trim(); last = k; return; }
+      if (KEYS.indexOf(k) >= 0) { cur[k] = line.slice(c + 1).trim(); last = k; return; }
       /* Anything else continues the field above it, so a question long enough to
          be worth asking can be wrapped rather than run off the edge of the file. */
       if (last) cur[last] += " " + line;
@@ -107,7 +108,12 @@ globalThis.__ccAfFormat = globalThis.__ccAfFormat || (function () {
   function onceText(r) {
     if (!r.once || !r.once.length) return "";
     var body = r.once.map(function (e) {
-      return "when: " + e.when + NL + "ask: " + e.ask;
+      var out = [];
+      if (e.name) out.push("name: " + e.name);
+      out.push("when: " + e.when);
+      if (e.after) out.push("after: " + e.after);
+      out.push("ask: " + e.ask);
+      return out.join(NL);
     }).join(NL + NL);
     return NL + NL + "## once" + NL + body;
   }

@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 const B=require('path').resolve(__dirname,'..','af')+'/';
-const order=['config','bridge','claims','button','menu','lane','transcript','dialog','dialog-form','dialog-foot','loop','runtime'];
+const order=JSON.parse(fs.readFileSync(B+'order.json','utf8'));
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
 // expose internals for the test only
@@ -169,6 +169,26 @@ ok(S().claims.length===before+1,'repeated claim not recorded twice (added '+(S()
   ok(P({once:[{when:'21',ask:'ASK-DURATION'}]},'21 s')===null,'once: the same question stays asked across responders');
   ok(P({once:[{when:'21',ask:'ASK-DURATION, reworded'}]},'21 s')!==null,'once: editing a question re-arms it');
   ok(P({first_question:'FQ',once:[]},'anything').ask==='FQ','once: first_question still works for the simple case');
+}
+const F2=(()=>{const g={};(new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host','format.js'),'utf8')))(g);return g.__ccAfFormat;})();
+globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host','samples.js'),'utf8')))(g);return g.__ccAfSamples;})();
+
+// 'after:' - an ordering between once-questions, not a sharper pattern.
+{
+  const P=T.pendingOnce;
+  const R2={once:[{name:'frame',when:'[0-9]+ ?s([^a-z]|$)',ask:'A-FRAME'},
+                  {name:'factor',after:'frame',when:'[0-9]+ ?%',ask:'A-FACTOR'}]};
+  ok(P(R2,'that is 12% faster')===null,'after: a question waits for the one it depends on');
+  ok(P(R2,'it takes 21 s').ask==='A-FRAME','after: the question depended on still fires');
+  T.markOnceAsked(P(R2,'it takes 21 s').id);
+  ok(P(R2,'that is 12% faster').ask==='A-FACTOR','after: and unblocks the one waiting');
+  // a typo must cost the ordering, not the question
+  const R3={once:[{name:'factor',after:'nosuch',when:'[0-9]+ ?%',ask:'A-ORPHAN'}]};
+  ok(P(R3,'that is 12% faster').ask==='A-ORPHAN','after: naming an entry that does not exist blocks nothing');
+  const R4={once:[{when:'[0-9]+ ?%',ask:'A-PLAIN'}]};
+  ok(P(R4,'that is 12% faster').ask==='A-PLAIN','after: an entry without one is unaffected');
+  const ps=F2.parse('perf-skeptic',globalThis.__ccAfSamples2.find(s=>s.id==='perf-skeptic').text);
+  ok(ps.once[1].after==='frame','after: the shipped factor question waits for the frame question');
 }
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

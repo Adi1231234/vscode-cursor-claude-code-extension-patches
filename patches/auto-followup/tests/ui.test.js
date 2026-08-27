@@ -5,7 +5,7 @@
 require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 const B=path.resolve(__dirname,'..','af')+'/';
-const order=['config','bridge','claims','button','menu','lane','transcript','dialog','dialog-form','dialog-foot','loop','runtime'];
+const order=JSON.parse(require('fs').readFileSync(B+'order.json','utf8'));
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
 src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');

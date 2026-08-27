@@ -36,7 +36,7 @@ function Invoke-Patch {
     # Anchored on the queue's own marker: this patch calls window.__qAuto, which
     # queue/flush-init.js defines, so it has to be injected after it. apply.ps1
     # runs prompt-queue first for the same reason.
-    $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'transcript', 'dialog', 'dialog-form', 'dialog-foot', 'loop', 'runtime')
+    $order = Get-Content (Join-Path $PSScriptRoot 'af/order.json') -Raw | ConvertFrom-Json
     # The message selectors are the same detected names copy-message uses: the
     # transcript is read from the DOM, because nothing in the app exposes a
     # message list on the session store.

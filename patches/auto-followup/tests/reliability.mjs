@@ -18,6 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 globalThis.require = createRequire(import.meta.url);
 for (const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js'])
   (0, eval)(readFileSync(join(here, '..', 'host', f), 'utf8'));
+const ONCE = globalThis.require(join(here, '..', 'af', 'once.js'));
 const F = globalThis.__ccAfFormat, R = globalThis.__ccAfRun, P = globalThis.__ccAfPrompt;
 const resp = F.parse('perf-skeptic', globalThis.__ccAfSamples.find(s => s.id === 'perf-skeptic').text);
 resp.context = 'last-message+claims';
@@ -42,35 +43,28 @@ const FROM = Number(process.argv[4]) || 0;
 const COUNT = Number(process.argv[5]) || sample_.length;
 const moments = sample_.slice(FROM, FROM + COUNT);
 
-function idFor(ask) {
-  let h = 5381;
-  for (let i = 0; i < ask.length; i++) h = ((h * 33) ^ ask.charCodeAt(i)) >>> 0;
-  return 'q' + h.toString(36);
-}
-
 /* Which question fires where, decided before a single call goes out.
 
    It depends only on the text of Claude's messages and on the ledger, never on
    what the model replies - which is what makes the calls independent, and is why
    this used to take twenty-seven minutes for no reason.
 
+   The rules themselves come from af/once.js, the same file the panel uses. They
+   were a copy here once, the copy went stale when an ordering was added, and the
+   run reported the old behaviour in 0.4 seconds - which reads exactly like a fast
+   confirmation.
+
    The ledger resets on a session boundary: a once-question is spent for one
    arming, and these moments span five separate days. Carrying one ledger across
    all of them gagged the 26th with a question put on the 16th. */
 function plan() {
   const out = [];
-  let done = new Set(), day = '';
+  let done = [], day = '';
   for (const m of moments) {
     const d = m.ts.slice(0, 10);
-    if (d !== day) { day = d; done = new Set(); }
-    let hit = null;
-    for (const e of resp.once || []) {
-      const ask = (e.ask || '').trim();
-      if (!ask || done.has(idFor(ask))) continue;
-      let re; try { re = new RegExp(e.when, 'i'); } catch { continue; }
-      if (re.test(m.assistant)) { hit = { id: idFor(ask), ask }; break; }
-    }
-    if (hit) done.add(hit.id);
+    if (d !== day) { day = d; done = []; }
+    const hit = ONCE.pending(resp, m.assistant, done);
+    if (hit) done.push(hit.id);
     out.push(hit);
   }
   return out;
