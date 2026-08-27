@@ -70,6 +70,25 @@ ledger belongs to the conversation and not to the arming, so turning a responder
 off does not wipe it - what Claude asserted stays true across an off and on
 again.
 
+## Where the transcript and the session id come from
+
+Both from the places this repository already established, not from the session
+store, and both were wrong here first:
+
+- **The reply being answered** is read from the DOM, with the same detected class
+  names `copy-message` uses: `.message_<hash>`, a user turn identified by the
+  `.userMessage_<hash>` inside it, with thinking blocks and tool calls stripped.
+  Nothing in this repo reads a message list off the store, and the first version
+  here assumed `s.messages.value`. That is `undefined`, so `lastAssistant()`
+  returned `""` on every tick and **the loop would never have fired once** -
+  silently, with a green test suite, because the stub modelled the assumption.
+- **The session id** comes through `window.__qAuto.sid()`, which is
+  `persist.js`'s resolved and cached value. Its own note says where it really
+  lives, confirmed with an in-webview probe: the webview URL carries
+  `?session=<uuid>` and the store object does not carry it at all. The first
+  version here read `s.sessionId` and got `""`, which would have keyed every
+  conversation's arming and claims to one shared bucket.
+
 ## Why a slot of its own and not a queue item
 
 The queue already sends one message per turn, so pushing follow-ups into it looks

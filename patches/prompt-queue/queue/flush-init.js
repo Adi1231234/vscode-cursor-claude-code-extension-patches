@@ -84,6 +84,7 @@
        panel()   the queue panel node, or null - the lane renders inside it.
        send(t)   send one text now, by the same path a queued item takes.
        log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
+       sid()     the conversation id, resolved and cached by persist.js.
      Guarded so the first definition wins, like every other shared global here.
 
      send() cannot go through sendNow: that one takes an item already in Q and
@@ -115,7 +116,8 @@
     busy: function () { return isBusy(); },
     panel: function () { return panel && panel.isConnected ? panel : null; },
     send: sendText,
-    log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} }
+    log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },
+    sid: function () { return _curSid || ""; }
   };
 
   /* ---------- Init ---------- */

@@ -17,24 +17,29 @@
     return false;
   }
 
+  /* Through the queue, which already resolves this and caches it. Its own note
+     says where it really lives, confirmed with an in-webview probe: the webview
+     URL carries ?session=<uuid>, and the store object does NOT carry it - the
+     React props do, on a chain the composer is not on. An earlier version here
+     read s.sessionId directly, got "" every time, and would have keyed every
+     conversation's arming and claims to one shared bucket. */
   function sessionId() {
     try {
-      var s = globalThis.__ccStore();
-      var v = s && (s.sessionId || s.conversationId);
-      if (v && typeof v === "object" && "value" in v) v = v.value;
-      return v ? String(v) : "";
+      var q = qApi();
+      return (q && q.sid && q.sid()) || "";
     } catch (e) { return ""; }
   }
 
-  /* The workspace root, passed so the CLI has a valid place to start. The
-     responder is handed its context explicitly and is not meant to read the
-     project, so this is a working directory and nothing more. */
+  /* Only so the CLI has a valid directory to start in - the responder is handed
+     its context explicitly and never reads the project. Nothing in this repo
+     reads a cwd off the store, so this is a hint and not a fact: run.js checks it
+     and falls back to the home directory, which is correct for this use. */
   function cwdHint() {
     try {
       var s = globalThis.__ccStore();
-      var v = s && (s.cwd || s.workspaceRoot);
+      var v = s && s.cwd;
       if (v && typeof v === "object" && "value" in v) v = v.value;
-      return v ? String(v) : "";
+      return typeof v === "string" ? v : "";
     } catch (e) { return ""; }
   }
 

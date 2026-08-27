@@ -13,6 +13,9 @@ function mkEl(tag){
     querySelector(sel){var c=String(sel).replace('.','');for(var i=0;i<this.children.length;i++){if(this.children[i].className===c)return this.children[i];}return null;},closest(){return globalThis.__form;},
     getBoundingClientRect(){return {top:100,bottom:126,left:50,width:26,height:26};},
     insertAdjacentHTML(){},focus(){},
+    cloneNode(){const c=mkEl(this.tagName);c.className=this.className;c._text=this._text;
+      c.querySelectorAll=()=>[];return c;},
+    get innerText(){return this._text;},
     get textContent(){return this._text;},set textContent(v){this._text=v;},
     get innerHTML(){return this._html||'';},
     set innerHTML(v){
@@ -54,12 +57,38 @@ const __theStore={
   busy:{value:false}
 };
 globalThis.__ccStore=()=>__theStore;
+
+/* The transcript, the way the app really renders it: a list of .message_<hash>
+   nodes, a user one carrying .userMessage_<hash> inside. The tests set
+   globalThis.__msgs to [{role,content}] and this turns it into those nodes, so
+   the stub models the DOM the code reads rather than a store field it does not.
+   Getting this wrong once is exactly what hid a dead lastAssistant(). */
+const CLS={msg:'message_X',user:'userMessage_X'};
+globalThis.__msgs=[];
+document.querySelectorAll=function(sel){
+  if(String(sel).indexOf(CLS.msg)<0) return [];
+  return (globalThis.__msgs||[]).map(function(m){
+    const wrap=mkEl('div'); wrap.className=CLS.msg;
+    const inner=mkEl('div');
+    inner._text=typeof m.content==='string'?m.content:'';
+    if(m.role==='user'){ inner.className=CLS.user; }
+    wrap.children.push(inner); inner.parentNode=wrap;
+    wrap.querySelector=function(q){
+      if(String(q).indexOf(CLS.user)>=0) return m.role==='user'?inner:null;
+      return null;
+    };
+    wrap.querySelectorAll=function(){return [];};
+    wrap.cloneNode=function(){ const c=mkEl('div'); c._text=inner._text;
+      c.querySelectorAll=function(){return [];}; return c; };
+    return wrap;
+  });
+};
 globalThis.__qAutoState={count:0,paused:false,busy:false};
 globalThis.window.__qAuto={
   count:()=>globalThis.__qAutoState.count,
   paused:()=>globalThis.__qAutoState.paused,
   busy:()=>globalThis.__qAutoState.busy,
-  panel:()=>null, log:()=>{},
+  panel:()=>null, log:()=>{}, sid:()=>'sess-1',
   send:t=>{globalThis.__sentText=t;return Promise.resolve(true);}
 };
 globalThis.setInterval=(f,ms)=>{globalThis.__tick=f;return 1;};

@@ -37,7 +37,17 @@ function Invoke-Patch {
     # queue/flush-init.js defines, so it has to be injected after it. apply.ps1
     # runs prompt-queue first for the same reason.
     $order = @('config', 'bridge', 'claims', 'button', 'menu', 'lane', 'dialog', 'dialog-form', 'dialog-foot', 'loop', 'runtime')
+    # The message selectors are the same detected names copy-message uses: the
+    # transcript is read from the DOM, because nothing in the app exposes a
+    # message list on the session store.
     $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "af/$_.js") }) -join ''
-    $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce })
+    $script = Expand-JsTokens $script ([ordered]@{
+        '__NONCE__'   = $Ctx.Nonce
+        '__MSG__'     = "message_$($Ctx.MsgHash)"
+        '__USERMSG__' = "userMessage_$($Ctx.MsgHash)"
+        '__THINK__'   = $Ctx.ThinkingClass
+        '__TOOLUSE__' = $Ctx.ToolUseClass
+        '__TOOLRES__' = $Ctx.ToolResultClass
+    })
     Add-ScriptAfterMarker $Ctx $script '/* AUTOFOLLOWUP */' 'auto follow-up JS' @('/* QUEUE */')
 }

@@ -5,6 +5,9 @@ const order=['config','bridge','claims','button','menu','lane','dialog','dialog-
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</script>').join('');src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
 // expose internals for the test only
+src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
+         .split('__THINK__').join('thinking_X').split('__TOOLUSE__').join('toolUse_X')
+         .split('__TOOLRES__').join('toolResult_X');
 src=src.replace('  requestList();\n  setInterval(', '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})};\n  requestList();\n  setInterval(');
 eval(src);
 

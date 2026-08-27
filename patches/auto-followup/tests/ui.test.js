@@ -9,6 +9,9 @@ const order=['config','bridge','claims','button','menu','lane','dialog','dialog-
 let src=order.map(f=>fs.readFileSync(B+f+'.js','utf8')).join('');
 src=src.split('/* AUTOFOLLOWUP */').join('').split('</scr'+'ipt>').join('');
 src=src.replace(/^[\s\S]*?\(function\(\)\{/,'(function(){');
+src=src.split('__MSG__').join('message_X').split('__USERMSG__').join('userMessage_X')
+         .split('__THINK__').join('thinking_X').split('__TOOLUSE__').join('toolUse_X')
+         .split('__TOOLRES__').join('toolResult_X');
 src=src.replace('  requestList();'+String.fromCharCode(10)+'  setInterval(',
  '  globalThis.__t={arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'+
  'approve:approve,openDialog:openDialog,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,'+
