@@ -67,6 +67,13 @@
 
   function editPane() {
     var pane = el("div", "__afPane __afEdit __ccScroll");
+    /* Under it, because it is the same shape and a different firing rule: the
+       questions here come back on a cadence. Without a box they would still
+       work and still be saved, and nobody would ever see them. */
+    pane.appendChild(box("Ask again", "every few turns, whenever the pattern matches",
+      draft.everyText, function (v) { draft.everyText = v; }, "__afOnce __afMono",
+      ["name: five", "turns: 3", "when: [0-9]",
+       "ask: five ways this could be 5x?"].join(NL)));
     if (!draft) return pane;
 
     var idrow = el("div", "__afIdRow");

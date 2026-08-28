@@ -4,7 +4,7 @@ const base=require('path').resolve(__dirname,'..','host')+'/';
 // isolated responders dir
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'afcfg-'));
 process.env.CLAUDE_CONFIG_DIR=dir;
-for(const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const S=globalThis.__ccAfStore, F=globalThis.__ccAfFormat, R=globalThis.__ccAfRun;
 let pass=0,fail=0;
 const ok=(c,m)=>{ c?pass++:(fail++,console.log('  FAIL: '+m)); };
@@ -21,7 +21,7 @@ ok(S.list().length===3,'seed is idempotent');
 // 3. fields parsed
 const p=S.read('perf-skeptic');
 ok(p && p.context==='last-message+claims','context parsed: '+(p&&p.context));
-ok(p && p.max_turns==='20','max_turns parsed: '+(p&&p.max_turns));
+ok(p && p.max_turns==='50','max_turns parsed: '+(p&&p.max_turns));
 ok(p && p.autosend==='false','autosend parsed');
 ok(p && p.rules.length>50,'rules body parsed ('+(p?p.rules.length:0)+' ch)');
 ok(p && p.stop.length>20,'stop body parsed ('+(p?p.stop.length:0)+' ch)');
@@ -85,28 +85,29 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(back.rules==='be brief'&&back.stop==='done','once: round trip leaves rules and stop alone');
 
   const ps=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text);
-  ok(ps.once.length===3,'once: shipped perf responder carries the whole chain, got '+ps.once.length);
-  // what is this a number of -> show me what produced it -> by what factor.
-  // Each waits for the one before, and nothing names itself: an entry whose
-  // 'after' is its own name can never fire, which is a deadlock that reads as
-  // a question that simply never comes up.
-  ok(ps.once.map(e=>e.name).join('>')==='frame>code>factor','once: the chain is frame, code, factor');
+  ok(ps.once.length===2,'once: the shipped responder frames twice and only twice, got '+ps.once.length);
+  ok(ps.once.map(e=>e.name).join('>')==='backwards>frame','once: backwards first, then what it was measured on');
+  // the reaching questions moved to ## every, because asking them once was the
+  // whole failure: on a ten-hour run the factor question fired three times in
+  // sixty-seven turns and not once in the last forty-six.
+  ok(ps.every.length===3,'every: three recurring questions, got '+ps.every.length);
+  ok(ps.every.map(e=>e.name).join(',')==='five,read,unexplained','every: five, read, unexplained');
+  ok(ps.every.every(e=>parseInt(e.turns,10)>0),'every: each one names its cadence');
   ok(ps.once.every(e=>e.after!==e.name),'once: no entry waits for itself');
-  ok(new RegExp(ps.once[0].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
+  ok(new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
   // asserting only the English form is how the frame question came to be dead on
   // every one of twelve real turning points while the suite stayed green
-  ok(new RegExp(ps.once[0].when,'i').test('הפרומפט לוקח 21.8 שניות'),'once: frame question triggers on a duration written in Hebrew');
-  ok(new RegExp(ps.once[0].when,'i').test('זה 500 מילישניות'),'once: and on milliseconds written in Hebrew');
-  ok(!new RegExp(ps.once[0].when,'i').test('18 shared layers'),'once: a bare count is not a duration');
-  ok(new RegExp(ps.once[1].when,'i').test('that is 12% faster'),'once: factor question triggers on a percent');
-  // or it takes the turn the frame question exists for
-  ok(new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: any figure at all reaches the request for the code');
-  ok(new RegExp(ps.once[2].when,'i').test('that is 12% faster'),'once: the factor question still triggers on a percent');
-  // '31 percent' spelled out in Hebrew is the same claim as '31%', and the
-  // English-only form of this pattern is what left the framing question dead on
-  // twelve real turning points
-  ok(new RegExp(ps.once[2].when,'i').test('משפר ב-31 אחוז'),'once: the factor question triggers on a percent written in Hebrew');
-  ok(!new RegExp(ps.once[2].when,'i').test('18 שכבות'),'once: a bare count in Hebrew is not a percent');
+  ok(new RegExp(ps.once[1].when,'i').test('הפרומפט לוקח 21.8 שניות'),'once: frame question triggers on a duration written in Hebrew');
+  ok(new RegExp(ps.once[1].when,'i').test('זה 500 מילישניות'),'once: and on milliseconds written in Hebrew');
+  ok(!new RegExp(ps.once[1].when,'i').test('18 shared layers'),'once: a bare count is not a duration');
+  // the reaching questions fire on any number now, not on a percent: a percent
+  // is what a turn produces when the frame is already too small, and waiting for
+  // one is waiting for the wrong thing.
+  ok(ps.every.every(e=>new RegExp(e.when,'i').test('prefill is 53.8 s')),
+     'every: each recurring question triggers on any number in the message');
+  ok(ps.every.every(e=>!new RegExp(e.when,'i').test('no numbers at all here')),
+     'every: and on none when there is none');
+  ok(!new RegExp(ps.once[1].when,'i').test('18 שכבות'),'once: a bare count in Hebrew is not a duration');
   ok(!(ps.first_question||'').trim(),'once: the shipped responder no longer relies on first_question');
 }
 
@@ -165,6 +166,59 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   // to. settings-live.mjs is where that is checked against a real argv.
   const off = F.parse('x', F.serialize(Object.assign({}, bare, { effort: 'default' })));
   ok(off.effort === 'default', 'effort: default survives being chosen on purpose');
+}
+
+// 9. '## every' - the same trigger with a cadence, for the questions that have
+// to be asked again. Measured on a ten-hour run, the factor question fired three
+// times in sixty-seven turns and then not once in the last forty-six.
+{
+  const O=require('../af/once.js');
+  const e1=F.parse('x',['## every','name: five','turns: 3','when: [0-9]','ask: five ways?'].join(NL));
+  ok(e1.every.length===1,'every: parsed, got '+e1.every.length);
+  ok(e1.every[0].turns==='3','every: the cadence is kept, got '+e1.every[0].turns);
+  ok(e1.once.length===0,'every: and it is not the once list');
+  const eBack=F.parse('x',F.serialize(e1));
+  ok(JSON.stringify(eBack.every)===JSON.stringify(e1.every),'every: survives a save/load round trip');
+
+  const r={every:[{name:'five',turns:'3',when:'[0-9]',ask:'five ways?'}]};
+  const id=O.idFor('five ways?');
+  const log5={}; log5[id]=5;
+  ok(O.recurring(r,'53.8 s',{},0),'every: fires when it has never fired');
+  ok(!O.recurring(r,'no digits here',{},0),'every: and only when the pattern matches');
+  ok(!O.recurring(r,'53.8 s',log5,6),'every: does not fire again inside the gap');
+  ok(!O.recurring(r,'53.8 s',log5,7),'every: nor on the last turn of it');
+  ok(O.recurring(r,'53.8 s',log5,8),'every: fires again once the gap has passed');
+
+  // two due at once: the one that has waited longest goes, so a short cadence
+  // cannot starve a long one on a message that matches both.
+  const two={every:[{name:'a',turns:'2',when:'[0-9]',ask:'A?'},
+                    {name:'b',turns:'2',when:'[0-9]',ask:'B?'}]};
+  const log2={}; log2[O.idFor('A?')]=9; log2[O.idFor('B?')]=2;
+  ok((O.recurring(two,'1',log2,20)||{}).ask==='B?','every: the one waiting longest goes first');
+  ok(O.recurring(two,'1',log2,20).every===true,'every: and is marked as recurring');
+}
+
+// 10. both question sections make the round trip through the store the dialog
+// actually uses. A section the panel is never sent is a section nobody can edit,
+// and one the store does not parse back is a section a save deletes.
+{
+  const got=S.list().find(r=>r.id==='perf-skeptic');
+  ok(typeof got.onceText==='string' && /name: backwards/.test(got.onceText),
+     'store: the once section reaches the panel as text');
+  ok(typeof got.everyText==='string' && /name: five/.test(got.everyText),
+     'store: and so does the recurring one, got '+String(got.everyText).slice(0,20));
+  ok(!/## once|## every/.test(got.onceText+got.everyText),
+     'store: as the entries, without the heading above them');
+
+  // what the dialog sends back is text, and only text
+  const edited={id:'perf-skeptic',name:'perf-skeptic',rules:'r',stop:'s',
+    onceText:['name: a','when: x','ask: A?'].join(NL),
+    everyText:['name: b','turns: 7','when: y','ask: B?'].join(NL)};
+  S.save(edited);
+  const back=S.list().find(r=>r.id==='perf-skeptic');
+  ok(back.once.length===1 && back.once[0].ask==='A?','store: a saved once entry comes back');
+  ok(back.every.length===1 && back.every[0].ask==='B?','store: and a saved recurring one, got '+JSON.stringify(back.every));
+  ok(back.every[0].turns==='7','store: with its cadence, got '+(back.every[0]||{}).turns);
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);

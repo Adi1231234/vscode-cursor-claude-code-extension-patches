@@ -14,7 +14,7 @@
      node patches/auto-followup/tests/loop-live.test.js */
 const fs=require('fs'), path=require('path'), os=require('os');
 const base=path.resolve(__dirname,'..','host')+'/';
-for(const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const F=globalThis.__ccAfFormat, R=globalThis.__ccAfRun;
 const sample=globalThis.__ccAfSamples.filter(s=>s.id==='perf-skeptic')[0];
 

@@ -21,7 +21,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const hostDir = join(here, '..', 'host');
 const require = createRequire(import.meta.url);
 globalThis.require = require;
-for (const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js'])
+for (const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js'])
   (0, eval)(readFileSync(join(hostDir, f), 'utf8'));
 const F = globalThis.__ccAfFormat, R = globalThis.__ccAfRun;
 const SAMPLE = globalThis.__ccAfSamples.find(s => s.id === 'perf-skeptic');

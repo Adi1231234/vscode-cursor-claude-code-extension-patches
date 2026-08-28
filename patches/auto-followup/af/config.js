@@ -37,8 +37,11 @@
   var FIRST_KEY = "ccAfFirst:";    /* + session id - has first_question been put */
   var ASKED_KEY = "ccAfAsked:";    /* + session id - what the panel actually sent */
   var STATE_KEY = "ccAfState:";  /* + session id - turns, slot, stop reason */
+  var EVERY_KEY = "ccAfEvery:";    /* + session id - the turn each recurring question last fired */
+  var AXES_KEY = "ccAfAxes:";      /* + session id - what has been priced, and what killed it */
   var MAX_ASKED = 5;               /* enough to recognise a repeat, not a transcript */
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
+  var MAX_AXES = 200;              /* the graveyard is small and must not scroll */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */
 
   /* This whole script is injected into a template literal, so every backslash is

@@ -10,13 +10,16 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     "You are NOT talking to the human and you are NOT Claude. Your whole output is the",
     "message that will be typed into the composer, plus bookkeeping.",
     "",
-    "Answer with JSON only, exactly these four keys:",
+    "Answer with JSON only, exactly these five keys:",
     '  "message" - the text to send. Write it as the human would: direct, short,',
     "              in the language the human has been using.",
     '  "why"     - one short clause naming the rule you applied. The human reads',
     "              this to judge you, so name the trigger, not the intent.",
     '  "claims"  - factual assertions or numbers Claude stated in the message you',
     "              were given, as short strings. [] when there are none.",
+    '  "axes"    - any axis you priced this turn, one short line each: what it is,',
+    "              what it is worth, and what killed it if it is dead. [] when",
+    "              there are none - the panel keeps them, you only add.",
     '  "stop"    - null to continue, or a short reason when the stop condition is met.',
     "",
     "When you return a stop reason, 'message' is ignored and nothing is sent."
@@ -81,6 +84,23 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     var p = [CONTRACT, ""].concat(goalOf(r))
               .concat(["# When to type what", (r.rules || "").trim()]);
     if ((r.stop || "").trim()) p.push("", "# When to stop", r.stop.trim());
+    /* The graveyard, above the claims, because it decides what is worth a turn
+       and they only decide whether a number is right.
+
+       It is uncapped where the claims are not. Measured on a ten-hour run, no
+       turn could see further back than twenty-three rounds of sixty-seven, so
+       an axis priced and closed in round four was invisible for the rest of the
+       night and the loop kept working it. This list is small enough not to
+       scroll, and it is the only thing here that remembers the shape of the
+       search rather than its assertions. */
+    if (ctx.axes && ctx.axes.length) {
+      p.push("", "# Axes already priced, oldest first",
+             "What has been weighed and what killed it. Do not re-open one of these",
+             "for a better measurement of the same number. Do re-open one whose",
+             "killer was a decision somebody made, the moment that decision moves -",
+             "and say that is why you are re-opening it.",
+             ctx.axes.join(String.fromCharCode(10)));
+    }
     if (ctx.claims && ctx.claims.length) {
       p.push("", "# What Claude has already asserted this session",
              "Each line is one earlier claim. Use them to catch a contradiction with",

@@ -24,7 +24,12 @@
     var mode = (meta && meta.context) || "last-message+claims";
     var reply = lastAssistant();
     var ctx = { text: reply, cwd: cwdHint(), claims: [], asked: readAsked(),
-                once: pendingOnce(meta, reply) };
+                once: null, axes: readAxes() };
+    /* The framing questions come first and are asked once each; the recurring
+       ones fill the turns after they have all been put. Both arrive through
+       the same field because from here on they are the same thing: a question
+       the panel chose, leaving the model only the wording. */
+    ctx.once = pendingOnce(meta, reply) || pendingEvery(meta, reply);
     ctx.needFirst = !!ctx.once;
     if (mode === "last-message+claims") ctx.claims = readClaims();
     else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
@@ -42,6 +47,7 @@
     liveResult = m;
     turns += 1;
     if (m.claims && m.claims.length) addClaims(m.claims);
+    if (m.axes && m.axes.length) addAxes(m.axes);
     if (m.stop) { slot = null; disarm(m.stop); return; }
     if (!m.message) { log("empty message, nothing to send"); renderAll(); return; }
     /* Into the queue, as an ordinary item.
@@ -85,7 +91,8 @@
     if (!text || text === lastSeen) return;    /* nothing new to answer */
     lastSeen = text;
     var ctx = contextFor();
-    if (ctx.once) markOnceAsked(ctx.once.id);   /* asked once, whatever comes back */
+    if (ctx.once && ctx.once.every) markEveryAsked(ctx.once.id);
+    else if (ctx.once) markOnceAsked(ctx.once.id);   /* asked once, whatever comes back */
     inflight = requestRun(armed, ctx);
     try { liveReset(inflight); } catch (e) {}
     renderAll();
