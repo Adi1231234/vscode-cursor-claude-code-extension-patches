@@ -56,6 +56,26 @@
      than a list, because what decides the next firing is when the last one was
      and not whether it happened. Cleared with the once ledger, for the same
      reason: a new arming is a new search. */
+  /* When the panel last put a question of its own, whichever one. Every question
+     it chooses arrives with "ask this, and nothing else", so two in a row throw
+     away the answer to the first - and each question knowing only its own cadence
+     is what let that happen. */
+  function lastPanelTurn() {
+    try { return parseInt(localStorage.getItem(keyFor(PANEL_KEY)), 10) || -99; }
+    catch (e) { return -99; }
+  }
+
+  function markPanelAsked() {
+    try { localStorage.setItem(keyFor(PANEL_KEY), String(turns)); } catch (e) {}
+  }
+
+  /* The gate, in one place, so the two kinds of question cannot space themselves
+     against their own cadence and forget about each other. */
+  function panelQuestion(r, text) {
+    if (turns - lastPanelTurn() < PANEL_GAP) return null;
+    return pendingOnce(r, text) || pendingEvery(r, text);
+  }
+
   function everyLog() {
     try { return JSON.parse(localStorage.getItem(keyFor(EVERY_KEY)) || "{}") || {}; }
     catch (e) { return {}; }
@@ -111,6 +131,7 @@
   function clearFirst() {
     try { localStorage.removeItem(keyFor(FIRST_KEY)); } catch (e) {}
     try { localStorage.removeItem(keyFor(EVERY_KEY)); } catch (e) {}
+    try { localStorage.removeItem(keyFor(PANEL_KEY)); } catch (e) {}
   }
 
   function recordAsked(text) {

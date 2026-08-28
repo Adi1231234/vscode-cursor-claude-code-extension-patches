@@ -29,7 +29,7 @@
        ones fill the turns after they have all been put. Both arrive through
        the same field because from here on they are the same thing: a question
        the panel chose, leaving the model only the wording. */
-    ctx.once = pendingOnce(meta, reply) || pendingEvery(meta, reply);
+    ctx.once = panelQuestion(meta, reply);
     ctx.needFirst = !!ctx.once;
     if (mode === "last-message+claims") ctx.claims = readClaims();
     else if (mode === "full-session") { ctx.claims = readClaims(); ctx.transcript = transcript(); }
@@ -91,6 +91,7 @@
     if (!text || text === lastSeen) return;    /* nothing new to answer */
     lastSeen = text;
     var ctx = contextFor();
+    if (ctx.once) markPanelAsked();
     if (ctx.once && ctx.once.every) markEveryAsked(ctx.once.id);
     else if (ctx.once) markOnceAsked(ctx.once.id);   /* asked once, whatever comes back */
     inflight = requestRun(armed, ctx);
