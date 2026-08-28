@@ -98,6 +98,8 @@
       renderAll();
       /* The picker may be open and showing the emptiness it was built with. */
       try { refreshMenu(); } catch (e) {}
+      /* And the one line in the dialog that is about the file, not the draft. */
+      try { refreshSavedAt(); } catch (e) {}
       return;
     }
     if (m.op === "chunk") {

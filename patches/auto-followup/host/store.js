@@ -46,10 +46,15 @@ globalThis.__ccAfStore = globalThis.__ccAfStore || (function () {
     var f = fileFor(id);
     if (!f) return null;
     try {
-      if (fs.statSync(f).size > MAX_FILE) return null;
+      var st = fs.statSync(f);
+      if (st.size > MAX_FILE) return null;
       var r = globalThis.__ccAfFormat.parse(id, fs.readFileSync(f, "utf8"));
       r.onceText = globalThis.__ccAfFormat.onceToText(r.once);
       r.everyText = globalThis.__ccAfFormat.everyToText(r.every);
+      /* When the file last changed, from the file rather than from anything that
+         reports having written it. A save the panel thinks it made and a save the
+         disk actually took are two different facts, and this is the second. */
+      r.updated = st.mtimeMs;
       return r;
     } catch (e) { return null; }
   }

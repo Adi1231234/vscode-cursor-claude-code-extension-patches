@@ -23,6 +23,7 @@ const asHostSends=(id)=>{
   const r=HOSTG.__ccAfFormat.parse(id,HOSTG.__ccAfSamples.find(s=>s.id===id).text);
   r.onceText=HOSTG.__ccAfFormat.onceToText(r.once);
   r.everyText=HOSTG.__ccAfFormat.everyToText(r.every);
+  r.updated=Date.parse("2026-08-28T09:41:00Z");
   return r;
 };
 const LIST=[asHostSends('perf-skeptic'),
@@ -797,6 +798,25 @@ try{
   T.openLive();   /* close */
 }
 
+
+// When the file last changed. It answers a question the dialog could not: did
+// my save land, and has anything edited this outside this window.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const at=document.querySelector('.__afSavedAt');
+  ok(!!at,'saved-at: the footer carries it');
+  ok(/^saved /.test(at.textContent||''),'saved-at: and says what the time is, got '+at.textContent);
+  const first=at.textContent;
+
+  // it comes from the list, which the host rebuilds after every save, so a save
+  // that landed shows a new time without the pane being redrawn
+  const later=LIST.map(r=>Object.assign({},r,{updated:Date.parse("2026-08-28T10:05:00Z")}));
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:later}});
+  ok(document.querySelector('.__afSavedAt')===at,'saved-at: the node itself is not replaced');
+  ok(at.textContent!==first && /^saved /.test(at.textContent),
+     'saved-at: and the new time is in it, was '+first+' now '+at.textContent);
+  T.openDialog();
+}
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
