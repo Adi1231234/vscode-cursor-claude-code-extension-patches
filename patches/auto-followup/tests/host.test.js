@@ -258,13 +258,18 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   // baseline is measured by the run, never written down here - it was written
   // down, it went stale, and the file went on pricing against a machine that
   // had moved. The second assertion is the one that keeps it out.
-  ok(flat.indexOf("the gap is the baseline minus 10 s")>=0,"goal: the gap is measured, not carried");
+  // The target itself, pinned. It was 10 s, which is below this chip's arithmetic
+  // floor of 15.61 s at the published peak - the loop was being sent after seconds
+  // that could not exist. Reverting the opening line used to fail nothing.
+  ok(flat.indexOf("Prefill of 1,100 words in 20 seconds")>=0,"goal: the target is 20 s");
+  ok(flat.indexOf("in 10 seconds")<0,"goal: and the old target is gone from it");
+  ok(flat.indexOf("the gap is the baseline minus 20 s")>=0,"goal: the gap is measured, not carried");
   ok(flat.indexOf("53.8")<0,"file: no baseline figure is written into it");
-  // the floor is absolute: a share of the gap would refuse three-second wins on a bigger job
-  ok(flat.indexOf("Two seconds is worth having, and two seconds does not move")>=0,"goal: two seconds is the floor and it does not move");
+  // the floor is absolute: a share of the gap would refuse two-second wins on a bigger job
+  ok(flat.indexOf("One second is worth having, and one second does not move")>=0,"goal: one second is the floor and it does not move");
   ok(flat.indexOf("Track the running total")>=0,"goal: and the running total is what is tracked");
   const tiers=rl;
-  ok(tiers.indexOf("under 2 s")>=0 && tiers.indexOf("2 s to 10 s")>=0,
+  ok(tiers.indexOf("under 1 s")>=0 && tiers.indexOf("1 s to 10 s")>=0,
      "rules: the tiers are in seconds, not in factors");
   ok(tiers.indexOf("under 1.1x")<0,"rules: and no longer drop anything under five seconds");
   // the sentence that cost three hours: "the number is the prefill wall clock"
