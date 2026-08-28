@@ -4,7 +4,7 @@ const base=require('path').resolve(__dirname,'..','host')+'/';
 // isolated responders dir
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'afcfg-'));
 process.env.CLAUDE_CONFIG_DIR=dir;
-for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const S=globalThis.__ccAfStore, F=globalThis.__ccAfFormat, R=globalThis.__ccAfRun;
 let pass=0,fail=0;
 const ok=(c,m)=>{ c?pass++:(fail++,console.log('  FAIL: '+m)); };
@@ -264,6 +264,40 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
      "every: and a repeat asks what was wrong with the answers, not for more bans");
   ok(rl.indexOf("goes to the graveyard with what killed it")>=0,
      "rules: work already priced is the graveyard, not the refused list");
+}
+
+// 12. the prompt without a reload. Everything else about a responder is a file
+// read on every run; the composition was in the bundle, which is read when the
+// extension host starts, so changing it meant reloading every open window.
+{
+  const H=globalThis.__ccAfHot, P=globalThis.__ccAfPrompt;
+  const resp={id:'r',name:'r',rules:'RULES',stop:'STOP',goal:'GOAL'};
+  const ctx={text:'53.8 s',claims:[]};
+  ok(H.compose(resp,ctx)===P.compose(resp,ctx),'hot: with no override, the built-in is the prompt');
+
+  const f=H.file();
+  fs.mkdirSync(path.dirname(f),{recursive:true});
+  const good='globalThis.__ccAfPrompt={compose:function(r,c){return "OVERRIDDEN "+c.text;}};';
+  fs.writeFileSync(f,good,'utf8');
+  ok(H.compose(resp,ctx)==='OVERRIDDEN 53.8 s','hot: a _prompt.js beside the responders is used');
+
+  // the same file changed again, without anything restarting
+  fs.writeFileSync(f,good.replace('OVERRIDDEN','SECOND'),'utf8');
+  const t=Date.now()+2; fs.utimesSync(f,new Date(t),new Date(t));
+  ok(H.compose(resp,ctx)==='SECOND 53.8 s','hot: and re-read when it changes, with no reload');
+
+  // anything wrong with it falls back, because an older prompt beats no prompt
+  fs.writeFileSync(f,'this is not javascript {{{','utf8');
+  const t2=Date.now()+4; fs.utimesSync(f,new Date(t2),new Date(t2));
+  ok(H.compose(resp,ctx)===P.compose(resp,ctx),'hot: one that will not parse falls back');
+  ok(H.status().err.length>0,'hot: and says why, got '+H.status().err.slice(0,40));
+
+  fs.writeFileSync(f,'globalThis.__ccAfPrompt={compose:function(){return "";}};','utf8');
+  const t3=Date.now()+6; fs.utimesSync(f,new Date(t3),new Date(t3));
+  ok(H.compose(resp,ctx)===P.compose(resp,ctx),'hot: one that returns nothing falls back too');
+
+  fs.unlinkSync(f);
+  ok(H.compose(resp,ctx)===P.compose(resp,ctx),'hot: and removing it goes back to the built-in');
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
