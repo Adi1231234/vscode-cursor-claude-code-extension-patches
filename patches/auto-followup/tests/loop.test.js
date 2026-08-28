@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -141,6 +141,19 @@ ok(S().claims.length===claimsAtDone,"continue keeps the claims, got "+S().claims
 T.arm("perf-skeptic");
 ok(S().max===20,"arming starts the budget again, got "+S().max);
 ok(S().fired.length===0,"arming clears the once ledger, got "+JSON.stringify(S().fired));
+
+// 13c. done under a build that kept no id. The reason comes back and the
+// responder does not, and a done state with no way forward has only Turn off,
+// which throws away the count and the ledgers continuing exists to keep. So the
+// caller may name the responder instead.
+T.disarm("reached max_turns 20");
+T.forgetStoppedId();
+ok(S().stopped && !S().stoppedId,"no-id: the reason is there and the id is not");
+T.resume();
+ok(S().armed===null,"no-id: continuing with no id and none named does nothing");
+T.resume("perf-skeptic");
+ok(S().armed==="perf-skeptic","no-id: naming it continues that one, got "+S().armed);
+ok(S().stopped===null,"no-id: and clears done");
 
 // a run that ended on its own stop condition has turns to spare already, so
 // continuing it must not raise a ceiling nobody reached.

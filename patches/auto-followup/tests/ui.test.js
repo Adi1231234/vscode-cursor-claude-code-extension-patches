@@ -5,7 +5,7 @@
 require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,paused:paused,claims:readClaims()};}}");
+  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},resume:resume,forgetStoppedId:function(){stoppedId=null;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,stoppedId:stoppedId,pending:pending,paused:paused,claims:readClaims()};}}");
 
 let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
@@ -50,6 +50,46 @@ ok(!T.menuNode(),'menu closed');
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:[]}});
 run('menu with no responders', ()=>T.toggleMenu({currentTarget:T.btn()}));
 ok(T.menuNode(),'menu opens with an empty list');
+
+// A finished run has to have a way on. When the id was recorded there is one row
+// naming it; when it was not - a run that ended under a build with no such field
+// - the rows themselves are the only place that answer exists, so each one
+// continues rather than arms, and the menu is never just Turn off.
+{
+  T.toggleMenu({currentTarget:T.btn()});
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
+  // one real turn first, because the count is what tells continuing from arming
+  T.arm('perf-skeptic');
+  globalThis.__msgs=[{role:'user',content:'go'},{role:'assistant',content:'it takes 21 s'}];
+  globalThis.sent.length=0; T.maybeRun();
+  const ask=globalThis.sent.filter(m=>m.op==='run').pop();
+  globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:ask.rid,message:'q',claims:[],stop:null}});
+  ok(S().turns===1,'done menu: one turn counted first, got '+S().turns);
+  T.disarm('reached max_turns 20');
+  T.toggleMenu({currentTarget:T.btn()});
+  const why=document.querySelector('.__afMenuWhy');
+  ok(why && /max_turns/.test(why.textContent),'done menu: the reason is at the top');
+  const rows=()=>[...document.querySelectorAll('.__afMenu .__afItem')];
+  // the stub textContent does not walk children, so read the row as a whole tree
+  const deep=(n)=>{ let s=n.textContent||""; for(const c of (n.children||[])) s+=" "+deep(c); return s; };
+  ok(rows().some(n=>/^Continue /.test(deep(n))),
+     'done menu: one row names the responder that stopped');
+  T.toggleMenu({currentTarget:T.btn()});
+
+  T.forgetStoppedId();
+  T.toggleMenu({currentTarget:T.btn()});
+  ok(document.querySelector('.__afMenuWhy'),'no-id: the reason is still shown');
+  const cont=rows().filter(n=>/continue this one/.test(deep(n)));
+  ok(cont.length===LIST.length,'no-id: every responder row offers to continue, got '+cont.length);
+  ok(!rows().some(n=>/^Continue /.test(deep(n).trim())),
+     'no-id: and there is no row naming one, because nothing knows which');
+  cont[0].dispatchEvent(new globalThis.MouseEvent("click",{bubbles:true}));
+  ok(S().armed==='perf-skeptic','no-id: clicking a row continues that responder, got '+S().armed);
+  ok(S().turns===1,
+     'no-id: continuing keeps the count - arming would reset it, got '+S().turns);
+  ok(S().stopped===null,'no-id: and the done state is gone');
+  T.disarm(null);
+}
 T.toggleMenu({currentTarget:T.btn()});
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
 

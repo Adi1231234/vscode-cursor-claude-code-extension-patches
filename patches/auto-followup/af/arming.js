@@ -54,11 +54,17 @@
 
      Only a run that ended on its budget gets more budget. One that ended on
      its stop condition has turns to spare already, and adding more would
-     silently raise a ceiling nobody reached. */
-  function resume() {
-    if (!stopped || !stoppedId) return;
-    var id = stoppedId;
-    armed = id; meta = findResponder(id);
+     silently raise a ceiling nobody reached.
+
+     The id is an argument because it is not always known. A run that finished
+     under a build that did not keep one comes back with the reason on the
+     button and nothing to continue - and a done state with no way forward is a
+     dead end whose only exit is Turn off, which throws away the count and the
+     ledgers that continuing exists to keep. So the menu may name it. */
+  function resume(id) {
+    var use = id || stoppedId;
+    if (!stopped || !use) return;
+    armed = use; meta = findResponder(use);
     /* After meta is back, not before: baseTurns() reads it, and disarm had
        already set it to null. */
     var max = maxTurns();
@@ -66,8 +72,8 @@
     stopped = null; stoppedId = null; slot = null; approved = false; paused = false;
     /* Continuing is a play: the reply on screen is the one it answers. */
     lastSeen = "";
-    try { localStorage.setItem(keyFor(ARM_KEY), id); } catch (e) {}
-    log("resumed", id);
+    try { localStorage.setItem(keyFor(ARM_KEY), use); } catch (e) {}
+    log("resumed", use);
     renderAll();
   }
 
