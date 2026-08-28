@@ -41,6 +41,13 @@
     openMenu(ev.currentTarget);
   }
 
+  /* Done, and nobody recorded which one it was. Then the rows are the only place
+     the answer exists - the person knows, the panel does not - so while that is
+     true a row continues its responder rather than arming it fresh, and says so.
+     Without this the menu offers a finished run nothing but Turn off, which
+     throws away the count and the ledgers that continuing exists to keep. */
+  function continuing() { return !!stopped && !stoppedId; }
+
   function menuItem(r) {
     var it = el("div", "__afItem" + (armed === r.id ? " __afSel" : ""));
     var dot = el("span", "__afDot" + (armed === r.id ? "" : " __afDotOff"));
@@ -48,7 +55,13 @@
     var nm = el("b");
     txt(nm, r.name || r.id);
     t.appendChild(nm);
-    if (r.description) {
+    /* Instead of the description, not beside it: while this is what the row
+       does, what the responder is for is the less useful of the two. */
+    if (continuing()) {
+      var c = el("span");
+      txt(c, "continue this one, keeping the count and the ledgers");
+      t.appendChild(c);
+    } else if (r.description) {
       var d = el("span");
       txt(d, r.description);
       t.appendChild(d);
@@ -58,7 +71,9 @@
     press(it, function () {
       closeMenu();
       /* Both of these throw the count away while a loop is running, so both
-         ask first. Arming from nothing does not - there is nothing to lose. */
+         ask first. Arming from nothing does not, and neither does continuing -
+         there is nothing to lose in either. */
+      if (continuing()) { resume(r.id); return; }
       if (armed === r.id) confirmArmingChange("off", r.name || r.id, function () { disarm(null); });
       else confirmArmingChange("switch", r.name || r.id, function () { arm(r.id); });
     });
@@ -83,13 +98,18 @@
        what decides whether continuing is worth anything: a run that ended on its
        budget has more to do, and one that ended on its own stop condition has
        already decided that it has not. */
-    if (stopped && stoppedId) {
+    if (stopped) {
       var why = el("div", "__afMenuWhy");
       txt(why, stopped);
       m.appendChild(why);
-      var r0 = findResponder(stoppedId);
-      m.appendChild(plainItem("Continue " + ((r0 && r0.name) || stoppedId), resume,
-                              "keeps the claims, the count and what it already asked"));
+      /* One row when we know which it was; when we do not, the rows below say
+         it instead, so all that belongs here is why it stopped. */
+      if (stoppedId) {
+        var r0 = findResponder(stoppedId);
+        m.appendChild(plainItem("Continue " + ((r0 && r0.name) || stoppedId),
+                                function () { resume(); },
+                                "keeps the claims, the count and what it already asked"));
+      }
       m.appendChild(el("div", "__afSep"));
     }
 
