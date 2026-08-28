@@ -229,9 +229,16 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
 {
   const g=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text).goal;
   const flat=g.replace(/\s+/g," ");
-  ok(flat.indexOf("wait begins when the doctor stops talking")>=0,"goal: says where the wait starts");
-  ok(flat.indexOf("Never ask what could run before that")>=0,"goal: closes the half that is closed");
-  ok(flat.indexOf("field-selection interval")>=0,"goal: and names the half that is open");
+  // The target is the prefill wall clock. It is not what the doctor experiences,
+  // so there is no interval to subtract and nothing to ask about it - the file
+  // used to call that the open question and got asked it twice.
+  ok(flat.indexOf("The number is the prefill wall clock and nothing else")>=0,
+     "goal: the number is the wall clock");
+  ok(flat.indexOf("field-selection")<0,"goal: no interval to subtract");
+  const fr=F.parse("perf-skeptic",globalThis.__ccAfSamples.find(s=>s.id==="perf-skeptic").text)
+    .once.find(e=>e.name==="frame").ask;
+  ok(fr.indexOf("actually wait")<0,"frame: no longer asks what a person waits for");
+  ok(fr.indexOf("real input")>=0,"frame: and still catches an input that is not the case");
   // the fifth constraint, and the sentence it contradicts. The rules used to
   // offer "moving work to a unit that is idle" as a category to look in, which is
   // exactly what running everything on the iGPU forbids.
