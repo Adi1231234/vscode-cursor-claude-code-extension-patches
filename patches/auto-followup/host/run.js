@@ -168,10 +168,10 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
       done(shape(extract(u.text), u.text));
     });
 
-    try { child.stdin.end(globalThis.__ccAfPrompt.compose(r, ctx || {})); } catch (e) {}
+    try { child.stdin.end(globalThis.__ccAfHot.compose(r, ctx || {})); } catch (e) {}
     return child;
   }
 
   return { run: run, unwrap: unwrap, extract: extract, shape: shape, feed: feed,
-           compose: function (r, c) { return globalThis.__ccAfPrompt.compose(r, c); } };
+           compose: function (r, c) { return globalThis.__ccAfHot.compose(r, c); } };
 })();

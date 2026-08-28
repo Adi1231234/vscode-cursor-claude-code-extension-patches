@@ -4,7 +4,7 @@
 const fs=require('fs'), path=require('path'), os=require('os');
 const base=path.resolve(__dirname,'..','host')+'/';
 process.env.CLAUDE_CONFIG_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'afrun-'));
-for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const R=globalThis.__ccAfRun;
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 
