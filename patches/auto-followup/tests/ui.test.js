@@ -870,6 +870,47 @@ try{
   ok(globalThis.__ccCopied[0]==='perf-skeptic',
      'copy: and it copies the field beside it, got '+JSON.stringify(globalThis.__ccCopied[0]));
 }
+
+// Refresh is a button and it always says what it found. A timestamp that only
+// moves when a list happens to arrive cannot be live, and a button that answers
+// silently is the same as no button.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const said=()=>((document.querySelector('.__afRefreshSaid')||{}).textContent)||'';
+  const btn=[...document.querySelectorAll('.__afLink')].find(n=>n.textContent==='Refresh');
+  ok(!!btn,'refresh: the footer carries the button');
+  ok(said()==='','refresh: and says nothing before it is pressed');
+
+  // pressed, and the file came back the same
+  btn.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
+  ok(said()==='no changes','refresh: unchanged is said out loud, got '+JSON.stringify(said()));
+
+  // pressed, and the file had changed
+  const edited=LIST.map(r=>r.id==='perf-skeptic'?Object.assign({},r,{goal:'A DIFFERENT GOAL'}):r);
+  btn.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:edited}});
+  ok(/changed on disk/.test(said()),'refresh: a change is said too, got '+JSON.stringify(said()));
+  ok(T.draft().goal==='A DIFFERENT GOAL',
+     'refresh: and the form now holds the file, got '+JSON.stringify(T.draft().goal).slice(0,40));
+
+  // a list nobody asked for says nothing
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
+  ok(/changed on disk/.test(said()),
+     'refresh: a list that arrives on its own does not answer, got '+JSON.stringify(said()));
+
+  // and an unsaved edit is never overwritten to show a fresher file
+  const ta=[...document.querySelectorAll('.__afTa')][0];
+  ta.value='MY UNSAVED EDIT';
+  ta.dispatchEvent(new globalThis.Event('input',{bubbles:true}));
+  const b2=[...document.querySelectorAll('.__afLink')].find(n=>n.textContent==='Refresh');
+  b2.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  const other=LIST.map(r=>r.id==='perf-skeptic'?Object.assign({},r,{goal:'YET ANOTHER GOAL'}):r);
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:other}});
+  ok(/your edits are unsaved/.test(said()),
+     'refresh: it says the file moved and the form was left alone, got '+JSON.stringify(said()));
+  ok(T.draft().goal!=='YET ANOTHER GOAL','refresh: and the edit survives');
+}
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');
   process.exit(fail?1:0);
