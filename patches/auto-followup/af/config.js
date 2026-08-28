@@ -59,6 +59,8 @@
   var turns = 0;           /* how many follow-ups this arming has produced */
   var slot = null;         /* {message, why, invalid} awaiting send, or null */
   var stopped = null;      /* the stop reason once the loop has ended */
+  var stoppedId = null;    /* who it was, so a finished run can be continued */
+  var extraTurns = 0;      /* turns granted by continuing, on top of max_turns */
   var paused = false;     /* held by hand, still armed - see setPaused */
   /* {running, onDisk, stale} from the host, so the panel can say when the
      bundle on disk is newer than the code this window is running. */

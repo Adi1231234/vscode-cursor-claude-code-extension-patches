@@ -15,11 +15,19 @@
     return max ? turns + "/" + max : String(turns);
   }
 
-  function maxTurns() {
+  /* What the responder file says. */
+  function baseTurns() {
     var v = meta && String(meta.max_turns || "").trim().toLowerCase();
     if (!v || v === "unlimited" || v === "0" || v === "none") return 0;
     var n = parseInt(v, 10);
     return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  /* What it is allowed now, which is that plus whatever continuing has added.
+     Unlimited stays unlimited - there is nothing to add to. */
+  function maxTurns() {
+    var n = baseTurns();
+    return n ? n + extraTurns : 0;
   }
 
   function tipText() {

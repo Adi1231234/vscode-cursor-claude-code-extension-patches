@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend()})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -122,6 +122,36 @@ for (var i=0;i<30;i++){
 ok(S().armed===null,'max_turns disarmed it');
 ok(String(S().stopped).indexOf('max_turns')>=0,'max_turns reason: '+S().stopped);
 ok(S().turns===20,'stopped at 20 turns, got '+S().turns);
+
+// 13b. done, and then continued. Continuing is the same arming carried on:
+// the count, the claims and the questions it has already put all stay, and
+// only the budget is topped up.
+T.markOnceAsked("opening");
+const claimsAtDone = S().claims.length;
+ok(S().stoppedId==="perf-skeptic","done remembers who it was, got "+S().stoppedId);
+T.resume();
+ok(S().armed==="perf-skeptic","continue re-arms the same responder, got "+S().armed);
+ok(S().stopped===null,"continue clears done");
+ok(S().turns===20,"continue keeps the count, got "+S().turns);
+ok(S().max===40,"continue grants another max_turns worth, got "+S().max);
+ok(S().fired.indexOf("opening")>=0,"continue does not put the opening question again");
+ok(S().claims.length===claimsAtDone,"continue keeps the claims, got "+S().claims.length);
+
+// and a fresh arming from the menu is not a continuation of anything
+T.arm("perf-skeptic");
+ok(S().max===20,"arming starts the budget again, got "+S().max);
+ok(S().fired.length===0,"arming clears the once ledger, got "+JSON.stringify(S().fired));
+
+// a run that ended on its own stop condition has turns to spare already, so
+// continuing it must not raise a ceiling nobody reached.
+globalThis.__msgs.push({role:"assistant",content:"a reply to stop on"});
+globalThis.sent.length=0; T.maybeRun();
+var sr=globalThis.sent.filter(m=>m.op==="run")[0];
+globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:sr.rid,message:"",claims:[],stop:"the budget is accounted for"}});
+ok(S().armed===null && S().stopped==="the budget is accounted for","the stop condition ended it, got "+S().stopped);
+T.resume();
+ok(S().max===20,"continuing after a stop condition adds no turns, got "+S().max);
+ok(S().armed==="perf-skeptic","and still re-arms it");
 
 // 14. an answer that did not parse is parked skipped whatever the responder
 // says - it is the one case where what was written is not what was asked for.

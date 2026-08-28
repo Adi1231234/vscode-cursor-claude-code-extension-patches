@@ -36,7 +36,8 @@
     var snap, payload;
     try {
       payload = { turns: turns, slot: slot, slotFor: slot ? lastSeen : "",
-                  stopped: stopped, approved: approved, paused: paused, lastSeen: lastSeen,
+                  stopped: stopped, stoppedId: stoppedId, extra: extraTurns,
+                  approved: approved, paused: paused, lastSeen: lastSeen,
                   fp: fingerprint() };
       snap = JSON.stringify(payload);
     } catch (e) { return; }
@@ -61,6 +62,10 @@
 
     if (typeof o.turns === "number" && o.turns >= 0) turns = o.turns;
     if (typeof o.stopped === "string" && o.stopped) stopped = o.stopped;
+    /* Who it was and what continuing has already granted: without these a
+       finished run comes back with no way to carry it on. */
+    if (typeof o.stoppedId === "string" && o.stoppedId) stoppedId = o.stoppedId;
+    if (typeof o.extra === "number" && o.extra >= 0) extraTurns = o.extra;
     approved = o.approved === true;
     /* Everything comes back except the permission to act on it. A window that
        reopens is a window nobody has looked at yet: the conversation may have
