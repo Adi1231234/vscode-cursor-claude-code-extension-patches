@@ -1,4 +1,4 @@
-  /* ---------- Fitting an overlay to the panel ----------
+  /* ---------- Where a thing goes: overlays, and popups beside an anchor ----------
 
   /* The overlay has to be told how tall the screen is.
 
@@ -64,3 +64,42 @@
      narrower with the dialog open and the dialog stayed at its old width and
      hung over the edge. Measured: panel 619 to 302, overlay still 341.9px. */
   function fitDlgNow() { fitOverlay(dlg); }
+
+  /* Where a popup goes.
+
+     Two callers, two frames of reference. The responder menu hangs off a
+     toolbar button and belongs to the panel, so the panel is what bounds it and
+     centring on the button is right. A field's list belongs to the dialog it
+     was opened in - bounded by the panel instead, it ran out over the dialog's
+     own header and past both its edges, which reads as a menu that lost its
+     dialog. Measured at a 342px panel: the list spanned 10 to 322 inside a
+     dialog spanning 21 to 321.
+
+     So bounds is the frame the popup belongs to, and a list aligns to the start
+     of its field rather than centring on it, which is where a select opens
+     everywhere else. */
+  function rectOf(node) {
+    if (!node) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    var r = node.getBoundingClientRect();
+    return { left: r.left, top: r.top,
+             right: r.right === undefined ? r.left + (r.width || 0) : r.right,
+             bottom: r.bottom === undefined ? r.top + (r.height || 0) : r.bottom };
+  }
+
+  function place(m, anchor, o) {
+    o = o || {};
+    var pad = 8;
+    var b = rectOf(o.bounds);
+    var r = anchor.getBoundingClientRect();
+    /* Cap first, measure after: a list longer than its frame scrolls inside it
+       rather than deciding there is nowhere it fits. */
+    var room = b.bottom - b.top - pad * 2;
+    if (room > 0 && m.offsetHeight > room) m.style.maxHeight = room + "px";
+    var w = m.offsetWidth, h = m.offsetHeight;
+    var below = r.bottom + 6, above = r.top - h - 6;
+    var top = o.below ? (below + h <= b.bottom - pad ? below : above)
+                      : (above >= b.top + pad ? above : below);
+    var left = o.start ? r.left : r.left + r.width / 2 - w / 2;
+    m.style.top = Math.max(b.top + pad, Math.min(top, b.bottom - pad - h)) + "px";
+    m.style.left = Math.max(b.left + pad, Math.min(left, b.right - pad - w)) + "px";
+  }

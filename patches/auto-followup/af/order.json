@@ -17,6 +17,7 @@
   "live-parse",
   "live",
   "live-view",
+  "arming",
   "loop",
   "runtime"
 ]

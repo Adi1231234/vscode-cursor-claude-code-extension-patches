@@ -22,7 +22,8 @@ const { loadPanel } = require('./load-panel.js');
 const EXPOSE =
   '{arm:arm,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,'
   + 'approve:approve,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,paused:paused,'
-  + 'pending:pending,lastSeen:lastSeen,approved:approved,meta:meta})}';
+  + 'pending:pending,lastSeen:lastSeen,approved:approved,meta:meta,stoppedId:stoppedId,max:maxTurns()}),'
+  + 'resume:resume,markOnceAsked:markOnceAsked}';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log('  FAIL: ' + m)); };
@@ -261,6 +262,32 @@ globalThis.__tick();
 ok(TD.state().armed === 'perf-skeptic', 'the arming survives the id arriving');
 ok(TD.state().paused === false,
    'and it is still running - nobody reopened anything, got ' + TD.state().paused);
+
+/* ---------- a run that finished, reloaded, and then continued ---------- */
+/* Without stoppedId in the saved state a finished run comes back with the
+   reason on the button and no way to carry it on: the responder's id lived in
+   the arming key, and disarm removes that. */
+{
+  let R = loadPanel(EXPOSE);
+  globalThis.__sid = 'sess-done';
+  globalThis.__tick(); list();
+  R.arm('perf-skeptic');
+  turn(R, 'a reply', 'a question');
+  R.disarm('reached max_turns 20');
+  ok(R.state().stoppedId === 'perf-skeptic', 'done knows who it was');
+  globalThis.__tick();                 /* the tick is what writes the state */
+
+  R = loadPanel(EXPOSE);
+  globalThis.__tick(); list();
+  ok(R.state().stopped === 'reached max_turns 20',
+     'reload: the reason comes back, got ' + R.state().stopped);
+  ok(R.state().stoppedId === 'perf-skeptic',
+     'reload: and so does who it was, got ' + R.state().stoppedId);
+  R.resume();
+  ok(R.state().armed === 'perf-skeptic',
+     'reload: and it can still be continued, got ' + R.state().armed);
+  ok(R.state().turns === 1, 'reload: with the count it had, got ' + R.state().turns);
+}
 
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
