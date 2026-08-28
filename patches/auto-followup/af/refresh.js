@@ -13,16 +13,29 @@
 
   var pendingRefresh = null;   /* what the draft looked like when it was pressed */
 
-  /* Identity by content, not by mtime: a save that rewrites the same bytes bumps
-     the timestamp and has changed nothing, and "it changed" would then be a lie
-     the first time it mattered. */
+  /* Identity by content, not by mtime: a save that rewrites the same bytes
+     bumps the timestamp and has changed nothing, and "it changed" would then
+     be a lie the first time it mattered.
+
+     Every field the responder carries, rather than a list written out here.
+     The list was written out here, first_question was not on it, and a change
+     to the question a responder opens with read back as "no changes" - a
+     silent wrong answer from the one control whose whole job is to answer.
+     A hand-kept list of fields goes stale the first time the format grows.
+
+     once and every are skipped because they are arrays of objects, and
+     stringifying those compares nothing. They are covered exactly by
+     onceText and everyText, which is what the file holds and the form edits. */
+  var NOT_CONTENT = { id: 1, updated: 1, isNew: 1, once: 1, every: 1 };
+
   function shapeOf(r) {
     if (!r) return "";
-    var keep = ["name", "description", "goal", "rules", "stop", "onceText",
-                "everyText", "context", "max_turns", "autosend", "model", "effort"];
+    var keys = [], k;
+    for (k in r) { if (!NOT_CONTENT[k]) keys.push(k); }
+    keys.sort();
     var out = [];
-    for (var i = 0; i < keep.length; i++) out.push(keep[i] + "=" + (r[keep[i]] || ""));
-    return out.join("");
+    for (var i = 0; i < keys.length; i++) out.push(keys[i] + "=" + (r[keys[i]] || ""));
+    return out.join(String.fromCharCode(1));
   }
 
   function sayRefresh(text, cls) {

@@ -968,6 +968,20 @@ try{
   globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
   ok(/not saved yet/.test(said()),
      'refresh: a new draft is told it has no file, got '+JSON.stringify(said()));
+
+  // A field the form does not draw still counts as a change. The compared
+  // fields were a list written by hand, first_question was not on it, and
+  // editing the question a responder opens with read back as "no changes".
+  T.selectDraft('perf-skeptic'); T.renderDialog();
+  const fq=LIST.map(r=>r.id==='perf-skeptic'
+    ?Object.assign({},r,{first_question:'ASKED ON THE FIRST TURN'}):r);
+  const btnFq=[...document.querySelectorAll('.__afLink')].find(n=>n.textContent==='Refresh');
+  btnFq.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:fq}});
+  ok(/changed on disk/.test(said()),
+     'refresh: a field the form does not draw is still a change, got '+JSON.stringify(said()));
+  ok(T.draft().first_question==='ASKED ON THE FIRST TURN','refresh: and the form took it');
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
   ok(!/gone/.test(said()),'refresh: and not that one vanished');
 
   // an answer that arrives after the dialog moved on is dropped
