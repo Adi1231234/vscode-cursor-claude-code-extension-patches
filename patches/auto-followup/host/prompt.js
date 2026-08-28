@@ -64,6 +64,22 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     return g ? ["# What you are trying to get to", g, ""] : [];
   }
 
+  function askedBlock(ctx) {
+    var p = [];
+    if (ctx.asked && ctx.asked.length) {
+      p.push("", "# What you have already sent, oldest first",
+             ctx.asked.join("\n"),
+             "",
+             "You wrote those. If what you are about to send asks for the same thing",
+             "as one of them, then it was asked and not answered, and asking a third",
+             "time in new words is how that goes on forever. Say plainly that it is",
+             "the Nth time, name the exact thing you asked for, and ask for that or",
+             "for an admission that it is not available - or drop it and say in 'why'",
+             "that you dropped it and why. Do not repeat yourself in silence.");
+    }
+    return p;
+  }
+
   function compose(r, ctx) {
     var first = firstQuestion(r, ctx);
     if (first) {
@@ -77,6 +93,14 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
         "Ask nothing else this turn, however tempting the rest of the message is - it",
         "will still be there next turn, and the answer to this changes which of it",
         "matters. 'stop' is null.",
+        "",
+        /* The one thing this branch was missing. A question the panel repeats on a
+           cadence had no way to see that it had just been asked: this branch is the
+           contract, the goal, the question and the message, and nothing else.
+           Measured on a real run, the same demand for five routes went out three
+           times in forty-five minutes, each time discarding the answer to the last
+           and adding to a list of what was forbidden. */
+      ]).concat(askedBlock(ctx)).concat([
         "",
         "# Claude's message", (ctx.text || "").trim()
       ]).join("\n");
@@ -123,17 +147,7 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
        and asking for the id back produced o1, o2, o3, o4 - it wrote a new question
        instead of returning the id it had been handed. A fresh process will not
        keep books. It will read what is put in front of it. */
-    if (ctx.asked && ctx.asked.length) {
-      p.push("", "# What you have already sent, oldest first",
-             ctx.asked.join("\n"),
-             "",
-             "You wrote those. If what you are about to send asks for the same thing",
-             "as one of them, then it was asked and not answered, and asking a third",
-             "time in new words is how that goes on forever. Say plainly that it is",
-             "the Nth time, name the exact thing you asked for, and ask for that or",
-             "for an admission that it is not available - or drop it and say in 'why'",
-             "that you dropped it and why. Do not repeat yourself in silence.");
-    }
+    p = p.concat(askedBlock(ctx));
     p.push("", "# Claude's message, which you are answering", (ctx.text || "").trim());
     return p.join("\n");
   }
