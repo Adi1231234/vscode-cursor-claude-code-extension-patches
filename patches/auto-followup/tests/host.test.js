@@ -232,6 +232,18 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(flat.indexOf("wait begins when the doctor stops talking")>=0,"goal: says where the wait starts");
   ok(flat.indexOf("Never ask what could run before that")>=0,"goal: closes the half that is closed");
   ok(flat.indexOf("field-selection interval")>=0,"goal: and names the half that is open");
+  // the fifth constraint, and the sentence it contradicts. The rules used to
+  // offer "moving work to a unit that is idle" as a category to look in, which is
+  // exactly what running everything on the iGPU forbids.
+  ok(flat.indexOf("Five things are fixed")>=0,"goal: five constraints, not four");
+  ok(flat.indexOf("running on the iGPU")>=0,"goal: names the iGPU one");
+  ok(flat.indexOf("no CPU offload")>=0,"goal: and says what it forbids");
+  const rl=F.parse("perf-skeptic",globalThis.__ccAfSamples.find(s=>s.id==="perf-skeptic").text)
+    .rules.replace(/\s+/g," ");
+  ok(rl.indexOf("unit that is idle")<0,"rules: no longer offer the unit the constraint closes");
+  ok(rl.indexOf("moving work to the CPU")>=0,"rules: and it is on the refused list");
+  ok(flat.indexOf("1,100 words are the transcript")>=0,"goal: says what the 1,100 words are");
+  ok(flat.indexOf("served by a shared cache")>=0,"goal: and that the fixed prompt is already cached");
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
