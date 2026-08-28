@@ -5,7 +5,7 @@
 require('./dom-stubs.js');
 const fs=require('fs'), path=require('path');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},resume:resume,forgetStoppedId:function(){stoppedId=null;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,stoppedId:stoppedId,pending:pending,paused:paused,claims:readClaims()};}}");
+  "{arm:arm,disarm:disarm,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,openDialog:openDialog,openLive:openLive,fitOverlay:fitOverlay,renderDialog:function(){return renderDialog();},toggleMenu:toggleMenu,ensureButton:ensureButton,renderLane:renderLane,saveDraft:saveDraft,deleteDraft:deleteDraft,selectDraft:selectDraft,newDraft:newDraft,dlg:function(){return dlg;},draft:function(){return draft;},menuNode:function(){return menuNode;},resume:resume,forgetStoppedId:function(){stoppedId=null;},btn:function(){return globalThis.__form.__afSlot;},state:function(){return {armed:armed,turns:turns,slot:slot,stopped:stopped,stoppedId:stoppedId,pending:pending,paused:paused,claims:readClaims()};}}");
 
 let pass=0,fail=0;
 const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
@@ -910,6 +910,30 @@ try{
   ok(/your edits are unsaved/.test(said()),
      'refresh: it says the file moved and the form was left alone, got '+JSON.stringify(said()));
   ok(T.draft().goal!=='YET ANOTHER GOAL','refresh: and the edit survives');
+
+  // a draft that was never written is not a file that vanished. Driven through
+  // the button a person presses, because newDraft() returns a draft rather than
+  // selecting one and calling it directly proves nothing about the dialog.
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  document.querySelector('.__afNew').dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  ok(T.draft().isNew===true,'refresh: the new-responder control makes a new draft');
+  const b3=[...document.querySelectorAll('.__afLink')].find(n=>n.textContent==='Refresh');
+  b3.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
+  ok(/not saved yet/.test(said()),
+     'refresh: a new draft is told it has no file, got '+JSON.stringify(said()));
+  ok(!/gone/.test(said()),'refresh: and not that one vanished');
+
+  // an answer that arrives after the dialog moved on is dropped
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const b4=[...document.querySelectorAll('.__afLink')].find(n=>n.textContent==='Refresh');
+  b4.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  T.selectDraft('unl'); T.renderDialog();
+  ok(T.draft().id==="unl","refresh: the form moved on, got "+T.draft().id);
+  const edited2=LIST.map(r=>r.id==='perf-skeptic'?Object.assign({},r,{goal:'MOVED ON'}):r);
+  globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:edited2}});
+  ok(said()==='','refresh: an answer for a responder no longer on screen is dropped, got '+JSON.stringify(said()));
+  ok(T.draft().id==='unl','refresh: and it does not drag the form back');
 }
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');

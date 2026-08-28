@@ -34,7 +34,7 @@
 
   function askRefresh() {
     if (!draft) return;
-    pendingRefresh = { id: draft.id, shape: shapeOf(draft), dirty: dirty };
+    pendingRefresh = { id: draft.id, shape: shapeOf(draft), dirty: dirty, isNew: !!draft.isNew };
     sayRefresh("reading…", "");
     requestList();
   }
@@ -46,8 +46,18 @@
     if (!pendingRefresh) return;
     var was = pendingRefresh;
     pendingRefresh = null;
+    /* The dialog moved on while the list was in flight: answering now would be
+       about a responder that is no longer on screen, and selectDraft would drag
+       him back to it. */
+    if (!draft || draft.id !== was.id) { sayRefresh("", ""); return; }
     var fresh = findResponder(was.id);
-    if (!fresh) { sayRefresh("the file is gone", "__afRefreshWarn"); return; }
+    if (!fresh) {
+      /* Never written and never read is not the same as deleted, and the second
+         reads as an accident. */
+      sayRefresh(was.isNew ? "not saved yet - there is no file to read"
+                           : "the file is gone", "__afRefreshWarn");
+      return;
+    }
     if (shapeOf(fresh) === was.shape) { sayRefresh("no changes", ""); return; }
     if (was.dirty) {
       /* Not clobbering an edit to show a fresher one: the edit is the only copy. */
