@@ -67,11 +67,29 @@ ok(u.cli===null && sh.invalid===true && sh.message==='just prose','prose from th
 
 // --- the CLI missing must surface as an error, not a hang
 let done=false;
+// A turn where the panel chose the question is the contract, the goal, that
+// question and Claude message - and it used to be nothing else, so a question
+// asked on a cadence could not see that it had just gone out. Measured on a real
+// run: the same demand for five routes three times in forty-five minutes, each
+// discarding the last answer and lengthening a list of what was forbidden.
+{
+  const one=R.compose(resp,{text:'53.8 s',claims:[],asked:['[3] give me five routes'],
+                            once:{ask:'five routes to 5.4x?'}});
+  ok(one.indexOf('five routes to 5.4x?')>=0,'question turn: the chosen question is in it');
+  ok(one.indexOf('What you have already sent')>=0,
+     'question turn: and so is what it already sent');
+  ok(one.indexOf('[3] give me five routes')>=0,'question turn: with the entries themselves');
+  const none=R.compose(resp,{text:'53.8 s',claims:[],asked:[],once:{ask:'Q?'}});
+  ok(none.indexOf('What you have already sent')<0,
+     'question turn: nothing sent yet means no such section');
+}
+
 const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
   {text:'hi',claims:[],cwd:os.tmpdir()}, function(res){
     done=true;
     ok(!!res.error || typeof res.message==='string','a real spawn produced a verdict, not a hang');
     if(res.error) ok(res.error.length>0,'the error carries a reason: '+res.error.slice(0,60));
+
     else ok(true,'the CLI answered');
     console.log('\n  '+pass+' passed, '+fail+' failed');
     process.exit(fail?1:0);

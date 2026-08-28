@@ -244,6 +244,19 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(rl.indexOf("moving work to the CPU")>=0,"rules: and it is on the refused list");
   ok(flat.indexOf("1,100 words are the transcript")>=0,"goal: says what the 1,100 words are");
   ok(!/cach/i.test(g),"goal: says nothing about caching");
+  // 5.4x as a product, not a single item, and what is ours to rewrite
+  ok(flat.indexOf("5.4x does not have to be one move")>=0,"goal: a route may be several");
+  ok(flat.indexOf("Track the product")>=0,"goal: and the product is what is tracked");
+  ok(flat.indexOf("Rewriting all of llama.cpp is on the table")>=0,"goal: nothing is sacred but the five");
+  // the cadences, which were fast enough to ask the same thing three times an hour
+  const ev=F.parse("perf-skeptic",globalThis.__ccAfSamples.find(s=>s.id==="perf-skeptic").text).every;
+  const gap=(n)=>parseInt((ev.find(e=>e.name===n)||{}).turns,10);
+  ok(gap("five")>=8,"every: the five-routes ask is not three turns apart, got "+gap("five"));
+  ok(gap("read")>=8,"every: nor the reading one, got "+gap("read"));
+  ok(ev.find(e=>e.name==="five").ask.indexOf("longer list of what is forbidden")>=0,
+     "every: and a repeat asks what was wrong with the answers, not for more bans");
+  ok(rl.indexOf("goes to the graveyard with what killed it")>=0,
+     "rules: work already priced is the graveyard, not the refused list");
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
