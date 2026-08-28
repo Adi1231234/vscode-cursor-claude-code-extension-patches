@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -358,6 +358,36 @@ ok(ax2.ctx.axes && ax2.ctx.axes.length===1,'axes: and handed back on the next tu
 globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:ax2.rid,message:'q2',claims:[],
   axes:['flash attention: 21.9% of prefill, 1.28x if deleted, killed by the register file'],stop:null}});
 ok(S().axes.length===1,'axes: the same line twice is one line, got '+S().axes.length);
+
+// The memory that guards against repeats has to outlast the cadence that makes
+// them. It was five, from when every question was asked once; then ## every
+// started producing repeats every six to ten turns, and five cannot see one that
+// six creates. Measured on a real run: the same demand as message 3 and again as
+// message 11, the earlier one off the end of the list by then.
+{
+  const F3=(()=>{
+    const g={}, host=(f)=>(new Function("globalThis",
+      fs.readFileSync(require("path").resolve(__dirname,"..","host",f),"utf8")))(g);
+    host("sections.js"); host("format.js"); host("samples.js");
+    return {F:g.__ccAfFormat, S:g.__ccAfSamples};
+  })();
+  let slowest = 0;
+  for (const s of F3.S) {
+    const r = F3.F.parse(s.id, s.text);
+    for (const e of (r.every || [])) slowest = Math.max(slowest, parseInt(e.turns, 10) || 3);
+  }
+  ok(slowest > 0, "cadence: at least one shipped responder repeats a question, got " + slowest);
+  ok(T.maxAsked() > slowest,
+     "cadence: the sent-ledger outlasts the slowest cadence - " + T.maxAsked() + " against " + slowest);
+
+  // and it really does hold that many
+  for (let n = 0; n < T.maxAsked() + 3; n++) T.recordAsked("ask number " + n);
+  const have = T.readAsked();
+  ok(have.length === T.maxAsked(),
+     "cadence: the ledger keeps that many, got " + have.length);
+  ok(have[0].indexOf("ask number 3") > 0,
+     "cadence: and it is the newest that survive, got " + have[0]);
+}
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

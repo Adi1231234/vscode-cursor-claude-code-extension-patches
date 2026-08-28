@@ -85,13 +85,14 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(back.rules==='be brief'&&back.stop==='done','once: round trip leaves rules and stop alone');
 
   const ps=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text);
-  ok(ps.once.length===2,'once: the shipped responder frames twice and only twice, got '+ps.once.length);
-  ok(ps.once.map(e=>e.name).join('>')==='backwards>frame','once: backwards first, then what it was measured on');
-  // the reaching questions moved to ## every, because asking them once was the
-  // whole failure: on a ten-hour run the factor question fired three times in
-  // sixty-seven turns and not once in the last forty-six.
-  ok(ps.every.length===3,'every: three recurring questions, got '+ps.every.length);
-  ok(ps.every.map(e=>e.name).join(',')==='five,read,unexplained','every: five, read, unexplained');
+  ok(ps.once.length===3,'once: three asked-once questions, got '+ps.once.length);
+  ok(ps.once.map(e=>e.name).join('>')==='backwards>frame>unexplained',
+     'once: reframe, then what it was measured on, then the two named gaps');
+  // the two gaps are named numbers, not a standing demand: once they have been
+  // answered, asking again is noise, and on a real run it was asked a minute
+  // after the responder itself wrote that it had both verdicts.
+  ok(ps.every.length===2,'every: two recurring questions, got '+ps.every.length);
+  ok(ps.every.map(e=>e.name).join(',')==='five,read','every: five and read only');
   ok(ps.every.every(e=>parseInt(e.turns,10)>0),'every: each one names its cadence');
   ok(ps.once.every(e=>e.after!==e.name),'once: no entry waits for itself');
   ok(new RegExp(ps.once[1].when,'i').test('prefill is 21.8 s'),'once: frame question triggers on a duration');
@@ -260,8 +261,15 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   const gap=(n)=>parseInt((ev.find(e=>e.name===n)||{}).turns,10);
   ok(gap("five")>=8,"every: the five-routes ask is not three turns apart, got "+gap("five"));
   ok(gap("read")>=8,"every: nor the reading one, got "+gap("read"));
-  ok(ev.find(e=>e.name==="five").ask.indexOf("longer list of what is forbidden")>=0,
-     "every: and a repeat asks what was wrong with the answers, not for more bans");
+  // it used to be inside the ask, so the responder passed the instruction on to
+  // Claude instead of obeying it - it said "if I have asked you this before" in
+  // the first message it ever sent. An instruction to the writer is a rule.
+  ok(ev.find(e=>e.name==="five").ask.indexOf("asked you this before")<0,
+     "every: the anti-repeat sentence is not inside the message it sends");
+  ok(rl.indexOf("A question you have asked before")>=0,
+     "rules: it is a rule, where the responder can act on it");
+  ok(rl.indexOf("does not belong in the message you send")>=0,
+     "rules: and says so");
   ok(rl.indexOf("goes to the graveyard with what killed it")>=0,
      "rules: work already priced is the graveyard, not the refused list");
 }
