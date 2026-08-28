@@ -250,7 +250,7 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
     .rules.replace(/\s+/g," ");
   ok(rl.indexOf("unit that is idle")<0,"rules: no longer offer the unit the constraint closes");
   ok(rl.indexOf("moving work to the CPU")>=0,"rules: and it is on the refused list");
-  ok(flat.indexOf("1,100 words are the transcript")>=0,"goal: says what the 1,100 words are");
+  ok(flat.indexOf("1,100 words are the variable part of the prompt")>=0,"goal: says what the 1,100 words are");
   ok(!/cach/i.test(g),"goal: says nothing about caching");
   // 5.4x as a product, not a single item, and what is ours to rewrite
   // the target is seconds, not a factor: seconds add and factors do not, and
@@ -286,6 +286,16 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
      "rules: counted as transcript words, which is what was conflated");
   ok(rl.indexOf("The base is one number and it does not move")>=0,
      "rules: and the denominator is fixed");
+  // the subject is the stack, not any product on it - this is meant to carry to
+  // other products, and 18% of one run went into one application's client tree
+  ok(flat.indexOf("The thing being made faster is the inference stack")>=0,
+     "goal: the subject is the stack");
+  ok(flat.indexOf("do not go reading a product tree")>=0,"goal: and says where not to look");
+  ok(rl.indexOf("A product tree is not the subject")>=0,"rules: with a rule to match");
+  // and no product vocabulary anywhere, because it narrows the frame by itself
+  const whole=(g+" "+rl+" "+F.parse("perf-skeptic",globalThis.__ccAfSamples
+    .find(s=>s.id==="perf-skeptic").text).stop).replace(/\s+/g," ");
+  ok(!/doctor|DocVoice|clinic/i.test(whole),"file: no product words in it");
   // a critic with no external check degrades: GPT-4 on GSM8K went 95.5 to 91.5 to
   // 89.0 over two rounds of correcting itself without ground truth, at 3x and 5x
   // the cost. The rig is the external check, so a claim goes to it rather than
