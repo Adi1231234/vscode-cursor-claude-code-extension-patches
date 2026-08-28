@@ -30,6 +30,22 @@
     return n ? n + extraTurns : 0;
   }
 
+  /* Why the loop is not acting. stateNote() next door says this too, but it
+     cannot say it here: it returns "" until there is a slot, and the queue
+     gate in maybeRun fires before a slot can exist - so the one state that
+     explains an armed loop doing nothing was the one state with nothing on
+     screen. Found by reading a queue out of leveldb, which is not a thing a
+     user can do. */
+  function holdNote() {
+    var api = qApi();
+    if (!api) return " · held: the queue patch is not loaded";
+    if (api.busy()) return "";                   /* a turn is running, not a hold */
+    if (api.paused()) return " · held: the queue is paused";
+    var n = api.count();
+    if (n) return " · held: " + n + " in the queue";
+    return "";
+  }
+
   function tipText() {
     /* Said here because this is the one thing always on screen. Twice a change
        was applied, the window reloaded, and the old behaviour still showed -
@@ -41,7 +57,7 @@
     }
     if (stopped) return "STOP — " + stopped;
     if (armed) return "Auto follow-up · " + (meta ? meta.name : armed)
-                      + (paused ? " · paused" : "");
+                      + (paused ? " · paused" : holdNote());
     return "Auto follow-up — off";
   }
 
@@ -108,9 +124,14 @@
        with nothing in the console to say why. */
     var cn = b.querySelector(".__afCn");
     if (cn) txt(cn, want);
+    var t = tipText();
     var tip = b.querySelector(".__afTip");
     if (tip) {
-      txt(tip, tipText());
+      txt(tip, t);
       tip.className = "__afTip" + (stopped ? " __afTipWide" : "");
     }
+    /* On the node as well as in it: the tip span is produced by innerHTML and
+       is not reachable in every host, and what the button is saying should be
+       readable wherever the button is - the way the count already is. */
+    b.__afTip = t;
   }

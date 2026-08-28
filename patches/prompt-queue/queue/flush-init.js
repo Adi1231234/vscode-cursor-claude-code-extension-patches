@@ -78,7 +78,8 @@
      root protection and the busy check below took real bugs to get right.
 
      So this is the whole contract, read-only except for send():
-       count()   items in the user's lane. Non-zero means the user is driving.
+       count()   items the queue will send on its own. Non-zero means the user
+                 is driving. A parked item is not driving and never leaves.
        paused()  the user's hold. Nothing auto may send through it.
        busy()    a turn is running.
        panel()   the queue panel node, or null - the lane renders inside it.
@@ -111,7 +112,7 @@
   }
 
   window.__qAuto = window.__qAuto || {
-    count: function () { return Q.length; },
+    count: function () { return Q.filter(function (it) { return !isParked(it); }).length; },
     paused: function () { return paused; },
     busy: function () { return isBusy(); },
     panel: function () { return panel && panel.isConnected ? panel : null; },
