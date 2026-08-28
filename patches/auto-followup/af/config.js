@@ -39,7 +39,15 @@
   var STATE_KEY = "ccAfState:";  /* + session id - turns, slot, stop reason */
   var EVERY_KEY = "ccAfEvery:";    /* + session id - the turn each recurring question last fired */
   var AXES_KEY = "ccAfAxes:";      /* + session id - what has been priced, and what killed it */
-  var MAX_ASKED = 5;               /* enough to recognise a repeat, not a transcript */
+  /* Longer than the slowest cadence in any responder, and that is the whole
+     rule. It was five, written when every question was asked once and five was
+     enough to recognise a repeat. Then '## every' arrived and started producing
+     them on purpose, every six to ten turns - and a memory of five cannot see a
+     repeat that a cadence of six creates, by arithmetic. Measured on a real run:
+     the same demand went out as message 3 and again as message 11, and the same
+     question as 6 and 12, with the earlier one off the end of the list both
+     times. Raise this before raising a cadence past it. */
+  var MAX_ASKED = 14;
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
   var MAX_AXES = 200;              /* the graveyard is small and must not scroll */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */
