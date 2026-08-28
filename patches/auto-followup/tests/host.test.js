@@ -279,6 +279,17 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   // a doubt about a banked second is the turn, not a thing that waits
   ok(rl.indexOf("A doubt about something already banked outranks everything")>=0,
      "rules: a doubt about a banked second is this turn");
+
+  // The agent invents figures. Not wrong ones - absent ones, wrapped in a
+  // sentence that reads exactly like a measurement. So the first demand is the
+  // artefact, the check has code of its own that nobody reads, and a large
+  // claim gets more than one round.
+  ok(rl.indexOf("Assume it was not measured until you have been shown how")>=0,
+     "rules: a number is invented until an artefact says otherwise");
+  ok(rl.indexOf("the code of the check, not only of the thing being checked")>=0,
+     "rules: the check is a program too, and it can pass on a defect");
+  ok(rl.indexOf("One round is not enough for a large claim")>=0,
+     "rules: a large claim is pushed more than once");
   ok(rl.indexOf("there is no")>=0 && rl.indexOf("it can wait")>=0,
      "rules: and cannot be deferred");
 
