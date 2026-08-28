@@ -264,6 +264,28 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(tiers.indexOf("under 2 s")>=0 && tiers.indexOf("2 s to 10 s")>=0,
      "rules: the tiers are in seconds, not in factors");
   ok(tiers.indexOf("under 1.1x")<0,"rules: and no longer drop anything under five seconds");
+  // the sentence that cost three hours: "the number is the prefill wall clock"
+  // was read as "anything that avoids running the prefill is out of scope", and
+  // the template KV - deleting work, not moving it - was killed off the board at
+  // 10:38 and landed at 15:43 worth the whole of that day
+  ok(flat.indexOf("But work that is not done, because its result is already known")>=0,
+     "goal: not doing constant work is a shorter wall clock, not a schedule change");
+  ok(flat.indexOf("Doing the same work earlier is the schedule")>=0,
+     "goal: and the forbidden half is named beside it");
+
+  // a doubt about a banked second is the turn, not a thing that waits
+  ok(rl.indexOf("A doubt about something already banked outranks everything")>=0,
+     "rules: a doubt about a banked second is this turn");
+  ok(rl.indexOf("there is no")>=0 && rl.indexOf("it can wait")>=0,
+     "rules: and cannot be deferred");
+
+  // and nothing enters the ledger without the input it was measured on
+  ok(rl.indexOf("Nothing is banked without its input and its configuration")>=0,
+     "rules: the ledger takes the input with the second");
+  ok(rl.indexOf("words **of transcript**")>=0,
+     "rules: counted as transcript words, which is what was conflated");
+  ok(rl.indexOf("The base is one number and it does not move")>=0,
+     "rules: and the denominator is fixed");
   // a critic with no external check degrades: GPT-4 on GSM8K went 95.5 to 91.5 to
   // 89.0 over two rounds of correcting itself without ground truth, at 3x and 5x
   // the cost. The rig is the external check, so a claim goes to it rather than
