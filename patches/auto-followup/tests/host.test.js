@@ -299,6 +299,12 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   const whole=(g+" "+rl+" "+F.parse("perf-skeptic",globalThis.__ccAfSamples
     .find(s=>s.id==="perf-skeptic").text).stop).replace(/\s+/g," ");
   ok(!/doctor|DocVoice|clinic/i.test(whole),"file: no product words in it");
+
+  // A line left behind by an earlier edit read as a sentence to whoever was
+  // given this file. Every line of the prose has to be a whole sentence or the
+  // start of one; a fragment ending in a full stop is neither.
+  ok(flat.indexOf("make the kernel faster - and never looked for a second")<0,
+     "file: no sentence fragment left behind by an edit");
   // a critic with no external check degrades: GPT-4 on GSM8K went 95.5 to 91.5 to
   // 89.0 over two rounds of correcting itself without ground truth, at 3x and 5x
   // the cost. The rig is the external check, so a claim goes to it rather than
