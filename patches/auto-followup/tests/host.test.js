@@ -243,7 +243,7 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(rl.indexOf("unit that is idle")<0,"rules: no longer offer the unit the constraint closes");
   ok(rl.indexOf("moving work to the CPU")>=0,"rules: and it is on the refused list");
   ok(flat.indexOf("1,100 words are the transcript")>=0,"goal: says what the 1,100 words are");
-  ok(flat.indexOf("served by a shared cache")>=0,"goal: and that the fixed prompt is already cached");
+  ok(!/cach/i.test(g),"goal: says nothing about caching");
 }
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
