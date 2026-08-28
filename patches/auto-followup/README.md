@@ -575,3 +575,11 @@ because the queue panel is not always there: off, armed with `4/20` (or a bare
 count when `unlimited`), or finished in warning colour with the stop reason on
 hover. The generated message appears in a lane below a rule of its own, editable
 before it goes, with the rule that produced it underneath.
+
+## Does it help?
+
+Nobody has measured that. Every change to the responder so far was argued from a
+transcript, which is about the loop's behaviour and not about its outcome, and
+the method it borrows from asks explicitly for a comparison at equal cost
+(Huang et al., arXiv:2310.01798). `CONTROL.md` is the protocol and
+`tools/control-arm.mjs` holds the two arms so the comparison exists at all.
