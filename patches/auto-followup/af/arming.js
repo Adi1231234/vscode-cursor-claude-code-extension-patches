@@ -39,7 +39,12 @@
     var was = paused;
     paused = !!v;
     if (was === paused) return;
-    if (!paused) {
+    if (paused) {
+      /* A run in flight is work nobody is waiting for any more, and left alone
+         it comes back and queues a follow-up into a loop that was told to
+         stop. */
+      if (pending) cancelRun();
+    } else {
       if (slot && lastSeen !== lastAssistant()) slot = null;
     }
     log(paused ? "paused" : "resumed");
