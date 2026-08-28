@@ -268,6 +268,10 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
      "every: the anti-repeat sentence is not inside the message it sends");
   ok(rl.indexOf("A question you have asked before")>=0,
      "rules: it is a rule, where the responder can act on it");
+  ok(rl.indexOf("Something you asked for has arrived")>=0,
+     "rules: the turn after a demand belongs to its answer");
+  ok(rl.indexOf("Price what came back before you ask for anything else")>=0,
+     "rules: and says to price it before asking for anything else");
   ok(rl.indexOf("does not belong in the message you send")>=0,
      "rules: and says so");
   ok(rl.indexOf("goes to the graveyard with what killed it")>=0,

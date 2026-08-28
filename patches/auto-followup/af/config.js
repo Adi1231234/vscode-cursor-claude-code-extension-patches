@@ -39,6 +39,7 @@
   var STATE_KEY = "ccAfState:";  /* + session id - turns, slot, stop reason */
   var EVERY_KEY = "ccAfEvery:";    /* + session id - the turn each recurring question last fired */
   var AXES_KEY = "ccAfAxes:";      /* + session id - what has been priced, and what killed it */
+  var PANEL_KEY = "ccAfPanel:";    /* + session id - the turn a panel-chosen question last fired */
   /* Longer than the slowest cadence in any responder, and that is the whole
      rule. It was five, written when every question was asked once and five was
      enough to recognise a repeat. Then '## every' arrived and started producing
@@ -48,6 +49,21 @@
      question as 6 and 12, with the earlier one off the end of the list both
      times. Raise this before raising a cadence past it. */
   var MAX_ASKED = 14;
+
+  /* Turns that must pass between two questions the panel chooses, whichever
+     ones they are.
+
+     Each question had its own cadence and nothing spaced them against each
+     other, so two coming due together fired on consecutive turns - and a turn
+     the panel has chosen carries "ask this, and nothing else", which means the
+     answer to the previous one is dropped unread. Measured on a real run: of
+     twenty messages the panel chose thirteen, and all three times it demanded
+     five routes to the target, the next message was another panel question. The
+     routes were never once priced, which is also the loop's own stop condition.
+
+     Three leaves the turn after a demand free for its answer, and the two after
+     that for what the answer opens. */
+  var PANEL_GAP = 3;
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
   var MAX_AXES = 200;              /* the graveyard is small and must not scroll */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */

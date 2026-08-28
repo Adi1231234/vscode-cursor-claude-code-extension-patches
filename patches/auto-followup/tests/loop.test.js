@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,panelGap:()=>PANEL_GAP,panelQuestion:panelQuestion,markPanelAsked:markPanelAsked,forgetPanel:()=>{try{localStorage.removeItem(keyFor(PANEL_KEY));}catch(e){}},recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -387,6 +387,22 @@ ok(S().axes.length===1,'axes: the same line twice is one line, got '+S().axes.le
      "cadence: the ledger keeps that many, got " + have.length);
   ok(have[0].indexOf("ask number 3") > 0,
      "cadence: and it is the newest that survive, got " + have[0]);
+}
+
+// Two questions the panel chose, on consecutive turns. Each carries "ask this,
+// and nothing else", so the second throws away the answer to the first - and
+// every question knowing only its own cadence is what allowed it. Measured on a
+// real run: thirteen of twenty messages were panel-chosen, and all three times
+// it demanded five routes the next message was another panel question.
+{
+  const R={once:[{name:'a',when:'[0-9]',ask:'A?'}],
+           every:[{name:'b',turns:'1',when:'[0-9]',ask:'B?'}]};
+  T.forgetPanel();
+  const first=T.panelQuestion(R,'53.8 s');
+  ok(first && first.ask==='A?','gap: the first question fires, got '+JSON.stringify(first));
+  T.markPanelAsked();
+  ok(!T.panelQuestion(R,'53.8 s'),
+     'gap: and nothing else fires on the turn after it, however due');
 }
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
