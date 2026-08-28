@@ -434,5 +434,31 @@ globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:pr3.rid,message:"q3",cla
 ok(S().plan.length===1 && S().plan[0].indexOf("drift")>0,
    "plan: closing item one replaces the list rather than adding to it, got "+JSON.stringify(S().plan));
 
+// Stop pressed while a run is in flight, then Continue. The stop cancels the
+// run and the host kills the CLI, which fires close with no output and answers
+// with an error for that same rid. If the panel still considers that rid its
+// own, the error lands after the Continue and disarms it again on the spot.
+T.disarm(null); T.arm("perf-skeptic");
+globalThis.__msgs.push({role:"assistant",content:"a reply worth answering, 53.8 s"});
+globalThis.sent.length=0; T.maybeRun();
+var live=globalThis.sent.filter(m=>m.op==="run")[0];
+ok(!!live,"stop/continue: a run is in flight");
+
+// the stop button, through the same funnel the app uses
+globalThis.__ccStore().interrupt();
+ok(S().armed===null && S().stopped==="stopped by hand",
+   "stop/continue: the stop disarmed it, got "+S().stopped);
+
+// he presses Continue
+T.resume();
+ok(S().armed==="perf-skeptic","stop/continue: Continue re-arms it");
+
+// and the killed run answers, late, for the rid that was cancelled
+globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:live.rid,
+  error:"the responder returned nothing (exit 1)"}});
+ok(S().armed==="perf-skeptic",
+   "stop/continue: a cancelled run may not disarm what came after it, got armed="
+   +S().armed+" stopped="+S().stopped);
+
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);
