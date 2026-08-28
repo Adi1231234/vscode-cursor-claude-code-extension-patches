@@ -121,7 +121,10 @@
         });
       }
     } catch (e) { Q.length = 0; }
-    if (Q.length) paused = true;   /* restored batch is held - never auto-fire on load */
+    /* Only if something would actually fire: a restore of nothing but parked
+       items has nothing to hold back, and the hold then blocks the follow-up
+       loop on a queue that will never move. */
+    if (Q.some(function (it) { return !isParked(it); })) paused = true;
     ccLog("queue", "loadQueue", qKey(sid), "restored=" + Q.length);
     render();
   }

@@ -156,6 +156,26 @@ globalThis.__qAutoState.paused=false;
 globalThis.__qAutoState.count=3;      run('renderLane while the queue has items', ()=>T.renderLane());
 globalThis.__qAutoState.count=0;
 
+// An armed loop that is doing nothing has to say why. The lane cannot carry
+// this: stateNote() returns "" until there is a slot, and the queue gate in
+// maybeRun fires before a slot can exist - which is how one parked item held
+// the loop for good behind a button that said 0/150 and nothing else.
+{
+  T.arm('perf-skeptic'); T.ensureButton();
+  const tip = () => T.btn().__afTip||'';
+
+  globalThis.__qAutoState.count=1; T.ensureButton();
+  ok(tip().indexOf('held: 1 in the queue')>=0, 'the button names the queue as what holds it: '+tip());
+  globalThis.sent.length=0; T.maybeRun();
+  ok(!globalThis.sent.some(m=>m.op==='run'), 'and it really is held - nothing was asked');
+
+  globalThis.__qAutoState.count=0; globalThis.__qAutoState.paused=true; T.ensureButton();
+  ok(tip().indexOf('held: the queue is paused')>=0, 'the button names the pause: '+tip());
+
+  globalThis.__qAutoState.paused=false; T.ensureButton();
+  ok(tip().indexOf('held')<0, 'and says nothing when nothing holds it: '+tip());
+}
+
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:[LIST[1]]}});
 ok(S().armed===null,'an arming whose file vanished is disarmed');
 ok(String(S().stopped).indexOf('gone')>=0,'and says why: '+S().stopped);

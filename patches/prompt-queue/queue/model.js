@@ -85,17 +85,27 @@
         pending absolute schedules are transparent, an 'after' item GATES the
         queue (nothing behind it goes until it is armed and due), and the first
         plain item sends. missed / rearm items are inactive and skipped. */
+  /* Parked: present in the list, and not something the queue will ever send
+     on its own. off is set aside by hand or by a responder asking first,
+     missed is a moment that passed while the window was closed, rearm is a
+     countdown that lost its origin. Named once because three places have to
+     agree: what flushes, what counts as the user driving, and what a restore
+     holds the queue for. They did not agree, and a single parked item stopped
+     the follow-up loop for good - it can never be sent, so the count it made
+     non-zero could never fall. */
+  function isParked(it) { return !!(it.off || it.missed || it.rearm); }
+
   function firstSendableIndex() {
     var k, it;
     for (k = 0; k < Q.length; k++) {
       it = Q[k];
-      if (it.off || it.missed || it.rearm) continue;
+      if (isParked(it)) continue;
       if ((it.mode === "timer" || it.mode === "time") && isDue(it)) return k;
     }
     if (paused) return -1;
     for (k = 0; k < Q.length; k++) {
       it = Q[k];
-      if (it.off || it.missed || it.rearm) continue;
+      if (isParked(it)) continue;
       if (it.mode === "timer" || it.mode === "time") continue;
       if (it.mode === "after") return (it.at && isDue(it)) ? k : -1;
       return k;
