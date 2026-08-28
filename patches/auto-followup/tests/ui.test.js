@@ -930,7 +930,7 @@ try{
   // pressed, and the file came back the same
   btn.dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
   globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
-  ok(said()==='no changes','refresh: unchanged is said out loud, got '+JSON.stringify(said()));
+  ok(said()==='no changes since it opened','refresh: unchanged is said out loud, got '+JSON.stringify(said()));
 
   // pressed, and the file had changed
   const edited=LIST.map(r=>r.id==='perf-skeptic'?Object.assign({},r,{goal:'A DIFFERENT GOAL'}):r);
