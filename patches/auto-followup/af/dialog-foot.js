@@ -60,6 +60,12 @@
     var when = el("span", "__afSavedAt");
     txt(when, savedAtText());
     f.appendChild(when);
+    /* Beside the time it refreshes, because the two are one question. */
+    var again = el("span", "__afLink __afRefresh");
+    txt(again, "Refresh");
+    on(again, "click", askRefresh);
+    f.appendChild(again);
+    f.appendChild(el("span", "__afRefreshSaid"));
     var count = readClaims().length;
     var ex = el("span", "__afLink" + (count ? "" : " __afMuted"));
     txt(ex, count ? "Export claims (" + count + ")" : "No claims yet");

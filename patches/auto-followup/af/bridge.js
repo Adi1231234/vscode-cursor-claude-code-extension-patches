@@ -100,6 +100,8 @@
       try { refreshMenu(); } catch (e) {}
       /* And the one line in the dialog that is about the file, not the draft. */
       try { refreshSavedAt(); } catch (e) {}
+      /* And the answer to a Refresh that is waiting on this list. */
+      try { refreshArrived(); } catch (e) {}
       return;
     }
     if (m.op === "chunk") {

@@ -211,7 +211,10 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afConfirmBody{padding:14px 15px 4px;font-size:12px;line-height:1.65;background:var(--afPaper)}
 .__afConfirm .__afFoot{justify-content:flex-end}
 .__afFoot{display:flex;align-items:center;gap:9px;padding:11px 15px;background:var(--afChrome);border-top:1px solid var(--afLine)}
-.__afSavedAt{font-size:10.5px;opacity:.4;font-variant-numeric:tabular-nums;margin-inline-end:auto}
+.__afSavedAt{font-size:10.5px;opacity:.4;font-variant-numeric:tabular-nums}
+.__afRefreshSaid{font-size:10.5px;opacity:.55;margin-inline-end:auto;transition:opacity .15s}
+.__afRefreshSaid.__afRefreshOn{opacity:1;color:var(--afAcc,#d97757)}
+.__afRefreshSaid.__afRefreshWarn{opacity:1;color:var(--app-list-warning-foreground,#d0a215)}
 .__afSpacer{flex:1}
 .__afLink{font-size:11.5px;opacity:.8;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .__afLink:hover{opacity:1}
