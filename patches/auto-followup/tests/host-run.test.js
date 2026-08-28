@@ -84,6 +84,23 @@ let done=false;
      'question turn: nothing sent yet means no such section');
 }
 
+// The plan is handed back on every turn, both kinds. Sequential prompting loses
+// the goal: what was decided drifts out of a long history and the loop stops
+// working it. Re-injecting the list is what recovers it.
+{
+  const plan=['q6_K repack, 4 s','the baseline drift, unpriced'];
+  const ordinary=R.compose(resp,{text:'53.8 s',claims:[],plan:plan});
+  ok(ordinary.indexOf('# The plan, item one first')>=0,'plan: an ordinary turn carries it');
+  ok(ordinary.indexOf('1. q6_K repack, 4 s')>=0,'plan: numbered, item one first');
+  ok(ordinary.indexOf('Item one is what this turn is for')>=0,'plan: and says what to do with it');
+  const asked=R.compose(resp,{text:'53.8 s',claims:[],plan:plan,once:{ask:'Q?'}});
+  ok(asked.indexOf('# The plan, item one first')>=0,
+     'plan: and so does a turn where the panel chose the question');
+  ok(asked.indexOf('Q?')>=0,'plan: which still carries the question');
+  const none=R.compose(resp,{text:'53.8 s',claims:[],plan:[]});
+  ok(none.indexOf('# The plan')<0,'plan: nothing open means no such section');
+}
+
 const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
   {text:'hi',claims:[],cwd:os.tmpdir()}, function(res){
     done=true;

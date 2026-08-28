@@ -24,7 +24,7 @@
     var mode = (meta && meta.context) || "last-message+claims";
     var reply = lastAssistant();
     var ctx = { text: reply, cwd: cwdHint(), claims: [], asked: readAsked(),
-                once: null, axes: readAxes() };
+                once: null, axes: readAxes(), plan: readPlan() };
     /* The framing questions come first and are asked once each; the recurring
        ones fill the turns after they have all been put. Both arrive through
        the same field because from here on they are the same thing: a question
@@ -48,6 +48,7 @@
     turns += 1;
     if (m.claims && m.claims.length) addClaims(m.claims);
     if (m.axes && m.axes.length) addAxes(m.axes);
+    if (m.plan && m.plan.length) writePlan(m.plan);
     if (m.stop) { slot = null; disarm(m.stop); return; }
     if (!m.message) { log("empty message, nothing to send"); renderAll(); return; }
     /* Into the queue, as an ordinary item.

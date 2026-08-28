@@ -1,4 +1,4 @@
-  /* ---------- The three ledgers that are not claims ----------
+  /* ---------- The ledgers that are not claims and are not the plan ----------
 
      What the panel actually sent, which of the panel-chosen questions have been
      put, and which axes have been priced. All per session, all in localStorage,
@@ -72,7 +72,11 @@
   /* The gate, in one place, so the two kinds of question cannot space themselves
      against their own cadence and forget about each other. */
   function panelQuestion(r, text) {
-    if (turns - lastPanelTurn() < PANEL_GAP) return null;
+    /* Twice as long while a plan is open. The plan is the thing a question of
+       the panel's interrupts, and an interruption is worth less when there is
+       something in the middle of being worked than when there is not. */
+    var gap = readPlan().length ? PANEL_GAP * 2 : PANEL_GAP;
+    if (turns - lastPanelTurn() < gap) return null;
     return pendingOnce(r, text) || pendingEvery(r, text);
   }
 

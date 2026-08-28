@@ -253,8 +253,17 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(flat.indexOf("1,100 words are the transcript")>=0,"goal: says what the 1,100 words are");
   ok(!/cach/i.test(g),"goal: says nothing about caching");
   // 5.4x as a product, not a single item, and what is ours to rewrite
-  ok(flat.indexOf("5.4x does not have to be one move")>=0,"goal: a route may be several");
-  ok(flat.indexOf("Track the product")>=0,"goal: and the product is what is tracked");
+  // the target is seconds, not a factor: seconds add and factors do not, and
+  // pricing in factors is what made a two-second win look like nothing (1.04x)
+  // when fifteen of them are the whole job
+  ok(flat.indexOf("has to remove **43.8 seconds**")>=0,"goal: the target is seconds");
+  ok(flat.indexOf("seconds add and factors do not")>=0,"goal: and says why it is not a factor");
+  ok(flat.indexOf("Two seconds is worth having")>=0,"goal: two seconds is on the list");
+  ok(flat.indexOf("Track the running total")>=0,"goal: and the running total is what is tracked");
+  const tiers=rl;
+  ok(tiers.indexOf("under 2 s")>=0 && tiers.indexOf("2 s to 10 s")>=0,
+     "rules: the tiers are in seconds, not in factors");
+  ok(tiers.indexOf("under 1.1x")<0,"rules: and no longer drop anything under five seconds");
   ok(flat.indexOf("Rewriting all of llama.cpp is on the table")>=0,"goal: nothing is sacred but the five");
   // the cadences, which were fast enough to ask the same thing three times an hour
   const ev=F.parse("perf-skeptic",globalThis.__ccAfSamples.find(s=>s.id==="perf-skeptic").text).every;

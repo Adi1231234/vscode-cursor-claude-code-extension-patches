@@ -40,6 +40,7 @@
   var EVERY_KEY = "ccAfEvery:";    /* + session id - the turn each recurring question last fired */
   var AXES_KEY = "ccAfAxes:";      /* + session id - what has been priced, and what killed it */
   var PANEL_KEY = "ccAfPanel:";    /* + session id - the turn a panel-chosen question last fired */
+  var PLAN_KEY = "ccAfPlan:";      /* + session id - the open list, item 1 first */
   /* Longer than the slowest cadence in any responder, and that is the whole
      rule. It was five, written when every question was asked once and five was
      enough to recognise a repeat. Then '## every' arrived and started producing
@@ -66,6 +67,7 @@
   var PANEL_GAP = 3;
   var MAX_CLAIMS = 60;             /* the ledger is a cue, not an archive */
   var MAX_AXES = 200;              /* the graveyard is small and must not scroll */
+  var MAX_PLAN = 12;              /* a list nobody can hold in mind is not a plan */
   var MAX_TRANSCRIPT = 60000;      /* context: full-session, kept from the end */
 
   /* This whole script is injected into a template literal, so every backslash is
