@@ -257,8 +257,8 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   // pricing in factors is what made a two-second win look like nothing (1.04x)
   // when fifteen of them are the whole job
   ok(flat.indexOf("has to remove **43.8 seconds**")>=0,"goal: the target is seconds");
-  ok(flat.indexOf("seconds add and factors do not")>=0,"goal: and says why it is not a factor");
-  ok(flat.indexOf("Two seconds is worth having")>=0,"goal: two seconds is on the list");
+  // a threshold in fixed seconds goes stale with the baseline; the share does not
+  ok(flat.indexOf("A fifteenth of the gap is worth having")>=0,"goal: the small win is a share of the measured gap");
   ok(flat.indexOf("Track the running total")>=0,"goal: and the running total is what is tracked");
   const tiers=rl;
   ok(tiers.indexOf("under 2 s")>=0 && tiers.indexOf("2 s to 10 s")>=0,
