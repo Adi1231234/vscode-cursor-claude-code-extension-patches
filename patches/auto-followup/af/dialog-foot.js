@@ -28,8 +28,38 @@
      responder off does not wipe it - what Claude asserted stays true across an
      off and on again. That makes clearing it an explicit act, which is what these
      two are. */
+  /* When this responder last changed on disk, so a save can be seen to have
+     landed and an edit made somewhere else can be seen at all. Read from the
+     list, which the host rebuilds from the folder after every save, rather than
+     from the draft - the draft is what is on screen, and the question here is
+     what is in the file.
+
+     A time on its own for today, because that is nearly always the answer and a
+     date in front of it is noise; the date as well when it is not. */
+  function savedAtText() {
+    var r = draft && findResponder(draft.id);
+    if (!r || typeof r.updated !== "number") return draft && draft.isNew ? "not saved yet" : "";
+    var d = new Date(r.updated), now = new Date();
+    var hm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    var sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+                  && d.getDate() === now.getDate();
+    return "saved " + (sameDay ? hm
+      : d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + hm);
+  }
+
+  /* Patched in place rather than by redrawing the pane: a list arrives whenever
+     anything touches the folder, and rebuilding the form under someone who has
+     clicked into a box would take their cursor with it. */
+  function refreshSavedAt() {
+    var n = document.querySelector(".__afSavedAt");
+    if (n) txt(n, savedAtText());
+  }
+
   function footer() {
     var f = el("div", "__afFoot");
+    var when = el("span", "__afSavedAt");
+    txt(when, savedAtText());
+    f.appendChild(when);
     var count = readClaims().length;
     var ex = el("span", "__afLink" + (count ? "" : " __afMuted"));
     txt(ex, count ? "Export claims (" + count + ")" : "No claims yet");
