@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,panelGap:()=>PANEL_GAP,panelQuestion:panelQuestion,markPanelAsked:markPanelAsked,forgetPanel:()=>{try{localStorage.removeItem(keyFor(PANEL_KEY));}catch(e){}},recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,panelGap:()=>PANEL_GAP,panelQuestion:panelQuestion,markPanelAsked:markPanelAsked,forgetPanel:()=>{try{localStorage.removeItem(keyFor(PANEL_KEY));}catch(e){}},recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),plan:readPlan(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -404,6 +404,35 @@ ok(S().axes.length===1,'axes: the same line twice is one line, got '+S().axes.le
   ok(!T.panelQuestion(R,'53.8 s'),
      'gap: and nothing else fires on the turn after it, however due');
 }
+
+// The plan: what is open, in the order it will be worked. Replaced rather than
+// appended, which is the difference from the graveyard - and an empty return
+// leaves it alone, because a turn that says nothing about the plan has not
+// cleared it.
+T.disarm(null); T.arm("perf-skeptic");
+globalThis.__msgs.push({role:"assistant",content:"a reply with 53.8 s in it"});
+globalThis.sent.length=0; T.maybeRun();
+var pr=globalThis.sent.filter(m=>m.op==="run")[0];
+globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:pr.rid,message:"q",claims:[],
+  plan:["q6_K repack, 4 s, needs one counter run","the 10 percent baseline drift, unpriced"],stop:null}});
+ok(S().plan.length===2,"plan: what came back is kept, got "+JSON.stringify(S().plan));
+ok(S().plan[0].indexOf("q6_K")===0,"plan: in the order it was given");
+T.approve();
+globalThis.__msgs.push({role:"assistant",content:"another reply"});
+globalThis.sent.length=0; T.maybeRun();
+var pr2=globalThis.sent.filter(m=>m.op==="run")[0];
+ok(pr2.ctx.plan && pr2.ctx.plan.length===2,
+   "plan: and handed back on the next turn, got "+JSON.stringify(pr2.ctx.plan));
+globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:pr2.rid,message:"q2",claims:[],plan:[],stop:null}});
+ok(S().plan.length===2,"plan: an empty return leaves it alone, got "+S().plan.length);
+T.approve();
+globalThis.__msgs.push({role:"assistant",content:"a third reply"});
+globalThis.sent.length=0; T.maybeRun();
+var pr3=globalThis.sent.filter(m=>m.op==="run")[0];
+globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:pr3.rid,message:"q3",claims:[],
+  plan:["the 10 percent baseline drift, unpriced"],stop:null}});
+ok(S().plan.length===1 && S().plan[0].indexOf("drift")>0,
+   "plan: closing item one replaces the list rather than adding to it, got "+JSON.stringify(S().plan));
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

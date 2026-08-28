@@ -85,11 +85,12 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
 
   function shape(parsed, raw) {
     if (!parsed || typeof parsed !== "object") {
-      return { message: (raw || "").trim(), why: "output was not JSON", claims: [], axes: [],
+      return { message: (raw || "").trim(), why: "output was not JSON", claims: [], axes: [], plan: [],
                stop: null, invalid: true };
     }
     var claims = Array.isArray(parsed.claims) ? parsed.claims : [];
     var axes = Array.isArray(parsed.axes) ? parsed.axes : [];
+    var plan = Array.isArray(parsed.plan) ? parsed.plan : [];
     return {
       message: typeof parsed.message === "string" ? parsed.message.trim() : "",
       why: typeof parsed.why === "string" ? parsed.why.trim() : "",
@@ -97,6 +98,8 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
                     .map(function (c) { return c.trim(); }).slice(0, 12),
       axes: axes.filter(function (a) { return typeof a === "string" && a.trim(); })
                   .map(function (a) { return a.trim(); }).slice(0, 8),
+      plan: plan.filter(function (p) { return typeof p === "string" && p.trim(); })
+                .map(function (p) { return p.trim(); }).slice(0, 12),
       stop: typeof parsed.stop === "string" && parsed.stop.trim() ? parsed.stop.trim() : null,
       invalid: false
     };

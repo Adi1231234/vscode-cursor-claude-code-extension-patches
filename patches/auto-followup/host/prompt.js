@@ -10,7 +10,7 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     "You are NOT talking to the human and you are NOT Claude. Your whole output is the",
     "message that will be typed into the composer, plus bookkeeping.",
     "",
-    "Answer with JSON only, exactly these five keys:",
+    "Answer with JSON only, exactly these six keys:",
     '  "message" - the text to send. Write it as the human would: direct, short,',
     "              in the language the human has been using.",
     '  "why"     - one short clause naming the rule you applied. The human reads',
@@ -20,6 +20,9 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     '  "axes"    - any axis you priced this turn, one short line each: what it is,',
     "              what it is worth, and what killed it if it is dead. [] when",
     "              there are none - the panel keeps them, you only add.",
+    '  "plan"    - what is open, in the order you will work it, item one first.',
+    "              Return the whole list every turn you change it: close item one",
+    "              when it is done and the rest moves up. [] leaves it as it was.",
     '  "stop"    - null to continue, or a short reason when the stop condition is met.',
     "",
     "When you return a stop reason, 'message' is ignored and nothing is sent."
@@ -64,6 +67,27 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
     return g ? ["# What you are trying to get to", g, ""] : [];
   }
 
+  /* The plan, first of everything the responder is handed, because it is the
+     only part that says what this loop is in the middle of.
+
+     Sequential prompting loses the goal: early high-level thoughts drift out of
+     a long history and the loop stops working what it decided to work (Zhang et
+     al., ReCAP, arXiv:2510.23822, +32% pass@1 from re-injecting the plan). This
+     is that re-injection. Measured on a run of this loop before it existed: five
+     routes were demanded three times and none of the fifteen was ever priced. */
+  function planBlock(ctx) {
+    if (!ctx.plan || !ctx.plan.length) return [];
+    var out = ["", "# The plan, item one first"];
+    for (var i = 0; i < ctx.plan.length; i++) out.push((i + 1) + ". " + ctx.plan[i]);
+    return out.concat([
+      "",
+      "Item one is what this turn is for, unless what Claude just wrote closes it or",
+      "changes what it should be. Do not open a sixth thing while one is open: say",
+      "what item one needs next, or say it is closed and why, and let the rest move",
+      "up. Return the list in 'plan' whenever it changes."
+    ]);
+  }
+
   function askedBlock(ctx) {
     var p = [];
     if (ctx.asked && ctx.asked.length) {
@@ -83,7 +107,7 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
   function compose(r, ctx) {
     var first = firstQuestion(r, ctx);
     if (first) {
-      return [CONTRACT, ""].concat(goalOf(r)).concat([
+      return [CONTRACT, ""].concat(goalOf(r)).concat(planBlock(ctx)).concat([
         "# This turn has exactly one job",
         "Ask this, and nothing else:",
         "    " + first,
@@ -147,7 +171,7 @@ globalThis.__ccAfPrompt = globalThis.__ccAfPrompt || (function () {
        and asking for the id back produced o1, o2, o3, o4 - it wrote a new question
        instead of returning the id it had been handed. A fresh process will not
        keep books. It will read what is put in front of it. */
-    p = p.concat(askedBlock(ctx));
+    p = p.concat(planBlock(ctx)).concat(askedBlock(ctx));
     p.push("", "# Claude's message, which you are answering", (ctx.text || "").trim());
     return p.join("\n");
   }
