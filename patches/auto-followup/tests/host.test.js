@@ -264,6 +264,15 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(tiers.indexOf("under 2 s")>=0 && tiers.indexOf("2 s to 10 s")>=0,
      "rules: the tiers are in seconds, not in factors");
   ok(tiers.indexOf("under 1.1x")<0,"rules: and no longer drop anything under five seconds");
+  // a critic with no external check degrades: GPT-4 on GSM8K went 95.5 to 91.5 to
+  // 89.0 over two rounds of correcting itself without ground truth, at 3x and 5x
+  // the cost. The rig is the external check, so a claim goes to it rather than
+  // into an argument about it.
+  ok(rl.indexOf("Send it to the instrument, do not argue it")>=0,
+     "rules: a claim goes to the rig, not into an argument");
+  ok(rl.indexOf("cheapest thing the rig could run that would settle it")>=0,
+     "rules: and the move is the cheapest decisive measurement");
+  ok(rl.indexOf("2310.01798")>=0,"rules: with the reason it is not a preference");
   ok(flat.indexOf("Rewriting all of llama.cpp is on the table")>=0,"goal: nothing is sacred but the five");
   // the cadences, which were fast enough to ask the same thing three times an hour
   const ev=F.parse("perf-skeptic",globalThis.__ccAfSamples.find(s=>s.id==="perf-skeptic").text).every;
