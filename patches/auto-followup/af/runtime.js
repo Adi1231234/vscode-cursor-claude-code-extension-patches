@@ -7,14 +7,21 @@
      saying. */
   /* Same funnel every stop path goes through, decorated per session because the
      object is replaced when the conversation changes. No condition on the queue:
-     that is precisely the check that would make this fail. */
+     that is precisely the check that would make this fail, because the slot is
+     filled after a turn ends and at the moment stop is pressed there is often
+     nothing queued at all.
+
+     Stop holds the loop, it does not end it. It used to disarm, which threw away
+     the count, the ledgers and the arming for something the person meant as
+     "not now" - and getting them back meant Continue, on a state that had just
+     cancelled a run. A hold keeps all of it and costs one click to release. */
   function hookStop() {
     try {
       var s = globalThis.__ccStore();
       if (!s || s.__afStopHook || typeof s.interrupt !== "function") return;
       var orig = s.interrupt;
       s.interrupt = function () {
-        try { if (armed) disarm("stopped by hand"); } catch (e) {}
+        try { if (armed && !paused) setPaused(true); } catch (e) {}
         return orig.apply(this, arguments);
       };
       s.__afStopHook = 1;

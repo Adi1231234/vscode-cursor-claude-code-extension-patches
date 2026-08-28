@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,panelGap:()=>PANEL_GAP,panelQuestion:panelQuestion,markPanelAsked:markPanelAsked,forgetPanel:()=>{try{localStorage.removeItem(keyFor(PANEL_KEY));}catch(e){}},recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),plan:readPlan(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,maxAsked:()=>MAX_ASKED,panelGap:()=>PANEL_GAP,panelQuestion:panelQuestion,markPanelAsked:markPanelAsked,forgetPanel:()=>{try{localStorage.removeItem(keyFor(PANEL_KEY));}catch(e){}},recordAsked:recordAsked,readAsked:readAsked,forgetStoppedId:()=>{stoppedId=null;},state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,paused:paused,pending:pending,claims:readClaims(),axes:readAxes(),plan:readPlan(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -101,13 +101,19 @@ ok(r4 && typeof r4.ctx.transcript==='string' && r4.ctx.transcript.indexOf('CLAUD
 ok(r4 && r4.ctx.transcript.indexOf('HUMAN: hi')>=0,'transcript includes the human turns');
 
 
-// 12. the stop button disarms, with nothing queued
+// 12. the stop button holds the loop; it does not end it. Ending threw away the
+// count, the ledgers and the arming for something meant as "not now", and no
+// condition on the queue, because the slot is filled after a turn ends and at
+// the moment stop is pressed there is often nothing queued at all.
 T.disarm(null); T.arm('perf-skeptic');
 globalThis.__tick();
 globalThis.__qAutoState.count = 0;
 globalThis.__ccStore().interrupt();
-ok(S().armed===null,'stop button disarms even with an empty queue');
-ok(S().stopped==='stopped by hand','stop reason recorded, got '+S().stopped);
+ok(S().armed==='perf-skeptic','stop: the arming survives, got '+S().armed);
+ok(S().paused===true,'stop: and it is held, got '+S().paused);
+ok(S().stopped===null,'stop: with no stop reason, because nothing ended');
+T.setPaused(false);
+ok(S().paused===false,'stop: one click releases it');
 
 // 13. max_turns ends the arming
 T.disarm(null); T.arm('perf-skeptic');
@@ -434,30 +440,23 @@ globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:pr3.rid,message:"q3",cla
 ok(S().plan.length===1 && S().plan[0].indexOf("drift")>0,
    "plan: closing item one replaces the list rather than adding to it, got "+JSON.stringify(S().plan));
 
-// Stop pressed while a run is in flight, then Continue. The stop cancels the
-// run and the host kills the CLI, which fires close with no output and answers
-// with an error for that same rid. If the panel still considers that rid its
-// own, the error lands after the Continue and disarms it again on the spot.
+// Stop pressed while a run is in flight. The hold cancels the run, and the host
+// kills the CLI, which fires close with no output and answers with an error for
+// that same rid. If the panel still considers that rid its own, the error lands
+// afterwards and ends an arming that was only ever held.
 T.disarm(null); T.arm("perf-skeptic");
 globalThis.__msgs.push({role:"assistant",content:"a reply worth answering, 53.8 s"});
 globalThis.sent.length=0; T.maybeRun();
 var live=globalThis.sent.filter(m=>m.op==="run")[0];
 ok(!!live,"stop/continue: a run is in flight");
-
-// the stop button, through the same funnel the app uses
 globalThis.__ccStore().interrupt();
-ok(S().armed===null && S().stopped==="stopped by hand",
-   "stop/continue: the stop disarmed it, got "+S().stopped);
-
-// he presses Continue
-T.resume();
-ok(S().armed==="perf-skeptic","stop/continue: Continue re-arms it");
-
-// and the killed run answers, late, for the rid that was cancelled
+ok(S().armed==="perf-skeptic" && S().paused===true,
+   "stop/continue: the stop held it rather than ending it");
+T.setPaused(false);
 globalThis.__onMsg({data:{type:"__ccaf",op:"result",rid:live.rid,
   error:"the responder returned nothing (exit 1)"}});
-ok(S().armed==="perf-skeptic",
-   "stop/continue: a cancelled run may not disarm what came after it, got armed="
+ok(S().armed==="perf-skeptic" && S().stopped===null,
+   "stop/continue: a cancelled run may not end what came after it, got armed="
    +S().armed+" stopped="+S().stopped);
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
