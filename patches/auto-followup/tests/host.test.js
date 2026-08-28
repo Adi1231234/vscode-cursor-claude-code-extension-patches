@@ -254,9 +254,12 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(!/cach/i.test(g),"goal: says nothing about caching");
   // 5.4x as a product, not a single item, and what is ours to rewrite
   // the target is seconds, not a factor: seconds add and factors do not, and
-  // pricing in factors is what made a two-second win look like nothing (1.04x)
-  // when fifteen of them are the whole job
-  ok(flat.indexOf("has to remove **43.8 seconds**")>=0,"goal: the target is seconds");
+  // pricing in factors is what made a two-second win look like nothing. The
+  // baseline is measured by the run, never written down here - it was written
+  // down, it went stale, and the file went on pricing against a machine that
+  // had moved. The second assertion is the one that keeps it out.
+  ok(flat.indexOf("the gap is the baseline minus 10 s")>=0,"goal: the gap is measured, not carried");
+  ok(flat.indexOf("53.8")<0,"file: no baseline figure is written into it");
   // the floor is absolute: a share of the gap would refuse three-second wins on a bigger job
   ok(flat.indexOf("Two seconds is worth having, and two seconds does not move")>=0,"goal: two seconds is the floor and it does not move");
   ok(flat.indexOf("Track the running total")>=0,"goal: and the running total is what is tracked");
