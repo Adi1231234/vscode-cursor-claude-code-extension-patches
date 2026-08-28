@@ -221,6 +221,19 @@ ok(F.parse('x', LFfile.replace('description: d','description: a: b: c')).descrip
   ok(back.every[0].turns==='7','store: with its cadence, got '+(back.every[0]||{}).turns);
 }
 
+// 11. the wait question is the one that collides with a constraint. Asked as
+// "how many seconds does a person actually wait", the model localised it and
+// asked what happens before the doctor stops talking - which is the closed half.
+// The goal has to carry the distinction, because on a once-question turn the
+// rules are not in the prompt at all and the goal is the only thing that is.
+{
+  const g=F.parse('perf-skeptic',globalThis.__ccAfSamples.find(s=>s.id==='perf-skeptic').text).goal;
+  const flat=g.replace(/\s+/g," ");
+  ok(flat.indexOf("wait begins when the doctor stops talking")>=0,"goal: says where the wait starts");
+  ok(flat.indexOf("Never ask what could run before that")>=0,"goal: closes the half that is closed");
+  ok(flat.indexOf("field-selection interval")>=0,"goal: and names the half that is open");
+}
+
 console.log(`\n  ${pass} passed, ${fail} failed`);
 fs.rmSync(dir,{recursive:true,force:true});
 process.exit(fail?1:0);
