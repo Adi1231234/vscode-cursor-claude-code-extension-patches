@@ -15,9 +15,21 @@
     renderDialog();
   }
 
+  /* The one thing in this dialog that cannot be undone: the file is unlinked,
+     there is no trash and no second copy. It was also the only destructive
+     action here that asked nothing - switching responder and turning the loop
+     off both go through askConfirm, and both lose a count and nothing else.
+     Clearing the claims, which can be rebuilt, asks too. A responder written
+     over a day went to one click before this said anything. */
   function deleteDraft() {
     if (!draft || draft.isNew) { closeDialog(); return; }
     var id = draft.id;
+    askConfirm("Delete " + (draft.name || id) + "?",
+      "The file is removed from the responders folder. This cannot be undone.",
+      "Delete", function () { doDelete(id); });
+  }
+
+  function doDelete(id) {
     send({ type: "__ccaf", op: "delete", id: id });
     if (armed === id) disarm("the responder was deleted");
     setTimeout(requestList, 60);
