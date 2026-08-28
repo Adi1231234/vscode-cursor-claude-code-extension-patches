@@ -71,7 +71,13 @@
                            : "the file is gone", "__afRefreshWarn");
       return;
     }
-    if (shapeOf(fresh) === was.shape) { sayRefresh("no changes", ""); return; }
+    /* "since it opened", not "no changes": opening the menu and opening the
+       dialog each re-read the folder, so by the time this button is on screen
+       the form already holds what is on disk. The only window this can report
+       on is the one that starts when the dialog opens, and a bare "no changes"
+       reads as "your edit did not arrive" to someone who made one a minute ago
+       and was already looking at it. */
+    if (shapeOf(fresh) === was.shape) { sayRefresh("no changes since it opened", ""); return; }
     if (was.dirty) {
       /* Not clobbering an edit to show a fresher one: the edit is the only copy. */
       sayRefresh("changed on disk - your edits are unsaved, so the form is left alone",
