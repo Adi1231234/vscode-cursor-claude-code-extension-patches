@@ -73,12 +73,23 @@
     return mine;
   }
 
+  var inflight = "";
+
+  /* Cancelling has to disown the run as well as stop waiting for it.
+
+     It used to clear pending and leave inflight holding the cancelled rid, and
+     the host answers a killed process the same way it answers any other: close
+     fires with no output and it posts an error for that rid. The guard below
+     tests exactly this field and its comment names exactly this case, so the
+     late error walked through it and ended an arming that had been started
+     after the cancel. On the button that is Stop, then Continue, then done on
+     the spot with a reason nobody asked for. */
   function cancelRun() {
     send({ type: "__ccaf", op: "cancel", rid: sid + ":" + rid });
     pending = false;
+    inflight = "";
   }
 
-  var inflight = "";
 
   function onHostMessage(m) {
     if (!m || m.type !== "__ccaf") return;
