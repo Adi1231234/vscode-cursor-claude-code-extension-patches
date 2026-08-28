@@ -169,7 +169,6 @@ globalThis.__ccAfSamples = globalThis.__ccAfSamples || [
       "categories, not tricks: restructuring data so the same arithmetic costs fewer",
       "instructions, doing work once instead of once per chunk, precomputing into the",
       "file what is recomputed at runtime.",
-      "make the kernel faster - and never looked for a second.",
       "",
       "**Keep the graveyard, with the reason on each stone.** When an idea dies, record",
       "what killed it. An idea killed by a decision comes back to life the moment that",
