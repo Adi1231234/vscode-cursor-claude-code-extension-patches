@@ -17,11 +17,12 @@ const T=globalThis.__t, S=()=>T.state();
    whoever wrote it remembered - the goal and the once chain were both missing,
    so three tests passed against a responder that could not exist. */
 const HOSTG={};
-for(const f of ['format.js','samples.js'])
+for(const f of ['sections.js','format.js','samples.js'])
   (new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host',f),'utf8')))(HOSTG);
 const asHostSends=(id)=>{
   const r=HOSTG.__ccAfFormat.parse(id,HOSTG.__ccAfSamples.find(s=>s.id===id).text);
   r.onceText=HOSTG.__ccAfFormat.onceToText(r.once);
+  r.everyText=HOSTG.__ccAfFormat.everyToText(r.every);
   return r;
 };
 const LIST=[asHostSends('perf-skeptic'),
@@ -35,7 +36,7 @@ ok(T.btn(), 'button inserted into the composer');
 ok(T.btn().className==='__afBtn','off state class: '+T.btn().className);
 T.arm('perf-skeptic'); run('ensureButton while armed', ()=>T.ensureButton());
 ok(T.btn().className.indexOf('__afOn')>=0,'armed class: '+T.btn().className);
-ok(T.btn().__afCount==='0/20','counter shows the limit: '+T.btn().__afCount);
+ok(T.btn().__afCount==='0/50','counter shows the limit: '+T.btn().__afCount);
 T.disarm('a reason'); run('ensureButton while finished', ()=>T.ensureButton());
 ok(T.btn().className.indexOf('__afDone')>=0,'finished class: '+T.btn().className);
 ok(String(T.btn().__afCount).indexOf('done')>=0,'finished chip: '+T.btn().__afCount);
@@ -199,21 +200,27 @@ try{
   T.openDialog();
 }catch(e){ fail++; console.log('  THREW in keyboard block: '+e.message); }
 
-// The dialog edits the whole file. Two of its four sections had no field at all,
-// and survived only because serialize writes back what it was given - so a
-// responder could be opened, saved, and still be showing half of itself.
+// The dialog edits the whole file. Two of its sections had no field at all, and
+// survived only because serialize writes back what it was given - so a responder
+// could be opened, saved, and still be showing half of itself. '## every' was
+// the third: it saved correctly and was invisible, which is the same bug one
+// step later.
 {
   T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
   const heads=[...document.querySelectorAll('.__afBoxHead')].map(e=>e.textContent);
-  ok(heads.length===4,'sections: four boxes on the pane, got '+heads.length);
+  ok(heads.length===5,'sections: five boxes on the pane, got '+heads.length);
   const tas=[...document.querySelectorAll('.__afTa')];
-  ok(tas.length===4,'sections: four text areas, got '+tas.length);
+  ok(tas.length===5,'sections: five text areas, got '+tas.length);
   ok(!!document.querySelector('.__afPair'),'sections: the two short ones share a row');
   ok(!!document.querySelector('.__afGrow'),'sections: the rules box still takes the room');
 
   const d=T.draft();
   ok(typeof d.onceText==='string','sections: the once chain arrives as editable text');
-  ok(/name: frame/.test(d.onceText),'sections: and carries the chain, got '+String(d.onceText).slice(0,20));
+  ok(/name: backwards/.test(d.onceText),'sections: and carries the chain, got '+String(d.onceText).slice(0,20));
+  ok(/name: five/.test(d.everyText),
+     'sections: and the recurring ones, got '+String(d.everyText).slice(0,20));
+  ok(!/## once|## every/.test(String(d.onceText)+String(d.everyText)),
+     'sections: the editor shows the entries, not the heading above them');
   ok(typeof d.goal==='string' && d.goal.length>0,'sections: the goal arrives too');
 
   // saving hands the text back; the host parses it, so a bad pattern never

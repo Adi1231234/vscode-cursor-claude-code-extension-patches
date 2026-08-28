@@ -49,6 +49,7 @@ globalThis.__ccAfStore = globalThis.__ccAfStore || (function () {
       if (fs.statSync(f).size > MAX_FILE) return null;
       var r = globalThis.__ccAfFormat.parse(id, fs.readFileSync(f, "utf8"));
       r.onceText = globalThis.__ccAfFormat.onceToText(r.once);
+      r.everyText = globalThis.__ccAfFormat.everyToText(r.every);
       return r;
     } catch (e) { return null; }
   }
@@ -74,6 +75,7 @@ globalThis.__ccAfStore = globalThis.__ccAfStore || (function () {
        the panel is what keeps a bad regex from ever reaching the loop as an
        object nobody validated. */
     if (typeof r.onceText === "string") r.once = globalThis.__ccAfFormat.parseOnce(r.onceText);
+    if (typeof r.everyText === "string") r.every = globalThis.__ccAfFormat.parseOnce(r.everyText);
     try { fs.writeFileSync(f, globalThis.__ccAfFormat.serialize(r), "utf8"); return true; }
     catch (e) { return false; }
   }

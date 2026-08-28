@@ -1,7 +1,7 @@
 require('./dom-stubs.js');
 const fs=require('fs');
 require('./load-panel.js').loadPanel(
-  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
+  "{arm:arm,resume:resume,disarm:disarm,setPaused:setPaused,onHostMessage:onHostMessage,maybeRun:maybeRun,maybeSend:maybeSend,approve:approve,pendingOnce:pendingOnce,markOnceAsked:markOnceAsked,state:()=>({armed:armed,turns:turns,slot:slot,stopped:stopped,pending:pending,claims:readClaims(),axes:readAxes(),autosend:autosend(),max:maxTurns(),fired:fired(),stoppedId:stoppedId})}");
 
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 const T=globalThis.__t, S=()=>T.state();
@@ -198,7 +198,14 @@ ok(S().claims.length===before+1,'repeated claim not recorded twice (added '+(S()
   ok(P({once:[{when:'21',ask:'ASK-DURATION, reworded'}]},'21 s')!==null,'once: editing a question re-arms it');
   ok(P({first_question:'FQ',once:[]},'anything').ask==='FQ','once: first_question still works for the simple case');
 }
-const F2=(()=>{const g={};(new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host','format.js'),'utf8')))(g);return g.__ccAfFormat;})();
+/* sections.js first: format.js delegates the two question blocks to it, and this
+   shim is a fresh globalThis, so loading one without the other throws. */
+const F2=(()=>{
+  const g={}, host=(f)=>(new Function("globalThis",
+    fs.readFileSync(require("path").resolve(__dirname,"..","host",f),"utf8")))(g);
+  host("sections.js"); host("format.js");
+  return g.__ccAfFormat;
+})();
 globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFileSync(require('path').resolve(__dirname,'..','host','samples.js'),'utf8')))(g);return g.__ccAfSamples;})();
 
 // 'after:' - an ordering between once-questions, not a sharper pattern.
@@ -216,7 +223,7 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   const R4={once:[{when:'[0-9]+ ?%',ask:'A-PLAIN'}]};
   ok(P(R4,'that is 12% faster').ask==='A-PLAIN','after: an entry without one is unaffected');
   const ps=F2.parse('perf-skeptic',globalThis.__ccAfSamples2.find(s=>s.id==='perf-skeptic').text);
-  ok(ps.once[1].after==='frame','after: the shipped factor question waits for the frame question');
+  ok(ps.once[1].after==='backwards','after: the shipped frame question waits for the one that reframes');
 }
 
 // Arming before the session has an id. A live panel lost its arming here and no
@@ -316,6 +323,28 @@ globalThis.__ccAfSamples2=(()=>{const g={};(new Function('globalThis',fs.readFil
   T.maybeRun();
   ok(globalThis.sent.filter(m=>m.op==='run').length===1,'play: and only once');
 }
+
+// 15. the graveyard. An axis that was priced and closed is the one thing a later
+// turn cannot rediscover: the claims ledger is capped and on a long run reaches
+// back about twenty turns, so an axis closed in round four is invisible by round
+// thirty and the loop works it again. This ledger is not capped there and is
+// handed back every turn.
+T.disarm(null); T.arm('perf-skeptic');
+globalThis.__msgs.push({role:'assistant',content:'a reply about attention'});
+globalThis.sent.length=0; T.maybeRun();
+var ax=globalThis.sent.filter(m=>m.op==='run')[0];
+globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:ax.rid,message:'q',claims:[],
+  axes:['flash attention: 21.9% of prefill, 1.28x if deleted, killed by the register file'],stop:null}});
+ok(S().axes.length===1,'axes: what was priced this turn is kept, got '+JSON.stringify(S().axes));
+ok(S().axes[0].indexOf('[1]')===0,'axes: numbered by the turn that priced it, got '+S().axes[0]);
+T.approve();
+globalThis.__msgs.push({role:'assistant',content:'another reply'});
+globalThis.sent.length=0; T.maybeRun();
+var ax2=globalThis.sent.filter(m=>m.op==='run')[0];
+ok(ax2.ctx.axes && ax2.ctx.axes.length===1,'axes: and handed back on the next turn, got '+JSON.stringify(ax2.ctx.axes));
+globalThis.__onMsg({data:{type:'__ccaf',op:'result',rid:ax2.rid,message:'q2',claims:[],
+  axes:['flash attention: 21.9% of prefill, 1.28x if deleted, killed by the register file'],stop:null}});
+ok(S().axes.length===1,'axes: the same line twice is one line, got '+S().axes.length);
 
 console.log('\n  '+pass+' passed, '+fail+' failed');
 process.exit(fail?1:0);

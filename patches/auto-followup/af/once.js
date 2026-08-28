@@ -57,6 +57,47 @@ var __ccAfOnce = (function () {
     return null;
   }
 
-  return { idFor: idFor, pending: pending };
+  /* '## every' - the questions that have to be asked again.
+
+     '## once' fires a question the turn its pattern first matches and never
+     again, which is right for a framing question and wrong for the two that
+     matter most in a long search: "what would make this five times faster" and
+     "what is the largest thing nobody can explain". Measured on a ten-hour run,
+     the factor question fired three times in sixty-seven turns - and only because
+     the loop happened to be re-armed three times, since re-arming is what clears
+     the once ledger. After the third firing there were forty-six turns and not
+     one of them asked where a factor could come from.
+
+     So the same trigger, plus a cadence: fire when the pattern matches and at
+     least 'turns' turns have passed since this question last fired. The panel
+     keeps the record, the same way it keeps the once ledger, because a fresh
+     process will not count its own turns.
+
+     log: { id: turn } for each question already fired. turn: the current one. */
+  function recurring(r, text, log, turn) {
+    if (!r) return null;
+    var t = String(text || ""), list = r.every || [];
+    var best = null, oldest = null;
+    for (var i = 0; i < list.length; i++) {
+      var ask = String(list[i].ask || "").trim();
+      if (!ask) continue;
+      var id = idFor(ask);
+      var gap = parseInt(list[i].turns, 10);
+      if (!isFinite(gap) || gap < 1) gap = 3;
+      var last = log && log[id];
+      /* Never fired is due now; otherwise due when the gap has passed. */
+      if (typeof last === "number" && turn - last < gap) continue;
+      var re;
+      try { re = new RegExp(list[i].when, "i"); } catch (e) { continue; }
+      if (!re.test(t)) continue;
+      /* The one waiting longest goes first, so a short cadence cannot starve a
+         long one on a message that matches both. */
+      var since = typeof last === "number" ? turn - last : Infinity;
+      if (oldest === null || since > oldest) { oldest = since; best = { id: id, ask: ask, every: true }; }
+    }
+    return best;
+  }
+
+  return { idFor: idFor, pending: pending, recurring: recurring };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = __ccAfOnce;

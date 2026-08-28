@@ -13,7 +13,7 @@ const base=path.resolve(__dirname,'..','host')+'/';
    is_error true. That is a property of the isolation, not of the feature, and it
    cost a wrong diagnosis once. The responder is built from the shipped sample
    text instead of through the store, so nothing on disk is touched either way. */
-for(const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const F=globalThis.__ccAfFormat, R=globalThis.__ccAfRun;
 const sample=globalThis.__ccAfSamples.filter(s=>s.id==='perf-skeptic')[0];
 const resp=F.parse('perf-skeptic', sample.text);

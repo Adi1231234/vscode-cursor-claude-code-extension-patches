@@ -26,7 +26,7 @@ function Invoke-Patch {
         if (-not $js) {
             Write-Miss 'webview message-listener anchor not found'
         } else {
-            $parts = @('stamp', 'format', 'store', 'samples', 'prompt', 'run', 'handle')
+            $parts = @('stamp', 'sections', 'format', 'store', 'samples', 'prompt', 'run', 'handle')
             $hostJs = ($parts | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "host/$_.js") }) -join ''
             $hostJs = Expand-JsTokens $hostJs ([ordered]@{ '__CCSTAMP__' = $script:CcStamp })
             Write-Text $Ctx.Js ("/* AUTOFOLLOWUPHOST */`n" + $hostJs.Trim() + "`n" + $js)

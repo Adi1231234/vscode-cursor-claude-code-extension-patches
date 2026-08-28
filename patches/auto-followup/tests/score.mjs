@@ -19,7 +19,7 @@ import { tmpdir } from 'node:os';
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 globalThis.require = require;
-for (const f of ['format.js','store.js','samples.js','prompt.js','run.js','handle.js'])
+for (const f of ['sections.js','format.js','store.js','samples.js','prompt.js','run.js','handle.js'])
   (0, eval)(readFileSync(join(here, '..', 'host', f), 'utf8'));
 const F = globalThis.__ccAfFormat, R = globalThis.__ccAfRun;
 const resp = F.parse('perf-skeptic', globalThis.__ccAfSamples.find(s => s.id === 'perf-skeptic').text);
