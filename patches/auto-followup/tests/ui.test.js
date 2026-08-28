@@ -474,16 +474,27 @@ try{
   const rule = (sel) => (css.split(sel + '{')[1] || '').split('}')[0];
   const head = rule('.__afBoxHead');
   ok(/white-space:nowrap/.test(head), 'heads: the heading is set never to wrap');
-  const hint = rule('.__afBoxHead span');
+  const hint = rule('.__afBoxHead .__afHint');
   ok(/text-overflow:ellipsis/.test(hint) && /white-space:nowrap/.test(hint),
      'heads: the hint is the one that gives way');
   ok(/min-width:0/.test(hint), 'heads: and is allowed to shrink, or it cannot give way');
 
   T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
-  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead span')].map(e => e.textContent);
+  const paired = [...document.querySelectorAll('.__afPair .__afBoxHead .__afHint')].map(e => e.textContent);
   ok(paired.length === 2, 'heads: two boxes share the row, got ' + paired.length);
   ok(paired.every(t => t.length <= 28),
      'heads: their hints are written to fit half a pane - got ' + JSON.stringify(paired));
+  ok([...document.querySelectorAll('.__afPair .__afCopy')].length === 2,
+     'heads: and each carries a copy of its own');
+  // a selector that is a substring of another one - .__afFi:hover .__afCopy -
+  // so ask for the rule that starts a line
+  const cp = rule(String.fromCharCode(10) + '.__afCopy');
+  ok(/margin-inline-start:auto/.test(cp),
+     'heads: the copy sits at the end, so the hint keeps the room it gives way in');
+  ok(/flex:none/.test(cp),'heads: and does not shrink with it');
+  // an affordance nobody can see is one nobody uses: it was opacity 0 at rest
+  // and the icons were invisible in the editor until the pointer crossed a box
+  ok(/opacity:\.[1-9]/.test(cp),'heads: the copy is visible before anyone hovers it, got '+cp.slice(0,120));
   T.openDialog();
 }
 
@@ -816,6 +827,48 @@ try{
   ok(at.textContent!==first && /^saved /.test(at.textContent),
      'saved-at: and the new time is in it, was '+first+' now '+at.textContent);
   T.openDialog();
+}
+
+// The copy icon on each box. It reads the field when it is pressed, not when it
+// was built, so what it copies is what is on screen after an edit.
+{
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  const boxes=[...document.querySelectorAll('.__afBox')];
+  ok(boxes.length>0 && boxes.every(b=>!!b.querySelector('.__afCopy')),
+     'copy: every box carries one, '+boxes.length+' boxes');
+
+  globalThis.__ccCopied.length=0;
+  const goal=boxes.find(b=>/Prefill of 1,100/.test((b.querySelector('.__afTa')||{}).value||''));
+  ok(!!goal,'copy: found the goal box');
+  goal.querySelector('.__afCopy').dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  ok(globalThis.__ccCopied.length===1,'copy: pressing it copies once, got '+globalThis.__ccCopied.length);
+  ok(/Prefill of 1,100/.test(globalThis.__ccCopied[0]),'copy: and copies that field');
+
+  // typed into after the button was built
+  const ta=goal.querySelector('.__afTa');
+  ta.value='EDITED AFTERWARDS';
+  goal.querySelector('.__afCopy').dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  ok(globalThis.__ccCopied[1]==='EDITED AFTERWARDS',
+     'copy: it reads the field when pressed, got '+JSON.stringify(globalThis.__ccCopied[1]));
+
+  // an empty field is not a copy
+  ta.value='';
+  const before=globalThis.__ccCopied.length;
+  goal.querySelector('.__afCopy').dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  ok(globalThis.__ccCopied.length===before,'copy: nothing to copy is not a copy');
+
+  // the two single-line fields carry one too, on the label line
+  T.renderDialog();
+  globalThis.__ccCopied.length=0;
+  const fis=[...document.querySelectorAll('.__afFi')];
+  // the stub querySelector does not do descendant selectors, so walk it
+  const inLabel=(f)=>[...f.children].some(c=>String(c.tagName).toLowerCase()==="label"
+    && [...c.children].some(g=>String(g.className||"").indexOf("__afCopy")>=0));
+  ok(fis.length===2 && fis.every(inLabel),
+     'copy: name and description carry one on the label, got '+fis.length);
+  fis[0].querySelector('.__afCopy').dispatchEvent(new globalThis.MouseEvent('click',{bubbles:true}));
+  ok(globalThis.__ccCopied[0]==='perf-skeptic',
+     'copy: and it copies the field beside it, got '+JSON.stringify(globalThis.__ccCopied[0]));
 }
 }
   console.log(String.fromCharCode(10)+'  '+pass+' passed, '+fail+' failed');

@@ -47,11 +47,6 @@
 
   function box(title, hint, value, set, cls, placeholder) {
     var wrap = el("div", "__afBox" + (cls ? " " + cls : ""));
-    var head = el("div", "__afBoxHead");
-    head.dir = "auto";
-    txt(head, title);
-    if (hint) { var s = el("span"); txt(s, hint); head.appendChild(s); }
-    wrap.appendChild(head);
     var ta = el("textarea", "__afTa __ccScroll");
     ta.dir = "auto";
     /* An empty section used to be an empty box with a heading. The placeholder
@@ -61,6 +56,16 @@
     ta.spellcheck = false;
     ta.addEventListener("input", function () { set(ta.value); markDirty(); });
     ta.addEventListener("keydown", function (ev) { ev.stopPropagation(); });
+
+    var head = el("div", "__afBoxHead");
+    head.dir = "auto";
+    txt(head, title);
+    if (hint) { var s = el("span", "__afHint"); txt(s, hint); head.appendChild(s); }
+    /* Built here and read when it is pressed: the field will have been typed
+       into by then, and a value captured now would be the one it was drawn with. */
+    head.appendChild(copyBtn(function () { return ta.value; }, title));
+
+    wrap.appendChild(head);
     wrap.appendChild(ta);
     return wrap;
   }
@@ -78,18 +83,24 @@
 
     var idrow = el("div", "__afIdRow");
     var nameWrap = el("span", "__afFi");
-    var nl = el("label"); txt(nl, "name"); nameWrap.appendChild(nl);
-    nameWrap.appendChild(textInput("__afIn __afMono", draft.name, "perf-skeptic", function (v) {
+    var nl = el("label"); txt(nl, "name");
+    var nameIn = textInput("__afIn __afMono", draft.name, "perf-skeptic", function (v) {
       draft.name = v;
       /* The filename follows the name only while the file does not exist yet;
          renaming a saved responder would orphan the old file. */
       if (draft.isNew) draft.id = (v || "responder").toLowerCase()
         .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64) || "responder";
-    }));
+    });
+    nl.appendChild(copyBtn(function () { return nameIn.value; }, "name"));
+    nameWrap.appendChild(nl);
+    nameWrap.appendChild(nameIn);
     var descWrap = el("span", "__afFi __afWide");
-    var dl = el("label"); txt(dl, "description"); descWrap.appendChild(dl);
-    descWrap.appendChild(textInput("__afIn", draft.description, "what this responder does",
-      function (v) { draft.description = v; }));
+    var dl = el("label"); txt(dl, "description");
+    var descIn = textInput("__afIn", draft.description, "what this responder does",
+      function (v) { draft.description = v; });
+    dl.appendChild(copyBtn(function () { return descIn.value; }, "description"));
+    descWrap.appendChild(dl);
+    descWrap.appendChild(descIn);
     idrow.appendChild(nameWrap);
     idrow.appendChild(descWrap);
     pane.appendChild(idrow);

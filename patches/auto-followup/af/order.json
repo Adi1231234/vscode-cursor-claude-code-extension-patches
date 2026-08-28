@@ -13,6 +13,7 @@
   "fit",
   "dialog",
   "dialog-pick",
+  "copy-field",
   "dialog-form",
   "dialog-foot",
   "live-parse",
