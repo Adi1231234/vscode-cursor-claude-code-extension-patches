@@ -141,7 +141,7 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afIdRow>.__afFi:first-child{flex:0 0 168px}
 .__afFi{display:flex;flex-direction:column;gap:3px;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:6px 10px 7px;transition:border-color .1s ease}
 .__afWide{flex:1;min-width:0}
-.__afFi label{opacity:.72;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;direction:ltr;text-align:start}
+.__afFi label{display:flex;align-items:center;opacity:.72;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;direction:ltr;text-align:start}
 .__afIn{width:100%;min-width:0;background:none;border:none;outline:none;color:inherit;font:inherit;font-size:12px;padding:0}
 .__afIn::placeholder{opacity:.55}
 .__afMono{font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));direction:ltr;text-align:start;font-weight:600}
@@ -188,7 +188,16 @@ body.vscode-high-contrast .__afDlg,body.vscode-high-contrast-light .__afDlg{
 .__afGrow{flex:none}
 .__afBoxHead{display:flex;align-items:baseline;gap:8px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;opacity:.92;padding-inline-start:9px;position:relative;white-space:nowrap;min-width:0}
 .__afBoxHead::before{content:"";position:absolute;inset-inline-start:0;top:1px;height:9px;width:2px;border-radius:2px;background:color-mix(in srgb,var(--afAcc) 60%,transparent)}
-.__afBoxHead span{text-transform:none;letter-spacing:0;font-weight:400;opacity:.8;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.__afBoxHead .__afHint{text-transform:none;letter-spacing:0;font-weight:400;opacity:.8;font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Last on the row and pushed there, so the hint keeps the room it gives way in.
+   Visible at rest and not only on hover: an affordance nobody can see is one
+   nobody uses, and this dialog has no other way to get a field out of it. */
+.__afCopy{margin-inline-start:auto;flex:none;display:inline-flex;align-items:center;gap:4px;
+  padding:2px 4px;border-radius:4px;cursor:pointer;opacity:.3;transition:opacity .12s,background .12s;
+  text-transform:none;letter-spacing:0;font-weight:400;font-size:10px}
+.__afBox:hover .__afCopy,.__afFi:hover .__afCopy,.__afCopy:focus-visible{opacity:.7}
+.__afCopy:hover{opacity:1;background:rgba(128,128,128,.16)}
+.__afCopy.__afCopied{opacity:1;color:var(--afAcc,#d97757)}
 .__afTa{width:100%;box-sizing:border-box;resize:none;background:var(--afField);border:1px solid var(--afEdge);border-radius:7px;padding:10px 12px;color:inherit;font:inherit;font-size:11.5px;line-height:1.75;outline:none;transition:border-color .1s ease}
 
 

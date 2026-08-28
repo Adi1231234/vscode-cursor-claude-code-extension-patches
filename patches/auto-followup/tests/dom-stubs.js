@@ -171,7 +171,10 @@ globalThis.document={createElement:mkEl,
    passed against a code path it never entered. */
 globalThis.getComputedStyle=(n)=>({zoom:(n&&n.style&&n.style.zoom)||'',
   color:'',opacity:'',backgroundColor:'',display:'',position:''});
-globalThis.window={getComputedStyle:(n)=>globalThis.getComputedStyle(n),addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
+/* The shared clipboard helper the copy icons call. Recorded, not performed:
+   what matters here is what was handed to it. */
+globalThis.__ccCopied=[];
+globalThis.window={__ccCopyText:(t)=>{globalThis.__ccCopied.push(t);return Promise.resolve();},getComputedStyle:(n)=>globalThis.getComputedStyle(n),addEventListener(k,f){if(k==='message')globalThis.__onMsg=f;
   (globalThis.__winListeners[k]=globalThis.__winListeners[k]||[]).push(f);},
   removeEventListener(k,f){if(globalThis.__winListeners[k])globalThis.__winListeners[k]=globalThis.__winListeners[k].filter(x=>x!==f);},
   innerWidth:1200,innerHeight:800};
