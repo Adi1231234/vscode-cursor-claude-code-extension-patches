@@ -112,9 +112,35 @@ T.draft().max_turns='7'; T.saveDraft(); T.ensureButton();
 ok(T.btn().__afCount==='0/7','an edit to the armed responder reaches the counter: '+T.btn().__afCount);
 
 T.openDialog(); T.selectDraft('perf-skeptic');
-run('deleteDraft', ()=>T.deleteDraft());
-ok(S().armed===null,'deleting the armed responder disarms it');
-ok(globalThis.sent.some(m=>m.op==='delete'),'delete reached the host');
+// Delete is the only act in this dialog that cannot be undone, and it used to
+// take one click while the two reversible ones asked. A responder written over a
+// day was lost that way. Driven through the button, not the handler: the wiring
+// is half of what is being asserted.
+{
+  const cbox = () => document.querySelector('.__afConfirm');
+  const hit = (box, label) => {
+    const b = [...box.querySelectorAll('.__afB')].find(n => n.textContent.trim() === label);
+    b.click(); return !!b;
+  };
+  const delBtn = () => document.querySelector('.__afDel');
+
+  globalThis.sent.length = 0;
+  delBtn().click();
+  ok(!!cbox(), 'delete: the button asks before it deletes');
+  ok(!globalThis.sent.some(m=>m.op==='delete'), 'delete: and nothing is sent while it asks');
+  ok(S().armed==='perf-skeptic', 'delete: the loop is untouched while it asks');
+
+  hit(cbox(), 'Cancel');
+  ok(!cbox(), 'delete: cancel closes the question');
+  ok(!globalThis.sent.some(m=>m.op==='delete'), 'delete: cancel deletes nothing');
+  ok(S().armed==='perf-skeptic', 'delete: cancel keeps the responder armed');
+
+  T.openDialog(); T.selectDraft('perf-skeptic'); T.renderDialog();
+  delBtn().click();
+  hit(cbox(), 'Delete');
+  ok(globalThis.sent.some(m=>m.op==='delete'), 'delete: confirming reaches the host');
+  ok(S().armed===null, 'delete: confirming disarms the responder it removed');
+}
 
 globalThis.__onMsg({data:{type:'__ccaf',op:'list',items:LIST}});
 T.arm('perf-skeptic');
