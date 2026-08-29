@@ -4,7 +4,7 @@
 const fs=require('fs'), path=require('path'), os=require('os');
 const base=path.resolve(__dirname,'..','host')+'/';
 process.env.CLAUDE_CONFIG_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'afrun-'));
-for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','parse.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const R=globalThis.__ccAfRun;
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 
@@ -111,6 +111,41 @@ const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
     console.log('\n  '+pass+' passed, '+fail+' failed');
     process.exit(fail?1:0);
   });
+
+// The model corrects itself out loud, and it cost about thirty turns. It writes
+// one object, a line of prose saying it must add the missing keys, then the real
+// object. First-brace-to-last-brace spans all three and parses as nothing, so a
+// follow-up that was written correctly was marked invalid and parked - with
+// autosend on, which is what made it look like the loop had stopped.
+{
+  const P = globalThis.__ccAfParse;
+  const N = String.fromCharCode(10);
+  const first = JSON.stringify({message:"first attempt"});
+  const real  = JSON.stringify({message:"the corrected one",why:"w",
+                                claims:["c1","c2"],axes:[],plan:[],stop:null});
+  const out = first + N + N + "Wait - I must output exactly six keys. Let me correct." + N + N + real;
+
+  const s = P.shape(P.extract(out), out);
+  ok(s.invalid===false, "self-correction: the reply is not marked invalid");
+  ok(s.message==="the corrected one", "self-correction: the corrected object wins, got "+JSON.stringify(s.message));
+  ok(s.claims.length===2, "self-correction: and its claims come with it");
+
+  // a stray {} after the answer must not beat it
+  const trailing = real + N + "{}";
+  ok(P.extract(trailing).message==="the corrected one", "a trailing empty object does not win");
+
+  // the CLI envelope has no message and is still what comes back
+  ok(P.extract(JSON.stringify({type:"result",result:"x"})).type==="result",
+     "the CLI envelope is still found when it is the only object");
+
+  // cut off in the middle: the message alone, never the whole envelope
+  const cut = real.slice(0, real.indexOf("claims") + 20);
+  const c = P.shape(P.extract(cut), cut);
+  ok(c.invalid===true, "a reply cut off is still invalid");
+  ok(c.message==="the corrected one", "and the message is recovered, got "+JSON.stringify(c.message).slice(0,60));
+  ok(c.message.indexOf("claims")<0, "so the ledger is not sent as a prompt");
+}
+
 ok(child!==null || done,'run returned a handle or completed immediately');
 setTimeout(function(){ if(!done){ console.log('  FAIL: the run never called back'); fail++;
   console.log('\n  '+pass+' passed, '+fail+' failed'); process.exit(1); } }, 120000);
