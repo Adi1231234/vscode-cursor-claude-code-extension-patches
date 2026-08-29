@@ -119,7 +119,7 @@ const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
 // autosend on, which is what made it look like the loop had stopped.
 {
   const P = globalThis.__ccAfParse;
-  const N = String.fromCharCode(10);
+  const N = String.fromCharCode(10), Q = String.fromCharCode(34);
   const first = JSON.stringify({message:"first attempt"});
   const real  = JSON.stringify({message:"the corrected one",why:"w",
                                 claims:["c1","c2"],axes:[],plan:[],stop:null});
@@ -144,6 +144,29 @@ const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
   ok(c.invalid===true, "a reply cut off is still invalid");
   ok(c.message==="the corrected one", "and the message is recovered, got "+JSON.stringify(c.message).slice(0,60));
   ok(c.message.indexOf("claims")<0, "so the ledger is not sent as a prompt");
+
+  // A lone backslash is how a model breaks its own JSON: a regex or a Windows
+  // path written with one where JSON needs two. Repairing and parsing again
+  // recovers the whole answer, ledger included.
+  const BS = String.fromCharCode(92);
+  const lone = first + N + N + "Let me correct." + N + N +
+        String.fromCharCode(123) + Q + "message" + Q + ":" + Q + "the corrected one" + Q + "," +
+        Q + "claims" + Q + ":[" + Q + "the regex ^" + BS + "s*(" + BS + "d+)" + Q + "]," +
+        Q + "why" + Q + ":" + Q + "w" + Q + "," + Q + "axes" + Q + ":[]," +
+        Q + "plan" + Q + ":[]," + Q + "stop" + Q + ":null" + String.fromCharCode(125);
+  const r = P.shape(P.extract(lone), lone);
+  ok(r.invalid===false, "a lone backslash is repaired, not thrown away");
+  ok(r.message==="the corrected one", "and the corrected object still wins");
+  ok(r.claims.length===1, "and its claims come with it");
+
+  // An answer started after the last complete one and cut off is the model's
+  // last word. Nothing earlier may stand in for it: a draft sent silently is
+  // worse than a reply parked in view.
+  const stopped = first + N + N + "Let me correct." + N + N +
+                  String.fromCharCode(123) + Q + "message" + Q + ":" + Q + "cut off here";
+  const t = P.shape(P.extract(stopped), stopped);
+  ok(t.invalid===true, "a truncated answer is not answered with the draft above it");
+  ok(t.message==="cut off here", "and its message is recovered as far as it got, got "+JSON.stringify(t.message));
 }
 
 ok(child!==null || done,'run returned a handle or completed immediately');
