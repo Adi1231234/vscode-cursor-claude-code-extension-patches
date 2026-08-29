@@ -56,11 +56,7 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
     }
   }
 
-  function extract(out) {
-    var a = out.indexOf("{"), b = out.lastIndexOf("}");
-    if (a < 0 || b <= a) return null;
-    try { return JSON.parse(out.slice(a, b + 1)); } catch (e) { return null; }
-  }
+  function extract(out) { return globalThis.__ccAfParse.extract(out); }
 
   /* The CLI's own envelope, asked for with --output-format json.
 
@@ -83,27 +79,6 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
     return { cli: null, text: typeof env.result === "string" ? env.result : "" };
   }
 
-  function shape(parsed, raw) {
-    if (!parsed || typeof parsed !== "object") {
-      return { message: (raw || "").trim(), why: "output was not JSON", claims: [], axes: [], plan: [],
-               stop: null, invalid: true };
-    }
-    var claims = Array.isArray(parsed.claims) ? parsed.claims : [];
-    var axes = Array.isArray(parsed.axes) ? parsed.axes : [];
-    var plan = Array.isArray(parsed.plan) ? parsed.plan : [];
-    return {
-      message: typeof parsed.message === "string" ? parsed.message.trim() : "",
-      why: typeof parsed.why === "string" ? parsed.why.trim() : "",
-      claims: claims.filter(function (c) { return typeof c === "string" && c.trim(); })
-                    .map(function (c) { return c.trim(); }).slice(0, 12),
-      axes: axes.filter(function (a) { return typeof a === "string" && a.trim(); })
-                  .map(function (a) { return a.trim(); }).slice(0, 8),
-      plan: plan.filter(function (p) { return typeof p === "string" && p.trim(); })
-                .map(function (p) { return p.trim(); }).slice(0, 12),
-      stop: typeof parsed.stop === "string" && parsed.stop.trim() ? parsed.stop.trim() : null,
-      invalid: false
-    };
-  }
 
   /* cwd matters only so the CLI has somewhere valid to start; the responder is
      given its context explicitly and is not meant to read the project. */
@@ -168,13 +143,14 @@ globalThis.__ccAfRun = globalThis.__ccAfRun || (function () {
          the reason on the button, which is the honest outcome: nothing is typed
          into the conversation on the strength of a string nobody can vouch for. */
       if (u.cli) { done({ error: u.cli.slice(0, 300) }); return; }
-      done(shape(extract(u.text), u.text));
+      done(globalThis.__ccAfParse.shape(extract(u.text), u.text));
     });
 
     try { child.stdin.end(globalThis.__ccAfHot.compose(r, ctx || {})); } catch (e) {}
     return child;
   }
 
-  return { run: run, unwrap: unwrap, extract: extract, shape: shape, feed: feed,
+  return { run: run, unwrap: unwrap, extract: extract, feed: feed,
+           shape: function (p, r) { return globalThis.__ccAfParse.shape(p, r); },
            compose: function (r, c) { return globalThis.__ccAfHot.compose(r, c); } };
 })();
