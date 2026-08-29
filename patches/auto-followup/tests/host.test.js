@@ -4,7 +4,7 @@ const base=require('path').resolve(__dirname,'..','host')+'/';
 // isolated responders dir
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'afcfg-'));
 process.env.CLAUDE_CONFIG_DIR=dir;
-for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','parse.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','mend.js','parse.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const S=globalThis.__ccAfStore, F=globalThis.__ccAfFormat, R=globalThis.__ccAfRun;
 let pass=0,fail=0;
 const ok=(c,m)=>{ c?pass++:(fail++,console.log('  FAIL: '+m)); };

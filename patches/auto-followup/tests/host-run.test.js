@@ -4,7 +4,7 @@
 const fs=require('fs'), path=require('path'), os=require('os');
 const base=path.resolve(__dirname,'..','host')+'/';
 process.env.CLAUDE_CONFIG_DIR=fs.mkdtempSync(path.join(os.tmpdir(),'afrun-'));
-for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','parse.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
+for(const f of ['sections.js','format.js','store.js','samples.js','prompt.js','hot.js','mend.js','parse.js','run.js','handle.js']) eval(fs.readFileSync(base+f,'utf8'));
 const R=globalThis.__ccAfRun;
 let pass=0,fail=0; const ok=(c,m)=>{c?pass++:(fail++,console.log('  FAIL: '+m));};
 
@@ -167,6 +167,44 @@ const child=R.run({id:'r',rules:'R',stop:'S',model:'definitely-not-a-model'},
   const t = P.shape(P.extract(stopped), stopped);
   ok(t.invalid===true, "a truncated answer is not answered with the draft above it");
   ok(t.message==="cut off here", "and its message is recovered as far as it got, got "+JSON.stringify(t.message));
+}
+
+
+// Fourteen shapes a reply has actually taken or plausibly takes, each with what
+// the loop must be handed. Written as a table because the failures came one at a
+// time and each fix risked the ones before it: mending a lone backslash broke
+// nothing, mending a trailing one needed the text mended before it was split,
+// and both together needed the two menders in the other order.
+{
+  const P = globalThis.__ccAfParse;
+  const NL = String.fromCharCode(10), QQ = String.fromCharCode(34);
+  const B = String.fromCharCode(92), OB = String.fromCharCode(123), CB = String.fromCharCode(125);
+  const wrap = (m) => OB+QQ+"message"+QQ+":"+QQ+m+QQ+","+QQ+"why"+QQ+":"+QQ+"w"+QQ+","+
+        QQ+"claims"+QQ+":[],"+QQ+"axes"+QQ+":[],"+QQ+"plan"+QQ+":[],"+QQ+"stop"+QQ+":null"+CB;
+  const draft = JSON.stringify({message:"draft"}) + NL + "Let me correct." + NL;
+  const both = OB+QQ+"message"+QQ+":"+QQ+"see C:"+B+"Temp"+B+QQ+","+QQ+"claims"+QQ+":["+QQ+"^"+B+"d+"+QQ+"],"+
+        QQ+"why"+QQ+":"+QQ+"w"+QQ+","+QQ+"axes"+QQ+":[],"+QQ+"plan"+QQ+":[],"+QQ+"stop"+QQ+":null"+CB;
+  const table = [
+    ["plain",                       wrap("ordinary"),                              "ordinary",              false],
+    ["ends with a backslash",       wrap("at C:"+B+"Temp"+B),                      "at C:"+B+"Temp"+B,      false],
+    ["escaped quote mid sentence",  wrap("he said "+B+QQ+"floor"+B+QQ+" then"),    "he said "+QQ+"floor"+QQ+" then", false],
+    ["escaped quote at the end",    wrap("he said "+B+QQ+"floor"+B+QQ),            "he said "+QQ+"floor"+QQ, false],
+    ["lone backslash, a regex",     wrap("regex ^"+B+"s*"),                        "regex ^"+B+"s*",        false],
+    ["escaped backslash properly",  wrap("path C:"+B+B+"vkwg"),                    "path C:"+B+"vkwg",      false],
+    ["newline escape",              wrap("one"+B+"ntwo"),                          "one"+NL+"two",          false],
+    ["self-correction",             draft + wrap("second"),                        "second",                false],
+    ["trailing empty object",       wrap("real") + NL + "{}",                      "real",                  false],
+    ["hebrew with quotes",          wrap("סגור, ה"+B+QQ+"רצפה"+B+QQ),              "סגור, ה"+QQ+"רצפה"+QQ,  false],
+    ["trailing backslash + regex",  both,                                          "see C:"+B+"Temp"+B,     false],
+    ["both in a self-correction",   draft + both,                                  "see C:"+B+"Temp"+B,     false],
+    ["cut off mid string",          draft + OB+QQ+"message"+QQ+":"+QQ+"cut here",  "cut here",              true],
+    ["no json at all",              "no json here",                                "no json here",          true]
+  ];
+  table.forEach(function (row) {
+    const s = P.shape(P.extract(row[1]), row[1]);
+    ok(s.message === row[2] && s.invalid === row[3],
+       "reply shape: " + row[0] + " -> " + JSON.stringify(s.message).slice(0,40) + " invalid " + s.invalid);
+  });
 }
 
 ok(child!==null || done,'run returned a handle or completed immediately');
