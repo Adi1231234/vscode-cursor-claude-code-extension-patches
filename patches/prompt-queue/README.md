@@ -236,6 +236,25 @@ chosen over "fire-once" / "fire-all" catch-up because our messages execute.
 > would break out of the string. `node --check` the *patched* `extension.js`
 > (not just the standalone script) to catch this.
 
+## Tests
+
+    node patches/prompt-queue/tests/run-all.mjs
+
+`saved.test.js` (38 checks) runs `saved/store.js` itself - eval'd, not
+re-implemented - with only its outside world stubbed (localStorage, `Q`,
+`isBusy`, `render`). It pins the decisions rather than the mechanics: an
+at-time degrading to a plain item, attachments never reaching the store, a
+loaded timer coming back inactive, loading appending and parking the queue only
+while idle, a corrupt or foreign store reading as empty, and the cap. Then
+`check-injected` and `check-ps1`.
+
+**The fragment list is `order.json`, read by both `patch.ps1` and
+`tools/check-injected.mjs`.** They used to keep a copy each, and when the
+`saved/` fragments landed only `patch.ps1` learned about them - the checker
+went on reporting "ok (18 fragments)" for a bundle that ships 27, with six
+files and both lib runtimes never scanned. Add a fragment to `order.json` and
+nothing else needs telling.
+
 Exposes a single `Invoke-Patch $Ctx` (dot-sourced and called by `../../apply.ps1`). Idempotent and fail-safe: if its anchor isn't found it skips instead of corrupting anything.
 
 ## Items a responder wrote

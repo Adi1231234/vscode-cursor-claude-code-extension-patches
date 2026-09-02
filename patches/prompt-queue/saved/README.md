@@ -17,6 +17,11 @@ injected IIFE. Fragments, concatenated by `../patch.ps1`:
 - `edit.js` - the editor view.
 - `saved.css` - injected under its own guard `/* QSAVED */`.
 
+`store.js` is covered by `../tests/saved.test.js` (38 checks), which evaluates
+the real file with only its outside world stubbed. Every rule below that has a
+*reason* under it is pinned there, so changing one of them fails a test rather
+than quietly changing behaviour.
+
 ## Where it is stored, and why localStorage is enough
 
 `localStorage`, one key `ccq:saved`, shared by every session - not the
