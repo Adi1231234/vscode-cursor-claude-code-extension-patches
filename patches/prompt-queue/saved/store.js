@@ -95,11 +95,13 @@
     return t.length > 42 ? t.slice(0, 42).trim() + "..." : t;
   }
 
-  /* The row's second line: how many, then the queue itself. Two saved queues
-     are told apart by what is in them, and a name alone asks the reader to
-     remember what they put there. CSS ellipsises whatever does not fit, so
-     everything is offered and the row stays one line tall. */
+  /* The row's second line: the queue itself. Two saved queues are told apart by
+     what is in them, and a name alone asks the reader to remember what they put
+     there. The count is NOT in here - it is a chip of its own on the row, so it
+     lines up into a column instead of repeating as a phrase at the head of
+     every preview. CSS ellipsises whatever does not fit, so everything is
+     offered and the row stays two lines tall. */
   function savedPreview(en) {
-    var items = (en.items || []).map(function (o) { return oneLine(o.t); }).filter(function (t) { return t; });
-    return countLabel((en.items || []).length) + (items.length ? " · " + items.join(" · ") : "");
+    return (en.items || []).map(function (o) { return oneLine(o.t); })
+      .filter(function (t) { return t; }).join(" · ");
   }

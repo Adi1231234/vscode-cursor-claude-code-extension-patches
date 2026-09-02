@@ -10,7 +10,7 @@
     svClear("Saved queues");
     _sv.onKey = listKey;
     if (savedRead().length >= FILTER_FROM) _sv.host.appendChild(buildFilter());
-    _sv.list = el("div");
+    _sv.list = el("div", "__qSavedHost");
     _sv.host.appendChild(_sv.list);
     drawSavedList();
     buildListFoot();
@@ -84,7 +84,7 @@
     if (Q.length) save.title = countLabel(Q.length) + " in the queue now";
     else { save.disabled = true; save.title = "Queue some messages first"; }
     save.addEventListener("click", openSaveForm);
-    var close = btn("__qBtnGhost");
+    var close = btn("__qBtnQuiet");
     close.textContent = "Close";
     close.addEventListener("click", _sv.sh.close);
     _sv.sh.foot.appendChild(save);
@@ -96,11 +96,14 @@
     if (first) setTimeout(function () { try { first.focus(); } catch (e) {} }, 0);
   }
 
-  /* Headline, one sentence, and the action itself right below in the foot. */
+  /* A picture of the thing, a headline, one sentence, and the action itself
+     right below in the foot. The picture is the queue drawn in the panel's own
+     vocabulary - three rows fading back, bookmarked - rather than a generic
+     glyph: an illustration that does not say what the moment is is decoration. */
   function buildEmpty() {
     var d = el("div", "__qEmpty");
     var ic = el("span");
-    ic.innerHTML = IC_BOOK;
+    ic.innerHTML = ART_EMPTY;
     var t = el("div", "__qEmptyTitle");
     t.textContent = "No saved queues yet";
     var b = el("div", "__qEmptyBody");

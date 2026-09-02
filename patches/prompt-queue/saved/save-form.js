@@ -43,7 +43,14 @@
     form.appendChild(ok);
     form.appendChild(no);
     _sv.host.insertBefore(form, _sv.host.firstChild);
+    /* The foot's Save goes, and says in its place exactly what is being named -
+       otherwise the band is half empty and the field does not say what it is
+       about to keep. */
     var footSave = _sv.sh.foot.querySelector(".__qFootStart");
-    if (footSave) footSave.remove();
+    if (footSave) {
+      var hint = el("span", "__qHint __qFootStart");
+      hint.textContent = countLabel(Q.length) + " will be saved";
+      _sv.sh.foot.replaceChild(hint, footSave);
+    }
     try { name.focus(); name.select(); } catch (e) {}
   }

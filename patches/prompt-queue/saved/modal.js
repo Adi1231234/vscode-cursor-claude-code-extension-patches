@@ -7,6 +7,13 @@
   var IC_PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4.2L20 8.2 15.8 4 4 15.8V20z"></path><path d="M14.4 5.4l4.2 4.2"></path></svg>';
   var IC_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>';
   var IC_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+  /* The empty state's picture: a queue of rows fading back, bookmarked. Drawn
+     in the panel's own vocabulary so it says what the moment is. */
+  var ART_EMPTY = '<svg class="__qEmptyArt" viewBox="0 0 66 50" fill="none" aria-hidden="true">' +
+    '<rect x="2" y="5" width="44" height="10" rx="3" stroke="currentColor" stroke-width="1.5" opacity=".55"></rect>' +
+    '<rect x="2" y="20" width="44" height="10" rx="3" stroke="currentColor" stroke-width="1.5" opacity=".34"></rect>' +
+    '<rect x="2" y="35" width="44" height="10" rx="3" stroke="currentColor" stroke-width="1.5" opacity=".18"></rect>' +
+    '<path class="__qArtMark" d="M52 2h10a2 2 0 0 1 2 2v18l-7-4-7 4V4a2 2 0 0 1 2-2z"></path></svg>';
 
   var _sv = null;   /* the open dialog: {sh, host, list, q, flash, onKey, esc} */
 

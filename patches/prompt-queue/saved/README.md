@@ -78,9 +78,18 @@ the pattern has; none of it was picked by eye.
   anti-pattern (a disabled control in the primary position).
 - **A row is name + what is in it.** Two saved queues cannot be told apart by
   name alone without remembering what you put in them, so the second line is
-  `3 messages · <the prompts>`, ellipsised by CSS - everything is offered and
-  the row stays two lines tall. The row IS the load button, shaped like the
-  app's own command-menu item.
+  the prompts themselves, ellipsised by CSS - everything is offered and the row
+  stays two lines tall. The row IS the load button, shaped like the app's own
+  command-menu item.
+- **How many is a chip, not a phrase.** `3 messages ·` at the head of every
+  preview line repeats itself down the list and eats the width that the preview
+  needs. As a chip on the trailing edge it lines up into a column you can run
+  your eye down, and the preview gets the whole line. The chip reads as a bare
+  number, so the row carries an `aria-label` with the sentence instead.
+- **One hairline of accent at the leading edge** grows in on hover and to full
+  height on focus. It is the only thing on the row that moves, and it tells you
+  which row you are on before you read a word - which the active background
+  alone, a ~1.4:1 change, does not.
 - **The row's controls are always visible**, at `--app-secondary-foreground`,
   rather than appearing on hover. A control that appears on hover does not
   exist for the keyboard, for touch, or for anyone scanning for it.
@@ -97,8 +106,16 @@ the pattern has; none of it was picked by eye.
   are saved queues on screen (the primary action is a *row*, and an orange
   button beside the list pulls the eye off the content), primary when the list
   is empty and it is the only thing to do.
-- **The empty state** is headline, one sentence naming the next concrete step,
-  and the action itself right below - not "no data".
+- **The empty state** is a picture, a headline, one sentence naming the next
+  concrete step, and the action itself right below - not "no data". The picture
+  is the queue drawn in the panel's own vocabulary (three rows fading back,
+  bookmarked) rather than a generic glyph: an illustration that does not say
+  what the moment is is decoration.
+- **Heights come from flex, never from `vh`.** `patches/zoom` puts the panel in
+  a second coordinate system where viewport units report the *unzoomed*
+  viewport while every rect is `1/zoom` of it, so a `44vh` list is the wrong
+  size at any zoom but 1. `min-height:0` on the scrollers lets the box hand
+  them exactly the room it has left.
 - **Delete confirms; it does not offer undo.** The current guidance prefers
   undo for reversible actions, and confirmation for infrequent, irreversible
   ones. This is the second: the prompts are gone. So it follows the

@@ -8,13 +8,20 @@
   function buildSavedRow(en) {
     var row = el("div", "__qSavedItem");
     row.setAttribute("data-sq", en.id);
+    var n = (en.items || []).length, name = en.name || "Untitled", preview = savedPreview(en);
     var load = btn("__qSavedLoad", "Add these messages to the queue");
     var nm = el("span", "__qSavedName");
-    nm.textContent = en.name || "Untitled";
+    nm.textContent = name;
     var meta = el("span", "__qSavedMeta");
-    meta.textContent = savedPreview(en);
+    meta.textContent = preview;
+    var count = el("span", "__qCount");
+    count.textContent = n;
+    /* The chip reads as a bare number, so the whole row gets one spoken name
+       instead - the label wins over the content for assistive tech. */
+    load.setAttribute("aria-label", name + ", " + countLabel(n) + ", " + preview);
     load.appendChild(nm);
     load.appendChild(meta);
+    load.appendChild(count);
     load.addEventListener("click", function () {
       loadSavedInto(en);
       _sv.sh.close();      /* the queue panel behind is the confirmation */

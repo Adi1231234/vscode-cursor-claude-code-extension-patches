@@ -45,7 +45,7 @@
     }
 
     draw();
-    var back = btn("__qBtnGhost");
+    var back = btn("__qBtnQuiet");
     back.textContent = "Cancel";
     back.addEventListener("click", function () { showSavedList(); });
     var save = btn("__qBtnPrimary");
