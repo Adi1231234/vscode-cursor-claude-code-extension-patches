@@ -64,13 +64,13 @@
 .__qThumb{width:20px;height:20px;border-radius:3px;object-fit:cover;border:1px solid color-mix(in srgb,var(--vscode-foreground,#cccccc) 20%,transparent)}
 .__qDoc{display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 4px;border-radius:3px;font-size:8px;font-weight:600;letter-spacing:.03em;background:color-mix(in srgb,var(--vscode-foreground,#cccccc) 14%,transparent);border:1px solid color-mix(in srgb,var(--vscode-foreground,#cccccc) 22%,transparent);opacity:.8}
 .__qRow.__qOff .__qThumb,.__qRow.__qOff .__qDoc{opacity:.5}
-.__qAdd,.__qLog{position:relative;flex:none;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:5px;background:transparent;color:var(--app-secondary-foreground,var(--vscode-foreground,#ccc));margin-left:2px;opacity:.75;transition:background .12s ease,color .12s ease,opacity .12s ease}
-.__qAdd:hover,.__qLog:hover{background:var(--app-ghost-button-hover-background,rgba(128,128,128,.16));color:var(--app-primary-foreground,var(--vscode-foreground,#fff));opacity:1}
-.__qAdd:active,.__qLog:active{filter:brightness(1.1)}
+.__qAdd,.__qLog,.__qSaved{position:relative;flex:none;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:5px;background:transparent;color:var(--app-secondary-foreground,var(--vscode-foreground,#ccc));margin-left:2px;opacity:.75;transition:background .12s ease,color .12s ease,opacity .12s ease}
+.__qAdd:hover,.__qLog:hover,.__qSaved:hover{background:var(--app-ghost-button-hover-background,rgba(128,128,128,.16));color:var(--app-primary-foreground,var(--vscode-foreground,#fff));opacity:1}
+.__qAdd:active,.__qLog:active,.__qSaved:active{filter:brightness(1.1)}
 .__qAdd svg,.__qLog svg{display:block;pointer-events:none}
 .__qLog{opacity:.55}
 .__qTip{position:absolute;bottom:calc(100% + 6px);right:0;z-index:20;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:4px 8px;font-size:.85em;line-height:1.4;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:var(--corner-radius-medium,6px);box-shadow:0 2px 6px #00000026;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .1s ease-in}
-.__qAdd:hover .__qTip{opacity:1;visibility:visible;transition-delay:.4s}
+.__qAdd:hover .__qTip,.__qSaved:hover .__qTip{opacity:1;visibility:visible;transition-delay:.4s}
 .__qKbd{padding:1px 4px;font-size:.9em;font-family:var(--app-monospace-font-family,var(--vscode-editor-font-family,monospace));background:var(--app-ghost-button-hover-background,rgba(128,128,128,.2));border-radius:var(--corner-radius-small,3px)}
 /* ---- per-row clock + countdown ring ---- */
 .__qClock{display:inline-flex;align-items:center;gap:7px;flex:none}

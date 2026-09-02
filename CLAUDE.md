@@ -159,6 +159,15 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   JS stack, so read `scrollTop` inside an instrumented setter on the container
   and compare with `scrollHeight - clientHeight` (healthy is one chunk of
   growth, ~20px; broken is the whole message height).
+- **Every Claude panel in a window shares one webview origin, so localStorage is
+  shared - across panels and across sessions.** Measured with two panels open
+  side by side: both reported `vscode-webview://0c8i409p...` and both read the
+  same key, while each still held its own per-session queue. So a key that
+  carries a session id is private to that conversation and a key that does not
+  is visible to all of them, with no host round-trip - that is what makes
+  `patches/prompt-queue/saved/` (a queue saved here, loaded in the next chat)
+  possible. It survives a real window reload too, which is how the queue's own
+  per-session persistence has always worked.
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 - **One panel can be reloaded on its own, and that restarts its CLI too.**
   Re-assigning `webview.html` (rebuilt by the host's own `getHtmlForWebview`,

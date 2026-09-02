@@ -4,7 +4,7 @@
 **Touches:** `extension.js + webview/index.css`
 **Guard marker:** `/* QUEUE */`
 
-Codex-style queue: hold messages while Claude is busy, edit / reorder / skip, sent one per turn. `queue.css` -> stylesheet, ordered `queue/*.js` fragments (each < 150 lines) concatenated and injected after the INPUTRTL/ZOOM script (uses the webview nonce + image-preview class hash).
+Codex-style queue: hold messages while Claude is busy, edit / reorder / skip, sent one per turn. `queue.css` + `saved/saved.css` -> stylesheet, ordered `queue/*.js` and `saved/*.js` fragments (each < 150 lines) concatenated and injected after the INPUTRTL/ZOOM script (uses the webview nonce + image-preview class hash).
 
 ## Adding to the queue
 
@@ -92,6 +92,22 @@ The queue survives a full editor restart, per session:
 
 If the session id can't be read, persistence silently disables (the queue
 still works in memory) rather than risking a wrong-keyed write.
+
+## Saved queues (`saved/`)
+
+A queue you built once, kept for the next chat: the bookmark beside the send
+button (and the one in the panel header) opens a dialog that saves the current
+queue under a name and loads, renames, edits or deletes the saved ones. Stored
+globally rather than per session (`ccq:saved`), because every Claude panel in a
+window shares one webview origin and therefore one localStorage - which is what
+makes "pick it up in the next conversation" work at all. Text, skipped state
+and *relative* schedules are kept; at-times and attachments deliberately are
+not, and a load parks the queue like any other bulk add. Read `saved/README.md`
+before touching it.
+
+All three dialogs here - schedule, log viewer, saved queues - share
+`queue/modal-shell.js` for the overlay, head, foot, Esc, backdrop, focus trap
+and one-modal-at-a-time.
 
 ## Debug log viewer (`log.js`)
 

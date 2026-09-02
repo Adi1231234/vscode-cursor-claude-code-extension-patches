@@ -12,7 +12,7 @@
      both were on screen. Measured in a live panel: forty moves each in three
      seconds, alternating between two orders about every 150 ms. ccRow holds the
      ranks and does the placing; this file states only where this button belongs. */
-  if (window.__ccRow) { window.__ccRow.rank("__qLog", 20); window.__ccRow.rank("__qAdd", 40); }
+  if (window.__ccRow) { window.__ccRow.rank("__qLog", 20); window.__ccRow.rank("__qSaved", 30); window.__ccRow.rank("__qAdd", 40); }
 
   function onAddClick(ev) {
     ev.preventDefault();
@@ -40,11 +40,26 @@
     }
     /* insertBefore an already-attached node just moves it: idempotent, never duplicates */
     if (b.parentNode !== send.parentNode) send.parentNode.insertBefore(b, send);
+    ensureSavedButton(form, send, b);
     if (window.__ccRow) window.__ccRow.place(send.parentNode, send);
     else if (send.previousElementSibling !== b) send.parentNode.insertBefore(b, send);
     /* The log-viewer button is OFF by default; window.__ccLogBtn() (or Ctrl+Alt+L)
        shows it / opens the log modal when we need to debug. */
     if (window.__ccLogBtnOn) ensureLogButton(form, send, b);
+  }
+
+  /* The saved-queues door that is always there. The panel's own header carries
+     the same dialog, but the panel is hidden while the queue is empty - which
+     is exactly the moment you want to load a saved one. */
+  function ensureSavedButton(form, send, b) {
+    var sv = form.querySelector(".__qSaved");
+    if (!sv) {
+      sv = btn("__qSaved");                                    /* no native title - styled tooltip instead */
+      sv.setAttribute("aria-label", "Saved queues");
+      sv.innerHTML = IC_BOOK + '<span class="__qTip" aria-hidden="true">Saved queues</span>';
+      sv.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openSavedModal(false); });
+    }
+    if (sv.parentNode !== send.parentNode) send.parentNode.insertBefore(sv, b);
   }
 
   function ensureLogButton(form, send, b) {
