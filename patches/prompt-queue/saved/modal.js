@@ -18,7 +18,10 @@
   var _sv = null;   /* the open dialog: {sh, host, list, q, flash, onKey, esc} */
 
   function openSavedModal(startInSave) {
-    var sh = openShell({ title: "Saved queues", cls: "__qSavedBox", onKey: svKey });
+    var sh = openShell({
+      title: "Saved queues", sub: "Reuse a queue in any chat",
+      icon: IC_BOOK, cls: "__qSavedBox", onKey: svKey
+    });
     var host = el("div", "__qSavedBody");
     sh.box.appendChild(host);
     _sv = { sh: sh, host: host, list: null, q: "", flash: null, onKey: null, esc: null };
@@ -43,11 +46,15 @@
     if (_sv && _sv.onKey) _sv.onKey(ev);
   }
 
-  /* Both views start from a clean host, a clean foot and no claimed keys. */
-  function svClear(title) {
+  /* Both views start from a clean host, a clean foot and no claimed keys - and
+     re-state the header, which is how the editor announces itself without the
+     dialog ever becoming a second overlay. */
+  function svClear(title, sub, icon) {
     _sv.host.innerHTML = "";
     _sv.sh.foot.innerHTML = "";
     _sv.sh.title.textContent = title;
+    _sv.sh.sub.textContent = sub || "";
+    _sv.sh.icon.innerHTML = icon || IC_BOOK;
     _sv.onKey = null;
     _sv.esc = null;
   }

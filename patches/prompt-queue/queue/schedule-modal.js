@@ -8,7 +8,7 @@
 
     /* The overlay, head, foot, Esc / backdrop dismissal and the focus trap all
        come from the shared shell; only Enter-to-commit is ours. */
-    var sh = openShell({ title: "When to send", label: "Schedule message", onKey: onKey });
+    var sh = openShell({ title: "When to send", label: "Schedule message", icon: IC_CLOCK, onKey: onKey });
     var seg = el("div", "__qSeg");
     var body = el("div", "__qModalBody");
     var sum = el("div", "__qSummary");

@@ -20,12 +20,24 @@
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
     box.setAttribute("aria-label", o.label || o.title || "Dialog");
+    /* Head: a tinted medallion, then the title with a line of subtitle under
+       it, then the close. The medallion is what turns "text and a cross" into
+       a header - one accent-tinted square that says which of the three dialogs
+       you are looking at before you read it. Callers that have nothing to add
+       leave o.sub out and the line collapses (.__qSub:empty). */
     var head = el("div", "__qModalHead");
-    var title = el("span");
+    var icon = el("span", "__qHeadIcon");
+    var text = el("span", "__qHeadText");
+    var title = el("span", "__qTitle");
     title.textContent = o.title || "";
+    var sub = el("span", "__qSub");
+    sub.textContent = o.sub || "";
+    text.appendChild(title);
+    text.appendChild(sub);
     var x = btn("__qClose", "Close (Esc)");
     x.textContent = "✕";
-    head.appendChild(title);
+    if (o.icon) { icon.innerHTML = o.icon; head.appendChild(icon); }
+    head.appendChild(text);
     head.appendChild(x);
     var foot = el("div", "__qModalFoot");
 
@@ -64,6 +76,6 @@
     x.addEventListener("click", close);
     ov.addEventListener("click", function (ev) { if (ev.target === ov) close(); });
     box.appendChild(head);
-    return { ov: ov, box: box, head: head, title: title, foot: foot, close: close, mount: mount };
+    return { ov: ov, box: box, head: head, icon: icon, title: title, sub: sub, foot: foot, close: close, mount: mount };
   }
 

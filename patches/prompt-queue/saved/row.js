@@ -14,14 +14,14 @@
     nm.textContent = name;
     var meta = el("span", "__qSavedMeta");
     meta.textContent = preview;
-    var count = el("span", "__qCount");
-    count.textContent = n;
-    /* The chip reads as a bare number, so the whole row gets one spoken name
-       instead - the label wins over the content for assistive tech. */
+    var med = el("span", "__qMed");
+    med.textContent = n;
+    /* The medallion reads as a bare number, so the whole row gets one spoken
+       name instead - the label wins over the content for assistive tech. */
     load.setAttribute("aria-label", name + ", " + countLabel(n) + ", " + preview);
+    load.appendChild(med);
     load.appendChild(nm);
     load.appendChild(meta);
-    load.appendChild(count);
     load.addEventListener("click", function () {
       loadSavedInto(en);
       _sv.sh.close();      /* the queue panel behind is the confirmation */

@@ -66,7 +66,7 @@
 
   function openLogModal() {
     ccLogEnv();   /* fresh environment probe every time it opens (safe: on click, not at load) */
-    var sh = openShell({ title: "Queue logs (" + _ccLogs.length + ")", cls: "__qLogBox" });
+    var sh = openShell({ title: "Queue logs (" + _ccLogs.length + ")", icon: LOG_ICON, cls: "__qLogBox" });
     var pre = el("pre", "__qLogPre"); pre.textContent = _ccLogs.join(NL);
     var copy = btn("__qBtnGhost"); copy.textContent = "Copy all";
     copy.addEventListener("click", function () { try { navigator.clipboard.writeText(_ccLogs.join(NL)); copy.textContent = "Copied!"; setTimeout(function () { copy.textContent = "Copy all"; }, 1500); } catch (e) { ccLog("ui", "copy ERR", e.message); } });

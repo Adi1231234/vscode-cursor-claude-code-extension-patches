@@ -7,7 +7,7 @@
   var FILTER_FROM = 6;   /* a filter earns its row only once scanning stops being instant */
 
   function showSavedList() {
-    svClear("Saved queues");
+    svClear("Saved queues", "Reuse a queue in any chat", IC_BOOK);
     _sv.onKey = listKey;
     if (savedRead().length >= FILTER_FROM) _sv.host.appendChild(buildFilter());
     _sv.list = el("div", "__qSavedHost");
@@ -102,7 +102,7 @@
      glyph: an illustration that does not say what the moment is is decoration. */
   function buildEmpty() {
     var d = el("div", "__qEmpty");
-    var ic = el("span");
+    var ic = el("span", "__qEmptyHalo");
     ic.innerHTML = ART_EMPTY;
     var t = el("div", "__qEmptyTitle");
     t.textContent = "No saved queues yet";

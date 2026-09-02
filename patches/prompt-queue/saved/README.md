@@ -81,15 +81,23 @@ the pattern has; none of it was picked by eye.
   the prompts themselves, ellipsised by CSS - everything is offered and the row
   stays two lines tall. The row IS the load button, shaped like the app's own
   command-menu item.
-- **How many is a chip, not a phrase.** `3 messages ·` at the head of every
-  preview line repeats itself down the list and eats the width that the preview
-  needs. As a chip on the trailing edge it lines up into a column you can run
-  your eye down, and the preview gets the whole line. The chip reads as a bare
-  number, so the row carries an `aria-label` with the sentence instead.
-- **One hairline of accent at the leading edge** grows in on hover and to full
-  height on focus. It is the only thing on the row that moves, and it tells you
-  which row you are on before you read a word - which the active background
-  alone, a ~1.4:1 change, does not.
+- **How many is the row's medallion, not a phrase.** `3 messages ·` at the head
+  of every preview line repeats itself down the list and eats the width the
+  preview needs. As an accent-tinted square at the leading edge it gives the
+  list a rail to run your eye down, the preview gets the whole line, and it is
+  the one thing on the row that moves: tinted at rest, deeper on hover, solid
+  when the row has the focus - which is also what makes focus visible, since
+  the active background alone is a ~1.4:1 change. It reads as a bare number, so
+  the row carries an `aria-label` with the whole sentence.
+- **Each dialog has a header medallion.** One accent-tinted square with the
+  bookmark, the pencil, the clock or the log icon, a title, and a line of
+  subtitle under it. It says which of the three dialogs you are looking at
+  before you read it, and it is what turns "text and a cross" into a header.
+  The editor uses the subtitle for its count, which describes the whole view
+  rather than deserving a line of its own above the list.
+- **The message rows in the editor are fields at rest**, not bare text with a
+  caret hidden in it - the well plus its border is what says "this is the thing
+  you came here to edit", and it gives the editor the rhythm of a form.
 - **The row's controls are always visible**, at `--app-secondary-foreground`,
   rather than appearing on hover. A control that appears on hover does not
   exist for the keyboard, for touch, or for anyone scanning for it.
@@ -165,3 +173,13 @@ bullet in the root `CLAUDE.md` before changing any of it - in particular the
 part about `--app-input-background` being the same colour as
 `--app-primary-background`, which is why every field in these dialogs carries a
 border the app's own fields do not need.
+
+Where the chrome reads the app's **scale** rather than one of its values, it
+says so in place: the box takes `--corner-radius-large` (what the app puts on
+its own menu *popup*) while the controls on it keep `--corner-radius-small`
+(what it puts on the items in it); the surface is washed from the top with
+`--app-transparent-inner-border`, the token the app keeps for a lit edge, so
+the box reads as raised without a shadow anywhere near it; and the primary
+button runs `--app-accent-color` down to `--app-claude-clay-button-orange`,
+which is the app's own button pair one above the other rather than one or the
+other. Every value is still a token - the composition is ours.

@@ -6,10 +6,13 @@
   function showSavedEdit(en) {
     var draft = (en.items || []).map(queueItemOf);
     var name = en.name || "";
-    svClear("Edit saved queue");
+    svClear("Edit saved queue", "", IC_PEN);
     _sv.esc = function () { showSavedList(); };
 
     function draw() {
+      /* The count belongs in the header's subtitle, not as a line of its own
+         above the list: it describes the whole view. */
+      _sv.sh.sub.textContent = draft.length ? countLabel(draft.length) + ", sent in this order" : "No messages yet";
       _sv.host.innerHTML = "";
       var ni = el("input", "__qNameIn");
       ni.type = "text";
@@ -19,10 +22,6 @@
       ni.addEventListener("input", function () { name = ni.value; });
       ni.addEventListener("keydown", function (ev) { ev.stopPropagation(); if (ev.key === "Enter") ev.preventDefault(); });
       _sv.host.appendChild(ni);
-
-      var count = el("div", "__qEditCount");
-      count.textContent = draft.length ? countLabel(draft.length) + ", sent in this order" : "";
-      _sv.host.appendChild(count);
 
       var list = el("div", "__qEditList __ccScroll");
       if (draft.length) draft.forEach(function (it, i) { list.appendChild(buildEditRow(it, i, draft, draw)); });

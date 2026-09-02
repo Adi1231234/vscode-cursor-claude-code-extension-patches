@@ -17,10 +17,21 @@
 @keyframes __qOvIn{from{opacity:0}to{opacity:1}}
 @keyframes __qBoxIn{from{opacity:0;transform:translateY(5px) scale(.99)}to{opacity:1;transform:none}}
 .__qModalOv{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:var(--app-spacing-xlarge,16px);background:var(--app-modal-background,rgba(0,0,0,.75));animation:__qOvIn .12s ease-out}
-.__qModal{display:flex;flex-direction:column;gap:var(--app-spacing-large,12px);width:min(420px,100%);max-height:100%;box-sizing:border-box;padding:var(--app-spacing-xlarge,16px);background:var(--app-primary-background,#191a1b);border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-large,8px);box-shadow:inset 0 1px 0 var(--app-transparent-inner-border,#ffffff1a);color:var(--app-primary-foreground,#bfbfbf);font-size:var(--vscode-chat-font-size,13px);line-height:1.5;animation:__qBoxIn .16s cubic-bezier(.2,.8,.3,1)}
+/* The surface is lit from the top: a wash of --app-transparent-inner-border
+   fading out over the header's depth, with that same token as a hairline on
+   the very edge. Two app values, no shadow - the app draws none - and the box
+   still reads as raised off the scrim rather than cut out of it. */
+.__qModal{display:flex;flex-direction:column;gap:var(--app-spacing-large,12px);width:min(430px,100%);max-height:100%;box-sizing:border-box;padding:var(--app-spacing-xlarge,16px);background-color:var(--app-primary-background,#191a1b);background-image:linear-gradient(180deg,color-mix(in srgb,var(--app-transparent-inner-border,#ffffff1a) 55%,transparent),transparent 150px);border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-large,8px);box-shadow:inset 0 1px 0 var(--app-transparent-inner-border,#ffffff1a);color:var(--app-primary-foreground,#bfbfbf);font-size:var(--vscode-chat-font-size,13px);line-height:1.5;animation:__qBoxIn .16s cubic-bezier(.2,.8,.3,1)}
 /* Head and foot rule full width while their text keeps the box's inset - the
    thing that makes a dialog read as composed rather than as a stack of divs. */
-.__qModalHead{display:flex;align-items:center;justify-content:space-between;gap:var(--app-spacing-medium,8px);margin-inline:calc(var(--app-spacing-xlarge,16px) * -1);padding:0 var(--app-spacing-xlarge,16px) var(--app-spacing-large,12px);border-bottom:1px solid var(--app-widget-border,#2a2b2c);font-size:1em;font-weight:600;line-height:1.4}
+.__qModalHead{display:flex;align-items:center;gap:10px;margin-inline:calc(var(--app-spacing-xlarge,16px) * -1);padding:0 var(--app-spacing-xlarge,16px) var(--app-spacing-large,12px);border-bottom:1px solid var(--app-widget-border,#2a2b2c);line-height:1.4}
+/* One accent-tinted square that says which dialog this is before you read it. */
+.__qHeadIcon{flex:none;box-sizing:border-box;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--corner-radius-medium,6px);background:color-mix(in srgb,var(--app-accent-color,#d97757) 15%,transparent);color:var(--app-accent-color,#d97757)}
+.__qHeadIcon svg{width:16px;height:16px;display:block}
+.__qHeadText{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.__qTitle{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1em;font-weight:600;line-height:1.35}
+.__qSub{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85em;line-height:1.35;color:var(--app-secondary-foreground,#8c8c8c)}
+.__qSub:empty{display:none}
 .__qModalFoot{display:flex;justify-content:flex-end;align-items:center;gap:var(--app-spacing-medium,8px);margin-inline:calc(var(--app-spacing-xlarge,16px) * -1);padding:var(--app-spacing-large,12px) var(--app-spacing-xlarge,16px) 0;border-top:1px solid var(--app-widget-border,#2a2b2c)}
 .__qFootStart{margin-inline-end:auto}
 /* the app's own iconButton20: 28px, 4px padding, 4px radius, secondary colour */
@@ -33,12 +44,14 @@
    two identical ghost buttons side by side say "pick either". */
 .__qBtnQuiet{background:none;border-color:transparent;color:var(--app-secondary-foreground,#8c8c8c)}
 .__qBtnQuiet:hover{background:var(--app-ghost-button-hover-background,rgba(90,93,94,.31));color:var(--app-primary-foreground,#bfbfbf)}
-/* the app's own button pair: clay at rest, the accent orange on hover */
-.__qBtnPrimary{background:var(--app-claude-clay-button-orange,#c6613f);color:var(--app-claude-ivory,#faf9f5)}
-.__qBtnPrimary:hover{background:var(--app-accent-color,#d97757)}
+/* The app's own button pair, one above the other rather than one or the other:
+   the accent at the top edge falling to clay reads as a lit surface, and hover
+   lifts the whole face to the accent. */
+.__qBtnPrimary{background-color:var(--app-claude-clay-button-orange,#c6613f);background-image:linear-gradient(180deg,var(--app-accent-color,#d97757),var(--app-claude-clay-button-orange,#c6613f));color:var(--app-claude-ivory,#faf9f5);font-weight:500}
+.__qBtnPrimary:hover{background-color:var(--app-accent-color,#d97757);background-image:none}
 /* Dark text on the salmon, not white: white on --app-error-foreground is 2.5:1. */
 .__qBtnDanger{background:var(--app-error-foreground,#f48771);color:var(--app-claude-slate,#141413);font-weight:600}
 .__qBtnDanger:hover{filter:brightness(1.08)}
-.__qBtnGhost:disabled,.__qBtnPrimary:disabled,.__qBtnDanger:disabled{background:var(--app-input-secondary-background,#202122);border-color:var(--app-widget-border,#2a2b2c);color:var(--app-disabled-foreground,#555);cursor:default;font-weight:400}
+.__qBtnGhost:disabled,.__qBtnPrimary:disabled,.__qBtnDanger:disabled{background-color:var(--app-input-secondary-background,#202122);background-image:none;border-color:var(--app-widget-border,#2a2b2c);color:var(--app-disabled-foreground,#555);cursor:default;font-weight:400}
 .__qModal :focus-visible{outline:1px solid var(--app-accent-color,#d97757);outline-offset:1px}
 @media (prefers-reduced-motion:reduce){.__qModalOv,.__qModal,.__qJustSaved{animation:none}}
