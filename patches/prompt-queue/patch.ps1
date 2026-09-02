@@ -11,6 +11,7 @@ function Invoke-Patch {
     param($Ctx)
     Add-StyleBlock $Ctx (Get-LibCssPath 'ccScroll.css') '/* CCSCROLL */' 'shared scrollbar CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue.css') '/* QUEUE */' 'queue CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue/modal.css') '/* QMODAL */' 'shared dialog CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'saved/saved.css') '/* QSAVED */' 'saved queues CSS'
 
     # lib/js/ccStore.js is the shared session-store finder, dropped in right after
@@ -20,7 +21,7 @@ function Invoke-Patch {
         'queue/chips-preview', 'queue/persist', 'queue/debug', 'queue/model',
         'queue/schedule-lib', 'queue/schedule-clock', 'queue/add-button',
         'queue/schedule-modal', 'queue/render-panel', 'queue/row-menu',
-        'saved/store', 'saved/modal', 'saved/list', 'saved/edit',
+        'saved/store', 'saved/modal', 'saved/list', 'saved/row', 'saved/save-form', 'saved/edit',
         'queue/render-rows', 'queue/resize-input', 'queue/stop-pause', 'queue/flush-init'
     )
     $parts = @((Join-Path $PSScriptRoot 'queue/config-dom.js'), (Get-LibJsPath 'ccStore.js'), (Get-LibJsPath 'ccRow.js')) +

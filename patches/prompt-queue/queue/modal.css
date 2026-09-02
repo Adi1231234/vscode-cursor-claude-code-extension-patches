@@ -1,0 +1,32 @@
+/* QMODAL */
+/* The chrome every dialog in this panel wears (schedule, log viewer, saved
+   queues), in the app's OWN confirm-dialog family rather than a look of our
+   own. Measured off the live DOM, and the same family patches/remote-control-chip
+   settled on - the one the bundle uses twice: a box on an --app-modal-background
+   scrim, --app-spacing-* / --corner-radius-* throughout, and a 1px border
+   INSTEAD of a shadow (the app's own menu popup and dialogs carry none; the
+   drop shadow this used to have was the loudest thing on the screen).
+   Everything is re-expressed against the tokens, so nothing here has to track a
+   hashed class name across versions. */
+@keyframes __qOvIn{from{opacity:0}to{opacity:1}}
+@keyframes __qBoxIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.__qModalOv{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:var(--app-spacing-xlarge,16px);background:var(--app-modal-background,rgba(0,0,0,.75));animation:__qOvIn .1s ease-out}
+.__qModal{display:flex;flex-direction:column;gap:var(--app-spacing-large,12px);width:min(420px,100%);max-height:100%;box-sizing:border-box;padding:var(--app-spacing-xlarge,16px);background:var(--app-primary-background,#191a1b);border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-small,4px);color:var(--app-primary-foreground,#bfbfbf);font-size:var(--vscode-chat-font-size,13px);line-height:1.5;animation:__qBoxIn .13s ease-out}
+.__qModalHead{display:flex;align-items:center;justify-content:space-between;gap:var(--app-spacing-medium,8px);font-size:1em;font-weight:600;line-height:1.4}
+/* the app's own iconButton20: 28px, 4px padding, 4px radius, secondary colour */
+.__qClose{flex:none;box-sizing:border-box;width:28px;height:28px;margin:-4px -4px -4px 0;padding:4px;border:none;background:none;color:var(--app-secondary-foreground,#8c8c8c);cursor:pointer;border-radius:var(--corner-radius-small,4px);display:flex;align-items:center;justify-content:center;font-size:.95em;line-height:1;transition:background .12s ease,color .12s ease}
+.__qClose:hover{background:var(--app-ghost-button-hover-background,rgba(90,93,94,.31));color:var(--app-primary-foreground,#bfbfbf)}
+.__qModalFoot{display:flex;justify-content:flex-end;align-items:center;gap:var(--app-spacing-medium,8px)}
+.__qFootStart{margin-inline-end:auto}
+.__qBtnGhost,.__qBtnPrimary,.__qBtnDanger{box-sizing:border-box;padding:6px 12px;border:1px solid transparent;border-radius:var(--corner-radius-small,4px);font:inherit;font-size:1em;line-height:1.35;cursor:pointer;transition:background .12s ease,color .12s ease,border-color .12s ease}
+.__qBtnGhost{background:var(--app-input-secondary-background,#202122);border-color:var(--app-widget-border,#2a2b2c);color:var(--app-primary-foreground,#bfbfbf)}
+.__qBtnGhost:hover{background:var(--app-ghost-button-hover-background,rgba(90,93,94,.31))}
+/* the app's own button pair: clay at rest, the accent orange on hover */
+.__qBtnPrimary{background:var(--app-claude-clay-button-orange,#c6613f);color:var(--app-claude-ivory,#faf9f5)}
+.__qBtnPrimary:hover{background:var(--app-accent-color,#d97757)}
+/* Dark text on the salmon, not white: white on --app-error-foreground is 2.5:1. */
+.__qBtnDanger{background:var(--app-error-foreground,#f48771);color:var(--app-claude-slate,#141413);font-weight:600}
+.__qBtnDanger:hover{filter:brightness(1.08)}
+.__qBtnGhost:disabled,.__qBtnPrimary:disabled,.__qBtnDanger:disabled{background:var(--app-input-secondary-background,#202122);border-color:var(--app-widget-border,#2a2b2c);color:var(--app-disabled-foreground,#555);cursor:default;font-weight:400}
+.__qModal :focus-visible{outline:1px solid var(--app-accent-color,#d97757);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){.__qModalOv,.__qModal{animation:none}}

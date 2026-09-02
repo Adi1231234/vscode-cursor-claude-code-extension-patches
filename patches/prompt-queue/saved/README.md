@@ -5,11 +5,15 @@ under a name, and pick it back up from any conversation.
 
 Part of `prompt-queue` rather than a patch of its own - it shares `Q`,
 `render()`, `enqueue` and the modal chrome, and all of that lives inside one
-injected IIFE. Four fragments, concatenated by `../patch.ps1`:
+injected IIFE. Fragments, concatenated by `../patch.ps1`:
 
-- `store.js` - the data. Read/write, the two conversions, and loading into `Q`.
-- `modal.js` - the dialog and its list view, plus the panel-header door.
-- `list.js` - one row of the list (load / edit / delete-with-confirm).
+- `store.js` - the data. Read/write, the two conversions, the row preview, and
+  loading into `Q`.
+- `modal.js` - the dialog shell: icons, the `_sv` state, Escape-steps-back, and
+  the panel-header door.
+- `list.js` - the list view: filter, keyboard, empty states, footer.
+- `row.js` - one row (load / edit / delete-with-confirm).
+- `save-form.js` - the revealed name field.
 - `edit.js` - the editor view.
 - `saved.css` - injected under its own guard `/* QSAVED */`.
 
@@ -60,6 +64,57 @@ Loading **appends** to the current queue rather than replacing it - with the
 usual empty queue the two are the same thing, and only one of them can throw
 away work.
 
+## How the dialog is laid out, and why
+
+Every choice below was either measured off the app or taken from the guidance
+the pattern has; none of it was picked by eye.
+
+- **The list owns the top.** Loading is the frequent job. The first version put
+  a name field and a Save button above the list, which meant the first thing
+  you saw - at exactly the moment you had come to load something with an empty
+  queue - was a *disabled* control. Saving is now one footer button that
+  reveals the field (`save-form.js`); the field is gone again the moment it is
+  used. That is progressive disclosure, and it is also the fix for a documented
+  anti-pattern (a disabled control in the primary position).
+- **A row is name + what is in it.** Two saved queues cannot be told apart by
+  name alone without remembering what you put in them, so the second line is
+  `3 messages · <the prompts>`, ellipsised by CSS - everything is offered and
+  the row stays two lines tall. The row IS the load button, shaped like the
+  app's own command-menu item.
+- **The row's controls are always visible**, at `--app-secondary-foreground`,
+  rather than appearing on hover. A control that appears on hover does not
+  exist for the keyboard, for touch, or for anyone scanning for it.
+- **Keyboard.** Focus lands inside the dialog on open (the filter if there is
+  one, else the first row). Up and down walk the rows and Enter loads - the
+  keys the app's own command menu answers to; the rows are real buttons, so
+  Enter and the screen-reader semantics come for free. Escape **steps back one
+  level** - out of the name field, out of a delete confirm, out of the editor -
+  and only closes the dialog from the list. That is what the shared shell's
+  "a caller may claim a key" hook exists for.
+- **A filter appears only at six saved queues.** Below that, scanning is
+  instant and a filter is a row of noise.
+- **The footer's Save changes weight with the situation**: ghost while there
+  are saved queues on screen (the primary action is a *row*, and an orange
+  button beside the list pulls the eye off the content), primary when the list
+  is empty and it is the only thing to do.
+- **The empty state** is headline, one sentence naming the next concrete step,
+  and the action itself right below - not "no data".
+- **Delete confirms; it does not offer undo.** The current guidance prefers
+  undo for reversible actions, and confirmation for infrequent, irreversible
+  ones. This is the second: the prompts are gone. So it follows the
+  confirmation rules - it names the queue, states what goes with it, labels the
+  button with the verb rather than "OK", and leaves the focus on Cancel so a
+  stray Enter cannot delete. It happens **in place of the row** because one
+  shell is open at a time by design and stacked modals are what every guideline
+  says not to build. The sentence wraps rather than ellipsising: what would get
+  cut is the consequence.
+- **Target sizes.** The editor's reorder arrows are 24x24 and the skip
+  checkbox gets a 24px hit area around its 15px box - WCAG 2.2 SC 2.5.8 (AA).
+  The first version had 18x13 arrows.
+- **Contrast.** Secondary text is the `--app-secondary-foreground` token at
+  full opacity (5.4:1), not the app's own 50% dim (~3.4:1). The delete button
+  is dark text on the salmon: white on `--app-error-foreground` is 2.5:1.
+
 ## Two doors, one dialog
 
 - the bookmark beside the composer's send button (`__qSaved`, ranked 30 in
@@ -79,6 +134,17 @@ vanishes later is worse than one that never saved.
 
 ## The modal shell it shares
 
-`../queue/modal-shell.js` - overlay, head, foot, Esc, backdrop, focus trap,
-focus restore, and one-modal-at-a-time. The schedule modal and the log viewer
-were each carrying their own copy of that; both now call `openShell()`.
+`../queue/modal-shell.js` (behaviour) and `../queue/modal.css` (the look) -
+overlay, head, foot, Esc, backdrop, focus trap, focus restore, and
+one-modal-at-a-time. The schedule modal and the log viewer were each carrying
+their own copy of that; both now call `openShell()`, so all three dialogs are
+one design line and a change lands in all of them at once.
+
+That line is the app's **own confirm-dialog family**, measured off the live DOM
+and the same one `patches/remote-control-chip` settled on: a box on an
+`--app-modal-background` scrim, `--app-spacing-*` / `--corner-radius-*`
+throughout, and a 1px border **instead of a shadow**. Read the design-line
+bullet in the root `CLAUDE.md` before changing any of it - in particular the
+part about `--app-input-background` being the same colour as
+`--app-primary-background`, which is why every field in these dialogs carries a
+border the app's own fields do not need.

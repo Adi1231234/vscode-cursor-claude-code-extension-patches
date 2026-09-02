@@ -52,14 +52,13 @@
     return it;
   }
 
+  /* Returns the new id, so the dialog can put the eye on the row it just made. */
   function savedAdd(name, items) {
     var l = savedRead();
-    l.unshift({
-      id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      name: name, ts: Date.now(), items: items
-    });
+    var id = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    l.unshift({ id: id, name: name, ts: Date.now(), items: items });
     ccLog("saved", "add", name, "n=" + items.length);
-    return savedWrite(l);
+    return savedWrite(l) ? id : null;
   }
 
   function savedPut(id, name, items) {
@@ -88,9 +87,19 @@
 
   function countLabel(n) { return n + (n === 1 ? " message" : " messages"); }
 
+  function oneLine(s) { return String(s || "").split(NL).join(" ").replace(/[ ]+/g, " ").trim(); }
+
   /* A name to start from: the first prompt, on one line, trimmed short. */
   function suggestSavedName() {
-    var t = (Q.length ? Q[0].text : "") || "";
-    t = t.split(NL).join(" ").replace(/[ ]+/g, " ").trim();
+    var t = oneLine(Q.length ? Q[0].text : "");
     return t.length > 42 ? t.slice(0, 42).trim() + "..." : t;
+  }
+
+  /* The row's second line: how many, then the queue itself. Two saved queues
+     are told apart by what is in them, and a name alone asks the reader to
+     remember what they put there. CSS ellipsises whatever does not fit, so
+     everything is offered and the row stays one line tall. */
+  function savedPreview(en) {
+    var items = (en.items || []).map(function (o) { return oneLine(o.t); }).filter(function (t) { return t; });
+    return countLabel((en.items || []).length) + (items.length ? " · " + items.join(" · ") : "");
   }

@@ -106,8 +106,12 @@ not, and a load parks the queue like any other bulk add. Read `saved/README.md`
 before touching it.
 
 All three dialogs here - schedule, log viewer, saved queues - share
-`queue/modal-shell.js` for the overlay, head, foot, Esc, backdrop, focus trap
-and one-modal-at-a-time.
+`queue/modal-shell.js` (behaviour: overlay, head, foot, Esc, backdrop, focus
+trap, one-modal-at-a-time, and a hook letting a caller claim a key so Escape
+can step back a level) and `queue/modal.css` (the look: the app's own
+confirm-dialog family - `--app-modal-background` scrim, `--app-spacing-*` /
+`--corner-radius-*`, a 1px border and no shadow). Change either and all three
+dialogs change together, which is the point.
 
 ## Debug log viewer (`log.js`)
 

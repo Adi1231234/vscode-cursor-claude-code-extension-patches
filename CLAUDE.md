@@ -106,7 +106,24 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   And mind specificity when overriding an app rule - `.inputFooterV2 .footerButton`
   is (0,2,0) and beats a single class of ours whatever the order; double our own
   class instead of reaching for `!important` or hardcoding a hashed name.
-  `patches/remote-control-chip/` is the worked example.
+  `patches/remote-control-chip/` is the worked example. Three things measured
+  off the live DOM that a source read will not tell you, and that
+  `patches/prompt-queue/queue/modal.css` now depends on. (1) The app has a real
+  token set - `--app-spacing-small/medium/large/xlarge` = 4/8/12/16,
+  `--corner-radius-small/medium/large` = 4/6/8, `--app-list-item-padding: 4px 8px`
+  with `--app-list-gap: 2px` and `--app-list-hover/active-background`,
+  `--app-modal-background: #000000bf` for a scrim - so a hand-picked 6px radius
+  or an `rgba(128,128,128,.16)` hover is a value nobody chose. (2) Its dialogs
+  and its menu popup carry **a 1px border and no shadow**; a drop shadow is the
+  loudest thing you can add to this panel. (3) `--app-input-background` and
+  `--app-primary-background` are **the same colour** (#191a1b). The app's own
+  fields are unbordered because they sit on `--app-menu-background`; put one on
+  a dialog surface with no border and it is invisible - it reads as a heading,
+  which is exactly what the saved-queues name field did until it was measured.
+  The app's own command menu is the reference for any list you inject: 13px
+  rows, `4px 8px` padding, 2px gaps, 4px radius, an 11.7px section header.
+  Copy its *metrics*, not its 50% opacity on secondary text - that lands near
+  3.4:1, and `--app-secondary-foreground` gets you 5.4:1 for free.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not

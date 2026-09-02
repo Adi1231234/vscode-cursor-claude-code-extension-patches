@@ -37,8 +37,12 @@
     }
 
     /* Capture phase: the app has body-level key handlers of its own, and Esc
-       has to reach the dialog before them. */
+       has to reach the dialog before them. The caller's onKey runs FIRST and
+       can claim a key by returning true - which is how a dialog with a level
+       inside it (a revealed field, a second view) makes Escape step back one
+       level instead of always closing the whole thing. */
     function onKey(ev) {
+      if (o.onKey && o.onKey(ev, close) === true) return;
       if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); return close(); }
       if (ev.key === "Tab") {
         var f = focusables(box);
@@ -46,9 +50,7 @@
         var i = f.indexOf(ev.target), last = f.length - 1;
         if (ev.shiftKey && i <= 0) { ev.preventDefault(); f[last].focus(); }
         else if (!ev.shiftKey && i === last) { ev.preventDefault(); f[0].focus(); }
-        return;
       }
-      if (o.onKey) o.onKey(ev, close);
     }
 
     function mount() {

@@ -1,11 +1,13 @@
   /* ---------- Saved queues: the editor ----------
      Works on a DRAFT copy (queueItemOf, i.e. the same shape a loaded item has,
      so savedItemOf serializes it back with no second conversion). Nothing is
-     written until Save, which makes Back a real cancel. */
+     written until Save, which is what makes Cancel - and Escape, which steps
+     back to the list - a real cancel. */
   function showSavedEdit(en) {
     var draft = (en.items || []).map(queueItemOf);
     var name = en.name || "";
     svClear("Edit saved queue");
+    _sv.esc = function () { showSavedList(); };
 
     function draw() {
       _sv.host.innerHTML = "";
@@ -18,16 +20,20 @@
       ni.addEventListener("keydown", function (ev) { ev.stopPropagation(); if (ev.key === "Enter") ev.preventDefault(); });
       _sv.host.appendChild(ni);
 
+      var count = el("div", "__qEditCount");
+      count.textContent = draft.length ? countLabel(draft.length) + ", sent in this order" : "";
+      _sv.host.appendChild(count);
+
       var list = el("div", "__qEditList __ccScroll");
       if (draft.length) draft.forEach(function (it, i) { list.appendChild(buildEditRow(it, i, draft, draw)); });
       else {
-        var e0 = el("div", "__qEmpty");
-        e0.textContent = "No messages in this queue.";
+        var e0 = el("div", "__qEmptyBody");
+        e0.textContent = "No messages in this queue yet.";
         list.appendChild(e0);
       }
       _sv.host.appendChild(list);
 
-      var add = btn("__qBtnGhost __qAddMsg");
+      var add = btn("__qBtnGhost __qMini __qAddMsg");
       add.textContent = "+ Add message";
       add.addEventListener("click", function () {
         draft.push(queueItemOf({ t: "" }));
@@ -40,18 +46,18 @@
 
     draw();
     var back = btn("__qBtnGhost");
-    back.textContent = "Back";
-    back.addEventListener("click", function () { showSavedList(false); });
+    back.textContent = "Cancel";
+    back.addEventListener("click", function () { showSavedList(); });
     var save = btn("__qBtnPrimary");
     save.textContent = "Save changes";
     save.addEventListener("click", function () {
-      /* A blank line is a row the user emptied or added and left - dropping it
+      /* A blank line is a row the user emptied or added and left. Dropping it
          on save is the only reading that does not put an unsendable item in a
-         future queue (flush drops a blank item silently, which would look like
-         a message that vanished). */
+         future queue: flush() silently drops a blank item, and a message that
+         vanishes later is worse than one that never saved. */
       var keep = draft.filter(function (it) { return (it.text || "").trim(); });
       savedPut(en.id, (name || "").trim() || "Untitled", keep.map(savedItemOf));
-      showSavedList(false);
+      showSavedList();
     });
     _sv.sh.foot.appendChild(back);
     _sv.sh.foot.appendChild(save);
@@ -59,16 +65,19 @@
 
   function buildEditRow(it, i, draft, draw) {
     var row = el("div", "__qEditRow" + (it.off ? " __qOff" : ""));
-    var nav = el("span", "__qNav");
-    nav.appendChild(navBtn("__qUp", "Move up", "▲", i === 0, function () { swapAt(draft, i, i - 1); draw(); }));
-    nav.appendChild(navBtn("__qDown", "Move down", "▼", i === draft.length - 1, function () { swapAt(draft, i, i + 1); draw(); }));
+    var nav = el("span", "__qEditNav");
+    nav.appendChild(navIcon(IC_UP, "Move up", i === 0, function () { swapAt(draft, i, i - 1); draw(); }));
+    nav.appendChild(navIcon(IC_DOWN, "Move down", i === draft.length - 1, function () { swapAt(draft, i, i + 1); draw(); }));
 
+    /* The 15px box the queue rows use, inside a 24px hit area (WCAG 2.5.8). */
+    var hit = el("span", "__qCheckHit");
     var check = el("span", "__qCheck" + (it.off ? "" : " __qOn"));
     check.textContent = it.off ? "" : "✓";
-    check.title = it.off ? "Loaded skipped - won't be sent (click to enable)" : "Loaded ready to send (click to skip)";
-    check.addEventListener("click", function () { it.off = !it.off; draw(); });
+    hit.title = it.off ? "Loaded skipped - won't be sent (click to enable)" : "Loaded ready to send (click to skip)";
+    hit.appendChild(check);
+    hit.addEventListener("click", function () { it.off = !it.off; draw(); });
 
-    var text = el("div", "__qText __qEditText");   /* the queue row's own text cell */
+    var text = el("div", "__qEditText");
     text.contentEditable = "plaintext-only";
     text.dir = "auto";
     text.textContent = it.text;
@@ -76,11 +85,17 @@
     text.addEventListener("keydown", function (ev) { ev.stopPropagation(); });
 
     row.appendChild(nav);
-    row.appendChild(check);
+    row.appendChild(hit);
     row.appendChild(text);
     if (isScheduled(it)) row.appendChild(buildSchedTag(it, draw));
     row.appendChild(iconBtn(IC_TRASH, "Remove message", "__qMenuDanger", function () { draft.splice(i, 1); draw(); }));
     return row;
+  }
+
+  function navIcon(icon, title, disabled, fn) {
+    var b = iconBtn(icon, title, "", fn);
+    b.disabled = disabled;
+    return b;
   }
 
   /* A saved schedule is relative by construction (store.js drops at-times), so
