@@ -8,7 +8,6 @@
      load-time localStorage access breaks the Cursor webview. All storage access
      is lazy: inside ccLog (runs after load) and openLogModal (on click). */
   var _ccLogs = [];
-  var _logClose = null;
   /* Newline as a char code, never as a backslash-n escape: this file is injected
      into a template literal in extension.js, which would turn a backslash-n into
      a real newline and break the string. fromCharCode(10) survives untouched. */
@@ -66,31 +65,18 @@
   }
 
   function openLogModal() {
-    if (_logClose) _logClose();
     ccLogEnv();   /* fresh environment probe every time it opens (safe: on click, not at load) */
-    var ov = el("div", "__qModalOv");
-    var box = el("div", "__qModal __qLogBox");
-    var head = el("div", "__qModalHead");
-    var title = el("span"); title.textContent = "Queue logs (" + _ccLogs.length + ")";
-    var x = btn("__qClose", "Close (Esc)"); x.textContent = "✕";
-    head.appendChild(title); head.appendChild(x);
+    var sh = openShell({ title: "Queue logs (" + _ccLogs.length + ")", icon: LOG_ICON, cls: "__qLogBox" });
     var pre = el("pre", "__qLogPre"); pre.textContent = _ccLogs.join(NL);
-    var foot = el("div", "__qModalFoot");
     var copy = btn("__qBtnGhost"); copy.textContent = "Copy all";
     copy.addEventListener("click", function () { try { navigator.clipboard.writeText(_ccLogs.join(NL)); copy.textContent = "Copied!"; setTimeout(function () { copy.textContent = "Copy all"; }, 1500); } catch (e) { ccLog("ui", "copy ERR", e.message); } });
     var clr = btn("__qBtnGhost __qClearBtn"); clr.textContent = "Clear";
-    clr.addEventListener("click", function () { _ccLogs.length = 0; pre.textContent = ""; title.textContent = "Queue logs (0)"; });
+    clr.addEventListener("click", function () { _ccLogs.length = 0; pre.textContent = ""; sh.title.textContent = "Queue logs (0)"; });
     var re = btn("__qBtnPrimary"); re.textContent = "Re-probe";
-    re.addEventListener("click", function () { ccLogEnv(); pre.textContent = _ccLogs.join(NL); title.textContent = "Queue logs (" + _ccLogs.length + ")"; pre.scrollTop = pre.scrollHeight; });
-    foot.appendChild(copy); foot.appendChild(clr); foot.appendChild(re);
-    function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); document.removeEventListener("keydown", onk, true); _logClose = null; }
-    function onk(ev) { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); close(); } }
-    x.addEventListener("click", close);
-    ov.addEventListener("click", function (ev) { if (ev.target === ov) close(); });
-    document.addEventListener("keydown", onk, true);
-    box.appendChild(head); box.appendChild(pre); box.appendChild(foot);
-    ov.appendChild(box); document.body.appendChild(ov);
-    _logClose = close;
+    re.addEventListener("click", function () { ccLogEnv(); pre.textContent = _ccLogs.join(NL); sh.title.textContent = "Queue logs (" + _ccLogs.length + ")"; pre.scrollTop = pre.scrollHeight; });
+    sh.foot.appendChild(copy); sh.foot.appendChild(clr); sh.foot.appendChild(re);
+    sh.box.appendChild(pre);
+    sh.mount();
     pre.scrollTop = pre.scrollHeight;
   }
 

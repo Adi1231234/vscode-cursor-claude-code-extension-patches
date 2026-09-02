@@ -40,11 +40,7 @@
   }
 
   function swapItems(i, j) {
-    if (i < 0 || j < 0 || i >= Q.length || j >= Q.length) return;
-    var t = Q[i];
-    Q[i] = Q[j];
-    Q[j] = t;
-    render();
+    if (swapAt(Q, i, j)) render();
   }
 
   /* Jump to either end. Both are a move to a clamped position, so they reuse

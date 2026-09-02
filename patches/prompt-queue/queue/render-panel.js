@@ -28,6 +28,7 @@
     min.addEventListener("click", function () { collapsed = !collapsed; render(); });
     head.appendChild(toggle);
     head.appendChild(label);
+    head.appendChild(buildSavedHeadButton());   /* save this queue / open the saved ones */
     head.appendChild(min);
     return head;
   }

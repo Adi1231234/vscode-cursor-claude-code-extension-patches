@@ -34,6 +34,24 @@
     return b;
   }
 
+  /* A square ghost button whose whole label is an inline SVG - the shape every
+     injected icon control in this panel already had, written once. */
+  function iconBtn(icon, title, cls, fn) {
+    var b = btn("__qIconBtn" + (cls ? " " + cls : ""), title);
+    b.innerHTML = icon;
+    b.setAttribute("aria-label", title);
+    b.addEventListener("click", function (ev) { ev.stopPropagation(); fn(); });
+    return b;
+  }
+
+  function swapAt(arr, i, j) {
+    if (i < 0 || j < 0 || i >= arr.length || j >= arr.length) return false;
+    var t = arr[i];
+    arr[i] = arr[j];
+    arr[j] = t;
+    return true;
+  }
+
   function inp() {
     return globalThis.__ccInput();                     /* cached in lib/js/ccStore.js */
   }

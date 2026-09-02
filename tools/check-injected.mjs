@@ -26,11 +26,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
    patch whose script is a single file needs no entry. */
 const SCRIPTS = {
   "prompt-queue": {
-    dir: "patches/prompt-queue/queue/",
-    order: ["config-dom", "log", "session", "busy-files", "chips-preview", "persist",
-            "debug", "model", "schedule-lib", "schedule-clock", "add-button",
-            "schedule-modal", "render-panel", "row-menu", "render-rows",
-            "resize-input", "stop-pause", "flush-init"]
+    /* Read, not repeated. Kept here as well as in patch.ps1, this list went
+       stale the moment saved/ landed: "ok (18 fragments)" for a bundle that
+       ships 27, six files never scanned. Repo-root paths - the assembly
+       reaches outside the patch folder. */
+    files: JSON.parse(fs.readFileSync("patches/prompt-queue/order.json", "utf8"))
   },
   "shared-lib": {
     dir: "lib/js/",
@@ -72,12 +72,13 @@ function check(name) {
   const spec = SCRIPTS[name];
   if (!spec) { console.log(`  ${name}: no fragment list registered, skipped`); return true; }
 
+  /* `files` is repo-root paths, `dir` + `order` the older shorthand. */
+  const files = spec.files || spec.order.map((f) => spec.dir + f + ".js");
   let bad = [];
   let src = "";
-  for (const f of spec.order) {
-    const p = path.join(root, spec.dir, f + ".js");
-    const text = fs.readFileSync(p, "utf8");
-    bad = bad.concat(offenders(text, f + ".js"));
+  for (const f of files) {
+    const text = fs.readFileSync(path.join(root, f), "utf8");
+    bad = bad.concat(offenders(text, path.basename(f)));
     src += text;
   }
 
@@ -97,10 +98,10 @@ function check(name) {
   const filled = src.replace(/\$\{(__[A-Z]+__)\}/g, (m, t) => "x".repeat(m.length))
                     .replace(/__[A-Z]+__/g, (m) => "x".repeat(m.length));
   const ticks = [];
-  for (const f of spec.order) {
-    const text = fs.readFileSync(path.join(root, spec.dir, f + ".js"), "utf8");
+  for (const f of files) {
+    const text = fs.readFileSync(path.join(root, f), "utf8");
     text.split(String.fromCharCode(10)).forEach((line, n) => {
-      if (line.indexOf(String.fromCharCode(96)) >= 0) ticks.push(f + ".js:" + (n + 1) + " " + line.trim().slice(0, 80));
+      if (line.indexOf(String.fromCharCode(96)) >= 0) ticks.push(path.basename(f) + ":" + (n + 1) + " " + line.trim().slice(0, 80));
     });
   }
   if (ticks.length) {
@@ -138,7 +139,7 @@ function check(name) {
      the offender scan above is the actual test. */
   const ok = parses && bad.length === 0;
   const note = eaten ? `, ${eaten} ch to unicode escapes` : "";
-  console.log(`  ${name}: ${ok ? "ok" : "FAILED"} (${spec.order.length} fragments, ${src.length} bytes${note})`);
+  console.log(`  ${name}: ${ok ? "ok" : "FAILED"} (${files.length} fragments, ${src.length} bytes${note})`);
   return ok;
 }
 

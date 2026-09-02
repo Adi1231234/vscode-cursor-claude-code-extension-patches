@@ -4,7 +4,7 @@
 **Touches:** `extension.js + webview/index.css`
 **Guard marker:** `/* QUEUE */`
 
-Codex-style queue: hold messages while Claude is busy, edit / reorder / skip, sent one per turn. `queue.css` -> stylesheet, ordered `queue/*.js` fragments (each < 150 lines) concatenated and injected after the INPUTRTL/ZOOM script (uses the webview nonce + image-preview class hash).
+Codex-style queue: hold messages while Claude is busy, edit / reorder / skip, sent one per turn. `queue.css` + `saved/saved.css` -> stylesheet, ordered `queue/*.js` and `saved/*.js` fragments (each < 150 lines) concatenated and injected after the INPUTRTL/ZOOM script (uses the webview nonce + image-preview class hash).
 
 ## Adding to the queue
 
@@ -92,6 +92,28 @@ The queue survives a full editor restart, per session:
 
 If the session id can't be read, persistence silently disables (the queue
 still works in memory) rather than risking a wrong-keyed write.
+
+## Saved queues (`saved/`)
+
+A queue you built once, kept for the next chat: the bookmark beside the send
+button (and the one in the panel header) opens a dialog that saves the current
+queue under a name and loads, renames, edits or deletes the saved ones. Stored
+globally rather than per session (`ccq:saved`), because every Claude panel in a
+window shares one webview origin and therefore one localStorage - which is what
+makes "pick it up in the next conversation" work at all. Text, skipped state
+and *relative* schedules are kept; at-times and attachments deliberately are
+not, and a load parks the queue like any other bulk add. Read `saved/README.md`
+before touching it.
+
+All three dialogs here - schedule, log viewer, saved queues - share
+`queue/modal-shell.js` (behaviour: overlay, an icon + title + subtitle head, a
+foot, Esc, backdrop, focus trap, one-modal-at-a-time, and a hook letting a
+caller claim a key so Escape can step back a level) and `queue/modal.css` (the
+look: the app's own confirm-dialog family - `--app-modal-background` scrim,
+`--app-spacing-*` / `--corner-radius-*`, a 1px border and no shadow, a surface
+washed from the top with `--app-transparent-inner-border`, and an accent-tinted
+medallion in the head). Change either and all three dialogs change together,
+which is the point.
 
 ## Debug log viewer (`log.js`)
 
@@ -213,6 +235,25 @@ chosen over "fire-once" / "fire-all" catch-up because our messages execute.
 > fragments must contain **no backticks and no `${`** (even in comments) - they
 > would break out of the string. `node --check` the *patched* `extension.js`
 > (not just the standalone script) to catch this.
+
+## Tests
+
+    node patches/prompt-queue/tests/run-all.mjs
+
+`saved.test.js` (38 checks) runs `saved/store.js` itself - eval'd, not
+re-implemented - with only its outside world stubbed (localStorage, `Q`,
+`isBusy`, `render`). It pins the decisions rather than the mechanics: an
+at-time degrading to a plain item, attachments never reaching the store, a
+loaded timer coming back inactive, loading appending and parking the queue only
+while idle, a corrupt or foreign store reading as empty, and the cap. Then
+`check-injected` and `check-ps1`.
+
+**The fragment list is `order.json`, read by both `patch.ps1` and
+`tools/check-injected.mjs`.** They used to keep a copy each, and when the
+`saved/` fragments landed only `patch.ps1` learned about them - the checker
+went on reporting "ok (18 fragments)" for a bundle that ships 27, with six
+files and both lib runtimes never scanned. Add a fragment to `order.json` and
+nothing else needs telling.
 
 Exposes a single `Invoke-Patch $Ctx` (dot-sourced and called by `../../apply.ps1`). Idempotent and fail-safe: if its anchor isn't found it skips instead of corrupting anything.
 

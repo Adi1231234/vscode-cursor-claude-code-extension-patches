@@ -1,0 +1,107 @@
+/* QSAVED */
+/* Saved queues: the list and the editor. The box, the head, the foot and the
+   three button shapes are the shared chrome in queue/modal.css; the list below
+   is the app's OWN command menu, measured off the live DOM - 13px rows, 2px
+   gaps, 4px radius, --app-list-hover/active-background. Secondary text is the
+   --app-secondary-foreground TOKEN and not an opacity: the app dims its own
+   section headers to 50%, which lands around 3.4:1, and this is the text you
+   read to choose.
+
+   Heights come from flex, never from vh: patches/zoom puts the panel in a
+   second coordinate system where viewport units report the UNZOOMED viewport
+   while every rect is 1/zoom of it. min-height:0 on the scrollers lets the box
+   give them exactly the room it has left. */
+.__qSavedBody{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--app-spacing-medium,8px);min-width:0}
+.__qSavedHost{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+/* The app's own filter input is --app-input-background with NO border, which
+   works because it sits on --app-menu-background. On the dialog surface those
+   two are the same colour (#191a1b), so an unbordered field is invisible - it
+   read as a heading. The border is what carries "this is a field" here. */
+.__qFilter{flex:none;box-sizing:border-box;width:100%;padding:7px 10px;border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-small,4px);background:var(--app-input-background,#191a1b);color:var(--app-input-foreground,#bfbfbf);font:inherit;font-size:.92em;outline:none;transition:border-color .12s ease}
+.__qFilter:focus{border-color:var(--app-accent-color,#d97757)}
+.__qFilter::placeholder{color:var(--app-input-placeholder-foreground,#555)}
+/* ---- the list ---- */
+.__qSavedList{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--app-list-gap,2px);overflow-y:auto;overscroll-behavior:contain;margin-inline:calc(var(--app-spacing-small,4px) * -1);padding-inline:var(--app-spacing-small,4px)}
+.__qSavedItem{position:relative;display:flex;align-items:center;gap:var(--app-spacing-small,4px);border-radius:var(--app-list-border-radius,4px);transition:background .12s ease}
+.__qSavedItem:hover{background:var(--app-list-hover-background,rgba(255,255,255,.08))}
+/* Keyboard focus reads as the app's own active list row, so arrowing down the
+   list looks like arrowing down its command menu - plus the medallion going
+   solid, because the active background alone is only a ~1.4:1 change. */
+.__qSavedItem:focus-within{background:var(--app-list-active-background,rgba(255,255,255,.13));color:var(--app-list-active-foreground,#ededed);outline:1px solid color-mix(in srgb,var(--app-accent-color,#d97757) 55%,transparent);outline-offset:-1px}
+.__qSavedLoad{flex:1;min-width:0;box-sizing:border-box;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"med name" "med meta";align-items:center;column-gap:10px;row-gap:1px;padding:7px var(--app-spacing-medium,8px);border:none;background:none;color:inherit;font:inherit;font-size:1em;text-align:start;cursor:pointer;border-radius:inherit}
+.__qSavedLoad:focus-visible{outline:none}   /* the row carries the ring */
+/* The medallion: how many, as the row's anchor. It gives the list a left rail
+   to run your eye down and it is the one thing on the row that moves - tinted
+   at rest, deeper on hover, solid when the row has the focus. A phrase like
+   "3 messages ·" at the head of every preview said the same thing, repeated
+   itself down the list, and ate the width the preview needed. */
+.__qMed{grid-area:med;flex:none;box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--corner-radius-medium,6px);background:color-mix(in srgb,var(--app-accent-color,#d97757) 13%,transparent);color:var(--app-accent-color,#d97757);font-size:.85em;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;transition:background .14s ease,color .14s ease}
+.__qSavedItem:hover .__qMed{background:color-mix(in srgb,var(--app-accent-color,#d97757) 24%,transparent)}
+.__qSavedItem:focus-within .__qMed{background:var(--app-claude-clay-button-orange,#c6613f);color:var(--app-claude-ivory,#faf9f5)}
+.__qSavedName{grid-area:name;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;line-height:1.4}
+.__qSavedMeta{grid-area:meta;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.92em;line-height:1.35;color:var(--app-secondary-foreground,#8c8c8c)}
+.__qSavedItem:focus-within .__qSavedMeta{color:var(--app-primary-foreground,#bfbfbf)}
+.__qSavedActs{flex:none;display:flex;align-items:center;gap:2px;padding-inline-end:var(--app-spacing-small,4px)}
+/* Always present, never only-on-hover: a control that appears on hover is
+   invisible to the keyboard and to a reader looking for it. */
+.__qIconBtn{flex:none;box-sizing:border-box;width:26px;height:26px;padding:4px;border:none;background:none;color:var(--app-secondary-foreground,#8c8c8c);cursor:pointer;border-radius:var(--corner-radius-small,4px);display:flex;align-items:center;justify-content:center;transition:background .12s ease,color .12s ease}
+.__qIconBtn svg{width:100%;height:100%;display:block;pointer-events:none}
+.__qIconBtn:hover{background:var(--app-ghost-button-hover-background,rgba(90,93,94,.31));color:var(--app-primary-foreground,#bfbfbf)}
+.__qIconBtn.__qMenuDanger:hover{color:var(--app-error-foreground,#f48771)}
+/* ---- empty state: a picture of the thing, a headline, one sentence ---- */
+.__qEmpty{display:flex;flex-direction:column;align-items:center;gap:var(--app-spacing-medium,8px);padding:30px 12px 26px;text-align:center;line-height:1.5;color:var(--app-secondary-foreground,#8c8c8c)}
+/* The halo is the same accent tint the medallions carry, spread out - it lifts
+   the drawing off the surface without a shadow anywhere near it. */
+.__qEmptyHalo{display:flex;align-items:center;justify-content:center;width:132px;height:106px;margin-bottom:var(--app-spacing-small,4px);border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--app-accent-color,#d97757) 11%,transparent),transparent)}
+.__qEmptyArt{width:84px;height:64px;color:var(--app-secondary-foreground,#8c8c8c)}
+.__qArtMark{fill:var(--app-accent-color,#d97757)}
+.__qEmptyTitle{color:var(--app-primary-foreground,#bfbfbf);font-weight:600;font-size:1.08em}
+.__qEmptyBody{max-width:32em}
+/* ---- naming a queue (revealed by "Save current queue") ---- */
+.__qSaveForm{flex:none;display:flex;align-items:center;gap:var(--app-spacing-small,4px);padding:var(--app-spacing-small,4px);border-radius:var(--corner-radius-small,4px);background:var(--app-input-secondary-background,#202122);border:1px solid color-mix(in srgb,var(--app-accent-color,#d97757) 45%,transparent)}
+.__qNameIn{flex:1;min-width:0;box-sizing:border-box;padding:6px 8px;border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-small,4px);background:var(--app-input-background,#191a1b);color:var(--app-input-foreground,#bfbfbf);font:inherit;font-size:1em;outline:none;transition:border-color .12s ease}
+.__qNameIn:focus{border-color:var(--app-accent-color,#d97757)}
+.__qNameIn::placeholder{color:var(--app-input-placeholder-foreground,#555)}
+.__qJustSaved{animation:__qFlash 1.5s cubic-bezier(.2,.8,.3,1)}
+@keyframes __qFlash{from{background:color-mix(in srgb,var(--app-accent-color,#d97757) 26%,transparent)}to{background:transparent}}
+/* ---- delete confirm, in place of the row ---- */
+.__qSavedItem.__qConfirm{flex-wrap:wrap;gap:var(--app-spacing-small,4px) var(--app-spacing-medium,8px);padding:7px 6px 7px var(--app-spacing-medium,8px);background:color-mix(in srgb,var(--app-error-foreground,#f48771) 13%,transparent);box-shadow:inset 2px 0 0 var(--app-error-foreground,#f48771)}
+/* Wraps rather than ellipsises: what gets cut off is the consequence, and a
+   confirmation that hides the consequence is the one thing it must not do. */
+.__qConfirmText{flex:1 1 14ch;min-width:0;line-height:1.4;overflow-wrap:anywhere}
+.__qConfirmActs{flex:none;display:flex;align-items:center;gap:var(--app-spacing-small,4px);margin-inline-start:auto}
+.__qMini{padding:4px 10px;font-size:.92em}
+/* ---- the editor ---- */
+.__qEditList{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--app-list-gap,2px);overflow-y:auto;overscroll-behavior:contain;margin-inline:calc(var(--app-spacing-small,4px) * -1);padding-inline:var(--app-spacing-small,4px)}
+.__qEditRow{position:relative;display:flex;align-items:center;gap:var(--app-spacing-small,4px);padding:4px var(--app-spacing-small,4px) 4px 2px;border-radius:var(--app-list-border-radius,4px);transition:background .12s ease}
+.__qEditRow:hover,.__qEditRow:focus-within{background:var(--app-list-hover-background,rgba(255,255,255,.08))}
+/* 24x24 each, which is WCAG 2.2's minimum target size (2.5.8, AA), with a 12px
+   glyph pushed to the inside edge of each box. Centred in their boxes the two
+   arrows sit 24px apart and read as two marks that happen to be near each
+   other; hugging the seam they read as one stepper, which is what they are. */
+.__qEditNav{flex:none;display:flex;flex-direction:column;margin:-2px 0}
+.__qEditNav .__qIconBtn{width:24px;height:24px;padding:0;color:var(--app-secondary-foreground,#8c8c8c)}
+.__qEditNav .__qIconBtn svg{width:12px;height:12px}
+.__qEditNav .__qIconBtn:first-child{align-items:flex-end;padding-bottom:1px}
+.__qEditNav .__qIconBtn:last-child{align-items:flex-start;padding-top:1px}
+.__qEditNav .__qIconBtn:disabled{opacity:.22;background:none;cursor:default}
+/* Same reason: the 15px box gets a 24px hit area around it rather than growing. */
+.__qCheckHit{flex:none;display:flex;align-items:center;justify-content:center;width:24px;height:24px;cursor:pointer}
+/* The message is a FIELD, at rest as well as focused. A row of bare text with
+   a caret hiding in it does not say "this is the thing you came here to edit";
+   the recessed well does, and it gives the editor the rhythm of a form rather
+   than of a list you happen to be able to type into. */
+.__qEditText{flex:1;min-width:0;max-height:96px;overflow-y:auto;outline:none;white-space:pre-wrap;word-break:break-word;line-height:1.45;box-sizing:border-box;padding:4px 8px;border:1px solid var(--app-widget-border,#2a2b2c);border-radius:var(--corner-radius-small,4px);background:var(--app-input-background,#191a1b);transition:border-color .12s ease}
+/* The border, not the fill, is what makes it a field: --app-input-background is
+   the same colour as the dialog surface (see the root CLAUDE.md), so the well
+   on its own is invisible - and under the surface wash it reads as a smudge. */
+.__qEditRow:hover .__qEditText{border-color:color-mix(in srgb,var(--app-primary-foreground,#bfbfbf) 22%,transparent)}
+.__qEditText:focus{border-color:var(--app-accent-color,#d97757)}
+.__qEditRow.__qOff .__qEditText{text-decoration:line-through;color:var(--app-secondary-foreground,#8c8c8c)}
+.__qSchedTag{flex:none;border:1px solid color-mix(in srgb,var(--app-accent-color,#d97757) 40%,transparent);background:none;color:var(--app-accent-color,#d97757);cursor:pointer;padding:1px 7px;border-radius:var(--corner-radius-small,4px);font:inherit;font-size:.85em;line-height:1.5;white-space:nowrap;transition:background .12s ease}
+.__qSchedTag:hover{background:color-mix(in srgb,var(--app-accent-color,#d97757) 14%,transparent)}
+.__qAddMsg{flex:none;align-self:flex-start}
+/* ---- the two doors: composer footer + panel header ---- */
+.__qSaved svg{width:17px;height:17px;display:block;pointer-events:none}
+.__qHeadSave svg{width:15px;height:15px;display:block;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.__qMed,.__qSavedItem,.__qEditRow,.__qIconBtn{transition:none}}
