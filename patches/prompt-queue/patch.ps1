@@ -17,7 +17,7 @@ function Invoke-Patch {
     param($Ctx)
     Add-StyleBlock $Ctx (Get-LibCssPath 'ccScroll.css') '/* CCSCROLL */' 'shared scrollbar CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue.css') '/* QUEUE */' 'queue CSS'
-    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'queue/modal.css') '/* QMODAL */' 'shared dialog CSS'
+    Add-StyleBlock $Ctx (Get-LibCssPath 'ccModal.css') '/* QMODAL */' 'shared dialog CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'saved/saved.css') '/* QSAVED */' 'saved queues CSS'
 
     $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent

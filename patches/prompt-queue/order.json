@@ -3,6 +3,7 @@
   "lib/js/ccStore.js",
   "lib/js/ccRow.js",
   "patches/prompt-queue/queue/log.js",
+  "lib/js/ccModal.js",
   "patches/prompt-queue/queue/modal-shell.js",
   "patches/prompt-queue/queue/session.js",
   "patches/prompt-queue/queue/busy-files.js",

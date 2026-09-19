@@ -47,6 +47,8 @@ $order = @(
     'cwd-drive-case'
     'reload-restore'
     'remote-control-chip'
+    'remote-control-pill-icon'
+    'panel-settings'
     'history-dialog-clip'
     'panel-restart-button'
     'auto-followup'

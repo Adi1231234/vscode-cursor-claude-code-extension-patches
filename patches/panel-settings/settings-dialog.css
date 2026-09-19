@@ -1,0 +1,136 @@
+/* PANELSETTINGSDIALOG */
+/* What sits inside the settings dialog: the group of toggle rows and the
+   switch on each one. The dialog's own chrome - overlay, head, foot - is the
+   shared lib/css/ccModal.css.
+
+   Almost nothing here is a value of ours. The group is the app's own
+   Memory-dialog group and the switch is its own toggle component, both
+   re-expressed against the same tokens rather than borrowed by class name:
+   naming a hashed module class would tie this stylesheet to one release, and a
+   hash that moves leaves a control with no styling at all. */
+
+/* One hairline group, dividers between the rows and none after the last - the
+   app's own shape for a block of preferences. */
+.__ccSetGroup {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    border: 1px solid var(--app-widget-border, #2a2b2c);
+    border-radius: var(--corner-radius-small, 4px);
+}
+
+.__ccSetRow {
+    display: flex;
+    align-items: center;
+    gap: var(--app-spacing-large, 12px);
+    box-sizing: border-box;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid var(--app-widget-border, #2a2b2c);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.__ccSetRow:last-child {
+    border-bottom: none;
+}
+
+.__ccSetRow:hover {
+    background-color: var(--app-list-hover-background, #ffffff14);
+}
+
+/* Keyboard focus is a different state from hover, and the app draws it as a
+   1px inset outline rather than as a second background. */
+.__ccSetRow:focus-visible {
+    outline: 1px solid var(--app-input-active-border, #d97757);
+    outline-offset: -1px;
+}
+
+/* The label with its description stacked under it, the way the app's own
+   settings toggles read in the command menu - and the shape that survives a
+   narrow panel, where a nowrap detail beside the label wrapped the label to
+   three lines instead. */
+.__ccSetText {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.__ccSetLabel {
+    color: var(--app-primary-foreground, #bfbfbf);
+    font-size: var(--vscode-chat-font-size, 13px);
+    line-height: 1.35;
+}
+
+/* --app-secondary-foreground, not the --app-disabled-foreground the command
+   menu uses for the same line: that one lands near 3.4:1 against this surface,
+   and this reads 5.4:1 for nothing. */
+.__ccSetDetail {
+    min-width: 0;
+    color: var(--app-secondary-foreground, #8c8c8c);
+    font-size: calc(var(--vscode-chat-font-size, 13px) - 2px);
+    line-height: 1.4;
+}
+
+/* The app's toggle, to its measured values: a 32x18 track at radius 9 that goes
+   from --app-input-border to --app-accent-color, and a 14px thumb in
+   --app-primary-foreground travelling 2px -> 16px. Both transitions are .15s.
+   The app gives it no hover, focus or active state of its own - the row carries
+   those - so neither does this. */
+.__ccSw {
+    position: relative;
+    flex: none;
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--app-input-border, #7f7f7f66);
+    transition: background 0.15s;
+}
+
+.__ccSwOn {
+    background: var(--app-accent-color, #d97757);
+}
+
+.__ccSwThumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--app-primary-foreground, #bfbfbf);
+    transition: left 0.15s;
+}
+
+.__ccSwOn .__ccSwThumb {
+    left: 16px;
+}
+
+/* The app puts a key legend under a dialog it expects to be driven from the
+   keyboard, at 11px secondary with bordered kbd caps. */
+.__ccSetKeys {
+    margin: 0;
+    color: var(--app-secondary-foreground, #8c8c8c);
+    font-size: calc(var(--vscode-chat-font-size, 13px) - 2px);
+}
+
+.__ccSetKeys kbd {
+    padding: 1px 4px;
+    border: 1px solid var(--app-widget-border, #2a2b2c);
+    border-radius: 3px;
+    font-family: var(--app-monospace-font-family, monospace);
+    font-size: calc(var(--vscode-chat-font-size, 13px) - 3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .__ccSw,
+    .__ccSwThumb {
+        transition: none;
+    }
+}
