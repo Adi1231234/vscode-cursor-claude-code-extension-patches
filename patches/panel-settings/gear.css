@@ -1,0 +1,31 @@
+/* PANELSETTINGSGEAR */
+/* The settings gear in the input footer row.
+
+   The button itself is the app's own: it wears `footerButton footerButtonPrimary`,
+   which already gives it 26px of height, a 5px radius, the 26x26 glyph box, the
+   ghost hover background and the full primary foreground every other icon in
+   that row is drawn at. Only the two things that rule gets wrong for an
+   icon-only button are corrected here. */
+
+/* `.inputFooterV2 .footerButton` reserves `padding: 0 8px 0 0` for the gap
+   between an icon and its text label. The gear has no label, so that 8px is
+   dead space - it widens the button past its 26px neighbours and puts the glyph
+   off centre inside the hover square. The class is doubled to match that rule's
+   (0,2,0) specificity; ours is appended last, so it wins without an !important
+   and without naming the hashed footer class.
+
+   flex-shrink, because that rule also carries `flex-shrink: 1; min-width: 0` -
+   right for the buttons it was written for, which hold a text label and are
+   meant to ellipsize as the row fills, and wrong for one that is a glyph.
+   Measured at a 300px panel: the gear was squeezed to 18px wide with its 26px
+   glyph still painting over its neighbour. The app's own icon-only buttons
+   (menuButton, sendButton, addButton) never shrink either - not by declaring
+   it, but because they set no min-width, so their glyph is their automatic
+   floor. This restores that floor explicitly and lets the squeeze fall where
+   the app already puts it: on the model pill, which is built to ellipsize. */
+.cc-settings-gear.cc-settings-gear {
+    padding: 0;
+    width: 26px;
+    flex-shrink: 0;
+    justify-content: center;
+}
