@@ -16,9 +16,16 @@ in place. Read this before changing anything so the structure stays clean.
   - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
   - `js/` - shared runtime JS, one copy each: `ccWtResolve.js` (the
     `__ccWtResolve` transcript-dir resolver, pulled in with
-    `Add-CcWtResolveHelper`), `ccCopyText.js` (`window.__ccCopyText`) and
-    `ccStore.js` (`__ccStore` / `__ccFiber`, the webview session-store finder) -
-    the last two pulled into a patch's fragment list with `Get-LibJsPath`.
+    `Add-CcWtResolveHelper`), `ccCopyText.js` (`window.__ccCopyText`),
+    `ccStore.js` (`__ccStore` / `__ccFiber`, the webview session-store finder),
+    `ccRow.js` (`window.__ccRow`, the relative order injected footer buttons
+    agree on) and `ccModal.js` (`window.__ccModal`, the dialog chrome - overlay,
+    head, foot, Esc, backdrop, focus trap) - all but the first pulled into a
+    patch's fragment list with `Get-LibJsPath`.
+  - `css/` - the shared stylesheets, `Get-LibCssPath`: `ccScroll.css` (the
+    scrollbar) and `ccModal.css` (the dialog chrome that goes with
+    `lib/js/ccModal.js`). Whichever patch runs first appends them; the guard in
+    the file makes the rest a no-op.
 - **`patches/<name>/`** - one folder per feature or bug fix. Contains:
   - `patch.ps1` - defines a single `function Invoke-Patch { param($Ctx) ... }`.
   - `README.md` - what it does + the proven root cause.
@@ -40,7 +47,7 @@ in place. Read this before changing anything so the structure stays clean.
 `Editor` (display name, e.g. `Cursor` / `VS Code`), `Dir`, `Name`, `Version`,
 `Js` (extension.js path), `WebJs` (webview/index.js path),
 `Css` (webview/index.css path), plus detected minified identifiers
-`Nonce`, `MessageInputClass`, `MentionMirrorClass`, `PvHash`.
+`Nonce`, `MessageInputClass`, `MentionMirrorClass`, `PvHash`, `PillClass`.
 Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ctx`
 - do not re-scan inside a patch.
 
@@ -52,7 +59,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Get-InjectedJs <jsPath> @{ '__TOKEN__' = $value; ... }` - read a `.js` resource and substitute its `__TOKEN__` placeholders (literal `.Replace`). This is how zoom / input-rtl / reload-restore inject their scripts.
    - `Expand-JsTokens <string> @{ ... }` - same substitution on an already-built string (e.g. `prompt-queue`, which joins its `queue/*.js` fragments first).
 4. Reuse the `lib/Patch.ps1` helpers instead of re-writing read/guard/inject/write:
-   - `Add-StyleBlock $Ctx <cssPath> '<guard>' '<label>'` - append a CSS resource once.
+   - `Add-StyleBlock $Ctx <cssPath> '<guard>' '<label>' [@{ '__TOKEN__' = … }]` -
+     append a CSS resource once. The optional token table expands the same
+     `__TOKEN__` placeholders a `.js` resource gets, for a stylesheet that has to
+     name a hashed CSS-module class (see `remote-control-pill-icon`): detect the
+     hash in `Extension.ps1` and thread it in, never write it down.
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Add-CcWtResolveHelper $js` - prepend the shared worktree resolver once (returns new text). Use this for anything that must resolve a `<sid>.jsonl` across worktree project dirs; never paste the helper inline.
@@ -124,6 +135,39 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   rows, `4px 8px` padding, 2px gaps, 4px radius, an 11.7px section header.
   Copy its *metrics*, not its 50% opacity on secondary text - that lands near
   3.4:1, and `--app-secondary-foreground` gets you 5.4:1 for free.
+- **Before drawing a control, check the app does not already ship it.** It has a
+  real **toggle switch** of its own (a 32x18 track at radius 9 going from
+  `--app-input-border` to `--app-accent-color`, a 14x14 thumb in
+  `--app-primary-foreground` moving `left: 2px -> 16px`, both `.15s`, and *no*
+  hover/focus/active state - the row carries those). It is what upstream puts on
+  "Focus view" and "Thinking". Reproduce those values against the tokens rather
+  than borrowing the hashed class, and note where preferences actually live: the
+  app has **no settings dialog**, it registers each one as a command-menu action
+  in a `"Settings"` section with the switch as `trailingComponent`. The one
+  dialog that does hold preferences is Memory/Instructions, and its group is the
+  shape to copy - a hairline `--app-widget-border` box at radius 4, rows at
+  `8px 12px` divided by 1px with none after the last, the description stacked
+  under the label. `patches/panel-settings/` is the worked example.
+- **`footerButtonInactive` does not exist** (checked on 2.1.278: the footer
+  module defines `footerButton`, `footerButtonPrimary`, `footerButtonStatic`
+  only). `patches/remote-control-chip/runtime/chip.js` reads it anyway, so its
+  off state renders `class="footerButton_… undefined cc-rc-chip"` - the exact
+  CSS-module-miss failure this file warns about two bullets down. Read every
+  class back off the live module map before using it.
+- **An icon-only button in the footer row needs `flex-shrink: 0`.**
+  `.footerButton` carries `flex-shrink: 1; min-width: 0`, which is right for the
+  buttons it was written for - they hold a text label and are meant to ellipsize
+  as the row fills. A glyph has nothing to give: measured at a 300px panel, an
+  injected 26px button was squeezed to 18px with its 26px svg painting past its
+  own box. The app's own icon buttons never shrink because they set no
+  min-width, so their glyph is their floor; an injected one has to say so.
+- **The footer row has a second, JS-driven size axis: `data-fit-stage`.** The
+  footer writes `0` / `1` / `2` on its own container from a `ResizeObserver` as
+  the row stops fitting, and rules hang off it - that is how the Remote Control
+  pill drops its label and becomes a glyph, and how the model pill is dropped
+  entirely at stage 2. It is not a media query and will not show up in a search
+  for one. `patches/remote-control-pill-icon/` just lifts that pill's stage-1
+  declarations out of the condition.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not
@@ -199,6 +243,40 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `patches/panel-restart-button`; measured in a live editor, the clicked panel
   got a new document and a new channel while its neighbours kept theirs, and
   exactly one `claude.exe` was left running.
+- **An OS notification has to leave the editor, and only the host can send it.**
+  Upstream already has a `show_notification` request the webview calls in a
+  dozen places - message, severity, buttons, even an `onlyIfNotVisible` gate -
+  but it ends at `vscode.window.showInformationMessage`, drawn *inside* the
+  window you are not looking at. There is nothing to turn on instead: the CLI's
+  `preferredNotifChannel` only offers terminal escape-sequence channels
+  (`iterm2`, `kitty`, `ghostty`, `terminal_bell`), all inert here, and the only
+  completion signals in the bundle are the tab icon swapping to
+  `claude-logo-done.svg` and the sidebar badge. For a real Action Center toast
+  the host has to shell out to PowerShell (WinRT is unreachable from Node here
+  without a native module). Three things that keep that clean, all in
+  `patches/panel-settings/host/`: the PowerShell stays a real `.ps1` and is
+  base64'd into the injected JS at patch time and run with `-EncodedCommand`, so
+  no language is embedded in another and there is no command line to quote
+  wrong; every dynamic value travels in the **environment** and is XML-escaped
+  in the script, so no conversation title can break the toast or inject into it;
+  and the toast wears the running editor's own name and icon **without the patch
+  branching on the editor**, because both publish a `win32AppUserModelId` in the
+  `product.json` beside `vscode.env.appRoot`. Toasts can be read back for a test
+  with `ToastNotificationManager.History.GetHistory(<appId>)`.
+- **`session.busy` is the run-state signal, and it is subscribable.** `busy` is
+  set true once on the SDK's `system`/`init` frame and false only in the store's
+  own `endTurn()` on the `result` frame, so it does **not** flap between tool
+  calls and one rising-then-falling pair is one run. Signals carry
+  `.subscribe()`, so the edge is a push - do not add a poll loop for it (the
+  queue and auto-followup poll because they need a *settled reply*, which is a
+  different question). Two traps: `.subscribe()` fires immediately with the
+  **current** value, so the first callback must only prime the edge detector or
+  opening a panel mid-run reads as a finish; and **Stop is indistinguishable
+  from a finish** on this signal, so decorate the store's `interrupt()` - which
+  runs synchronously with the click, before the signal flips - the way
+  `prompt-queue`, `auto-followup` and `panel-settings` all do. The store object
+  is replaced when the conversation changes, so re-wire from a render that takes
+  `session` as a prop rather than once at load.
 
 ## Testing a change (without touching your real install)
 
