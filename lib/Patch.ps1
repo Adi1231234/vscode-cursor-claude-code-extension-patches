@@ -4,11 +4,16 @@
 
 # Append a CSS resource to the webview stylesheet, once (guarded by a marker the
 # resource itself contains).
+#
+# $Tokens expands the same __TOKEN__ placeholders a .js resource gets, for the
+# stylesheets that have to name a hashed CSS-module class: the hash is detected
+# in Extension.ps1 and threaded in here, so it is never written down in a file
+# that outlives the release that minted it.
 function Add-StyleBlock {
-    param($Ctx, [string]$CssPath, [string]$Guard, [string]$Label)
+    param($Ctx, [string]$CssPath, [string]$Guard, [string]$Label, $Tokens = @{})
     $css = Read-Text $Ctx.Css
     if ($css.Contains($Guard)) { Write-Skip "$Label already present"; return }
-    Add-Text $Ctx.Css ("`r`n`r`n" + (Read-Text $CssPath))
+    Add-Text $Ctx.Css ("`r`n`r`n" + (Expand-JsTokens (Read-Text $CssPath) $Tokens))
     Write-Ok "$Label appended"
 }
 

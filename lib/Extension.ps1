@@ -40,6 +40,7 @@ function Find-ClaudeExtension {
         ThinkingClass      = 'thinking_aHyQPQ'
         ToolUseClass       = 'toolUse_uq5aLg'
         ToolResultClass    = 'toolResult_uq5aLg'
+        PillClass          = 'pill_jamplw'
     }
 
     if (Test-Path $ctx.Js) {
@@ -64,6 +65,10 @@ function Find-ClaudeExtension {
         if ($wc -match 'thinkingSummary:"thinkingSummary_([a-zA-Z0-9]+)"') { $ctx.ThinkingClass = "thinking_$($matches[1])" }
         if ($wc -match 'toolUse:"(toolUse_[a-zA-Z0-9]+)"') { $ctx.ToolUseClass = $matches[1] }
         if ($wc -match 'toolResult:"(toolResult_[a-zA-Z0-9]+)"') { $ctx.ToolResultClass = $matches[1] }
+        # The status pill in the input footer (Remote Control). Three modules
+        # define a `pill` key, so that one is useless on its own; `pillLink` is
+        # unique to this module and carries the same hash.
+        if ($wc -match 'pillLink:"pillLink_([a-zA-Z0-9]+)"') { $ctx.PillClass = "pill_$($matches[1])" }
     }
 
     return $ctx

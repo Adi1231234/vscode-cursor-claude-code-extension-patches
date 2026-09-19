@@ -1,0 +1,38 @@
+/* RCPILLICON */
+/* Remote Control pill: always the glyph, never the "Remote Control" label.
+
+   Upstream draws the pill in the input footer row as a phone glyph followed by
+   the words "Remote Control", and already ships an icon-only form of it - the
+   label dropped, the 8px side padding zeroed, the glyph switched on. That form
+   is not a breakpoint: it hangs off `[data-fit-stage="1"|"2"]`, an attribute the
+   footer component sets on its own container from a ResizeObserver once the row
+   stops fitting. So the glyph showed up only while the panel was narrow.
+
+   These three declarations are upstream's own, lifted out of those two stage
+   selectors and applied unconditionally. Nothing here is a value of ours: the
+   glyph keeps the 26px box, the -4px block margin and the pill background it
+   already had at stage 1, so a wide panel now renders exactly what a narrow one
+   always did.
+
+   Specificity: the app's base rules are `.pill{padding:0 8px}` (0,1,0) and
+   `.pill svg|span{...}` (0,1,1). Ours match them exactly and this stylesheet is
+   appended last, so they win on order alone - no !important, and no fight with
+   the (0,2,0) stage rules, which set these same values anyway.
+
+   The label is only ever hidden visually-by-removal here, not orphaned: every
+   branch of the pill already carries its own `aria-label` (the status text), so
+   dropping the span costs nothing in the accessibility tree.
+
+   The module hash is detected at patch time (see $Ctx.PillClass) and threaded in
+   as __PILL__ - it is reassigned on any release that touches that module. */
+.__PILL__ {
+    padding: 0;
+}
+
+.__PILL__ svg {
+    display: block;
+}
+
+.__PILL__ span {
+    display: none;
+}
