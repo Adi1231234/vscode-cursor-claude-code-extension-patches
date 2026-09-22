@@ -178,6 +178,11 @@ branch that actually notifies is covered in Node, with `require` shadowed so
 `vscode` and `child_process` are both stubs:
 `node patches/panel-settings/tests/notify.test.js`.
 
+The queue gate gets the same treatment for the cases that decide whether a
+notification is lost for ever - a paused queue, a panel with no queue patch, a
+queue whose methods throw - in `node patches/panel-settings/tests/queue-gate.test.js`.
+The lab drives the real queue, but only for the ordinary case.
+
 ## Waiting for the whole queue
 
 A queue of five prompts is one piece of work, not five, so the moment worth
@@ -319,6 +324,17 @@ And for the focus gate, in a live panel and in Node:
   the one bit flipped **off** and two more items queued the same way, it gained
   **two**. Counted by how many toasts carry this session's own summary: 1 -> 2
   -> 4.
+- **The queue gate's edge cases, in Node** (`tests/queue-gate.test.js`, 9
+  assertions): a **paused** queue notifies rather than waiting for ever, a panel
+  with no queue patch notifies, a `count()` or `paused()` that throws notifies,
+  a queue API with no `count()` notifies, and a build with no `paused()` still
+  holds while items remain.
+- **The dialog under the rest of the panel's conditions.** The shell's Tab trap
+  counts **1** focusable setting row while the parent is off and **3** once it
+  is on, so a locked row really does leave the Tab order. Under `direction: rtl`
+  all three rows mirror - switch at the leading edge, `text-align: start`, the
+  dialog still inside the panel. After a real `Developer: Reload Window` the
+  stored values come back exactly and the three rows reflect them.
 - **The notifying branch, in Node** (`patches/panel-settings/tests/notify.test.js`,
   `vscode` and `child_process` stubbed): on+focused stays quiet and still
   returns `true` so the message does not fall through to the app; on+unfocused
