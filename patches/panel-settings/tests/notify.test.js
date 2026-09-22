@@ -32,16 +32,22 @@ function loadHost() {
     }
     if (name === 'child_process') {
       return { spawn: (exe, args, opts) => {
-        notified.push({ via: 'toast', title: opts.env.CC_TOAST_TITLE, body: opts.env.CC_TOAST_BODY, launch: opts.env.CC_TOAST_LAUNCH });
+        notified.push({
+          via: 'toast', title: opts.env.CC_TOAST_TITLE, body: opts.env.CC_TOAST_BODY,
+          folder: opts.env.CC_TOAST_FOLDER, exe: opts.env.CC_TOAST_EXE
+        });
         return { on: () => {}, kill: () => {} };
       } };
     }
     return realRequire(name);
   };
   // eslint-disable-next-line no-unused-vars
-  const require = stub;                     // shadows inside the eval below
-  delete globalThis.__ccNotify;             // the IIFE guards on itself
-  eval(fs.readFileSync(path.resolve(__dirname, '..', 'host', 'notify.js'), 'utf8'));
+  const require = stub;                     // shadows inside the evals below
+  delete globalThis.__ccNotify;             // both IIFEs guard on themselves
+  delete globalThis.__ccToastShow;
+  const host = (f) => path.resolve(__dirname, '..', 'host', f);
+  eval(fs.readFileSync(host('show.js'), 'utf8'));      // raises the toast
+  eval(fs.readFileSync(host('notify.js'), 'utf8'));    // decides whether to
   return globalThis.__ccNotify;
 }
 
@@ -84,15 +90,19 @@ r = run('payload', () => { focused = false; }, done({ skipWhenFocused: true }));
 ok(notified[0] && notified[0].title === 'Claude finished' && notified[0].body === 'proj',
    'title and body reach the toast: ' + JSON.stringify(notified[0]));
 
-// 7. the click target: this window's folder, ending in a slash so the editor
-//    treats it as a folder (a path without one opens an editor tab instead)
-r = run('launch uri', () => { focused = false; }, done({ skipWhenFocused: true }));
-ok(notified[0] && notified[0].launch === 'vscode://file/C:/proj/demo%20app/',
-   'launch uri is the window folder, slash-terminated and encoded: ' + (notified[0] || {}).launch);
+// 7. the click target: this window's folder, handed to the editor's own
+//    command line by a shortcut (toast.ps1 writes it). The folder goes over
+//    verbatim - no uri, so nothing to encode and no security prompt.
+r = run('focus target', () => { focused = false; }, done({ skipWhenFocused: true }));
+ok(notified[0] && notified[0].folder === 'C:\\proj\\demo app',
+   'the click target is the window folder, verbatim: ' + (notified[0] || {}).folder);
+ok(notified[0] && notified[0].exe === process.execPath,
+   'and the editor binary to hand it to: ' + (notified[0] || {}).exe);
 
-// a window with no folder has nothing to focus, so the toast gets no launch
+// a window with no folder has nothing to focus, so the toast gets no target
 r = run('no folder', () => { folders = []; }, done({ skipWhenFocused: true }));
-ok(notified[0] && notified[0].launch === '', 'no workspace folder means no click target: ' + JSON.stringify((notified[0] || {}).launch));
+ok(notified[0] && notified[0].folder === '' && notified[0].exe === '',
+   'no workspace folder means no click target: ' + JSON.stringify((notified[0] || {}).folder));
 
 // 8. somebody else's message is not ours
 notified = [];

@@ -263,34 +263,36 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   branching on the editor**, because both publish a `win32AppUserModelId` in the
   `product.json` beside `vscode.env.appRoot`. Toasts can be read back for a test
   with `ToastNotificationManager.History.GetHistory(<appId>)`.
-- **To raise a specific editor window from outside, hand the shell a uri - do
-  not try to focus it yourself.** `SetForegroundWindow` from a background
-  process returns **false** (measured): Windows refuses a caller that did not
-  receive the last input. And a click on a toast cannot run code of ours unless
-  something is registered or left running - the BurntToast author's own write-up
-  says PowerShell cannot subscribe to a toast's WinRT events before 7.1, and
-  every published recipe registers a custom scheme pointing at a `.cmd` or a
-  `powershell`, both of which **flash a console**. The editor's own scheme has
-  none of those costs: it is already registered, and it is a windowed app.
-  Three things decide whether it focuses the right window or makes a mess, all
-  read off `vscode/src/vs/code/electron-main/app.ts` and confirmed against the
-  installed `main.js`:
-  1. **End the path with a slash.** `getWindowOpenableFromProtocolUrl` passes
-     `gotoLineMode`, so a path is a *file* unless it ends in `/`
-     (`if (e.charCodeAt(e.length-1) !== 47)`). Without it you open an editor
-     tab, and a folder without one lands in an **empty new window**.
-  2. **Point at the window's own folder**, not the session's cwd - that is what
-     `findWindowOnFile` / the workspace match uses, and the handler then calls
-     `window?.focus()` itself.
-  3. **An extension authority (`vscode://Anthropic.claude-code/...`) will not do
-     it.** That path is handled *inside* whichever window the uri is routed to,
-     so it cannot raise the window you meant.
-  The first open of any `file:` uri also raises **"An external application wants
-  to open ..."**; that is `shouldBlockOpenable`, switched off by
-  `security.promptForLocalFileProtocolHandling: false` (the dialog's own
-  checkbox sets the same thing). Measured with five windows open: foreground
-  went from `docvoice` to the target window, window count unchanged, nothing
-  opened inside it, no console anywhere.
+- **To raise a specific editor window from outside, go through the editor's
+  COMMAND LINE, not its uri.** `Code.exe "<folder>"` focuses the window already
+  holding that folder, asks nothing, and shows no console because the editor is
+  a windowed app. Everything else costs something, all measured:
+  - `SetForegroundWindow` from a background process returns **false** - Windows
+    refuses a caller that did not receive the last input.
+  - The editor's uri (`scheme://file/<folder>/`) *does* focus the right window,
+    but every `file:` uri from an external app first raises **"An external
+    application wants to open ..."** - `shouldBlockOpenable`, whose only switch
+    is the user's `security.promptForLocalFileProtocolHandling`. That prompt
+    lives in `handleProtocolUrl`; **the CLI never goes near it**.
+  - Its uri is also fussy in two ways worth knowing if you ever use it:
+    `getWindowOpenableFromProtocolUrl` passes `gotoLineMode`, so a path is a
+    *file* unless it ends in `/` (`if (e.charCodeAt(e.length-1) !== 47)`) -
+    without the slash you open a tab, and a folder without one lands in an
+    **empty new window**. And an extension authority
+    (`vscode://Anthropic.claude-code/...`) cannot do this at all: it is handled
+    *inside* whichever window the uri is routed to.
+  - A toast click cannot run code of ours for free either - the BurntToast
+    author's own write-up says PowerShell cannot subscribe to a toast's WinRT
+    events before **7.1**, and every published recipe registers a custom scheme
+    pointing at a `.cmd` or a `powershell`, both of which **flash a console**.
+  So the click runs a **shortcut** (target: the editor binary, argument: the
+  window's folder), which needs no registry, no settings and no parsing at
+  click time. `patches/panel-settings/host/toast.ps1` writes it under
+  `%LOCALAPPDATA%\claude-code-patches\focus\`, one per folder, outside the
+  extension so an update does not take it with it. Measured with five windows
+  open and the setting removed: clicking the toast moved the foreground to the
+  right window, window count unchanged, nothing opened inside it, no prompt and
+  no console.
 - **"Is this editor window focused?" is a host question, never a panel one.**
   There is exactly one extension host per window, so `vscode.window.state.focused`
   in it *is* the answer, with nothing to match up. The panel cannot stand in for
