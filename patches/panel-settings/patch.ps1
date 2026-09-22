@@ -38,7 +38,10 @@ function Invoke-Patch {
 
     $ps1 = Read-Text (Join-Path $PSScriptRoot 'host/toast.ps1')
     $b64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($ps1))
-    $hostJs = Get-InjectedJs (Join-Path $PSScriptRoot 'host/notify.js') @{ '__TOAST_B64__' = $b64 }
+    # show.js raises the toast, notify.js decides whether to; the base64'd
+    # PowerShell only belongs to the first.
+    $hostJs = (Get-InjectedJs (Join-Path $PSScriptRoot 'host/show.js') @{ '__TOAST_B64__' = $b64 }) +
+              "`n" + (Read-Text (Join-Path $PSScriptRoot 'host/notify.js'))
 
     # The dialog chrome is the shared one (prompt-queue's three dialogs use the
     # same file); it guards itself, so whichever of the two lands first wins and

@@ -206,12 +206,31 @@ come round yet, so the next item is still in the queue when it is counted.
 
 ## Clicking the toast raises that window
 
-The toast carries `activationType="protocol"` and a `launch` uri built by the
-host: the **window's own workspace folder**, slash-terminated, under the
-editor's own scheme (`vscode.env.uriScheme`, so Cursor gets `cursor://` without
-the patch knowing which editor it is in).
+The toast carries `activationType="protocol"` and a `launch` pointing at a
+**shortcut** whose target is the editor binary and whose argument is this
+window's workspace folder. Clicking it runs the editor's own command line, and
+the editor focuses the window already holding that folder. Nothing parses a uri
+at click time, and because the editor is a windowed app **no console appears
+anywhere in the chain**.
+
+The shortcut lives in `%LOCALAPPDATA%\claude-code-patches\focus\`, one per
+folder, named after the folder plus a hash of its full path. It is written by
+`host/toast.ps1` (which is already running, and can reach `WScript.Shell`),
+reused rather than rewritten, and kept outside the extension so that an editor
+update does not take it with it - a toast can sit in the Action Center for
+hours, and the file it points at has to still be there.
 
 Everything else was measured and ruled out first:
+
+- **The editor's own uri needs a settings change.** `scheme://file/<folder>/`
+  *does* focus the right window (measured), but every `file:` uri from an
+  external app first raises **"An external application wants to open …"** -
+  that is `shouldBlockOpenable`, and the only switch for it is the user's
+  `security.promptForLocalFileProtocolHandling`. A patch has no business
+  editing settings.json. The CLI has no such prompt: `shouldBlockOpenable`
+  lives in `handleProtocolUrl`, which the command line never goes near.
+- **A registry scheme means a console.** Every recipe on the web registers a
+  custom scheme pointing at a `.cmd` or a `powershell`, and both flash one.
 
 - **We cannot focus the window ourselves.** `SetForegroundWindow` from a
   background process returns **false** - Windows refuses a caller that did not
@@ -232,14 +251,12 @@ Everything else was measured and ruled out first:
   are handled *inside* whichever window the uri is routed to - so it cannot
   raise the window the run happened in. Measured: it raised nothing.
 
-### One setting it needs
+### It needs no settings change
 
-The first `file:` uri from an external app raises **"An external application
-wants to open '…' in Code. Do you want to open this folder?"** - that is
-`shouldBlockOpenable`. It is switched off by
-`security.promptForLocalFileProtocolHandling: false`, which is exactly what the
-dialog's own "don't ask again" checkbox sets. The patch does **not** write that
-setting: it is the user's, and a patch has no business editing settings.json.
+That is the point of going through the command line rather than the editor's
+uri. Verified by removing `security.promptForLocalFileProtocolHandling` from
+settings.json entirely, confirming the file was byte-identical to its backup,
+and clicking a toast again: the right window came forward with no prompt.
 
 ## Why it was quiet
 
@@ -390,19 +407,24 @@ And for the focus gate, in a live panel and in Node:
   the one bit flipped **off** and two more items queued the same way, it gained
   **two**. Counted by how many toasts carry this session's own summary: 1 -> 2
   -> 4.
-- **The click, end to end, on a real toast.** Five editor windows open,
-  foreground on `llama.cpp-docvoice`. A toast was raised carrying
-  `launch="vscode://file/C:/Users/…/vscode-cursor-claude-code-extension-patches/"`
-  and clicked by hand. Foreground afterwards:
+- **The click, end to end, on a real toast, with no settings change.** Five
+  editor windows open. A toast raised by this patch's own `toast.ps1` (which
+  wrote `vscode-cursor-claude-code-extension-patches-2FFAB9556356.lnk`, target
+  `Code.exe`, argument the folder) was clicked by hand: the foreground moved to
   **`vscode-cursor-claude-code-extension-patches`**, window count still five,
-  nothing opened inside it, and no console appeared at any point. The same uri
-  launched directly moved the foreground from `docvoice` to the same window.
-  Before the trailing slash was added, the identical uri opened an **empty new
-  window** instead; pointing it at a file opened that file as a tab.
-- **The launch uri itself, in Node** (`tests/notify.test.js`): built from the
-  window's folder, backslashes flipped, spaces percent-encoded, and always
-  slash-terminated (`C:\proj\demo app` -> `vscode://file/C:/proj/demo%20app/`);
-  a window with no folder gets an empty launch, so its toast simply does
+  nothing opened inside it, no prompt and no console at any point. The control
+  ran with `settings.json` restored byte-identical to its backup.
+- **The pieces separately.** `Code.exe "<folder>"` alone moved the foreground
+  from `docvoice` to that window with no prompt; launching the shortcut through
+  a `file:///…lnk` uri from Chrome did the same. For contrast,
+  `SetForegroundWindow` from a background process returned **false**, and the
+  editor's `scheme://file/<folder>/` uri focused the right window but only
+  after the security prompt - and without a trailing slash the same uri opened
+  an **empty new window**, while pointing it at a file opened that file as a
+  tab.
+- **The click target, in Node** (`tests/notify.test.js`): the window's folder
+  travels verbatim (`C:\proj\demo app`, nothing to encode) alongside the editor
+  binary, and a window with no folder sends neither, so its toast simply does
   nothing when clicked.
 - **The queue gate's edge cases, in Node** (`tests/queue-gate.test.js`, 9
   assertions): a **paused** queue notifies rather than waiting for ever, a panel
