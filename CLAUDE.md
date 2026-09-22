@@ -299,6 +299,18 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   that rather than reaching into the queue's own state, the way `auto-followup`
   and `panel-settings` both do. Treat a **paused** queue as nothing pending: it
   will not send anything, so the run that just ended was the last one.
+- **A feature that is silent by design has to say why it was silent.** When
+  nothing happens there is no way to tell from the outside whether it decided to
+  stay quiet or never saw the event at all - one run in testing raised no toast
+  and could not be explained afterwards, because nothing had been written down.
+  The queue patch owns the only in-panel log (`Ctrl+Alt+L` opens the viewer,
+  `window.__ccLogs()` reads the ring programmatically), and it now hands the
+  writer out as `window.__ccLog(tag, ...)`, so any patch can leave a trace under
+  its own tag instead of borrowing `__qAuto.log` and being filed as
+  "autofollowup". Log the *decision*, not just the event, and where the decision
+  is taken somewhere else - `panel-settings` sends the message but the **host**
+  applies the focus gate - say so in the line, or a reader chasing a silence
+  reads `sent` and concludes the message was lost.
 
 ## Testing a change (without touching your real install)
 

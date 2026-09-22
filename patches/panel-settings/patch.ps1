@@ -44,7 +44,7 @@ function Invoke-Patch {
     # same file); it guards itself, so whichever of the two lands first wins and
     # the other is a no-op.
     $parts = @(Get-LibJsPath 'ccModal.js') +
-             (@('store.js', 'icon.js', 'watch.js', 'row.js', 'dialog.js', 'gear.js') |
+             (@('store.js', 'icon.js', 'trace.js', 'label.js', 'watch.js', 'row.js', 'dialog.js', 'gear.js') |
                 ForEach-Object { Join-Path $PSScriptRoot "runtime/$_" })
     $runtime = ($parts | ForEach-Object { Read-Text $_ }) -join "`n"
 

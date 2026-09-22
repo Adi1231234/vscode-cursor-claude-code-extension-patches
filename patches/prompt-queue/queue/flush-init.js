@@ -147,6 +147,7 @@
   try {
     window.__ccLogs = function () { return _ccLogs.slice(); };            /* read logs programmatically */
     window.__ccLogBtn = function () { window.__ccLogBtnOn = 1; return "queue log button enabled"; };
+    window.__ccLog = ccLog;   /* any patch can trace under its own tag, not __qAuto.log's */
   } catch (e) {}
   ensureAddButton();
   setInterval(function () {
