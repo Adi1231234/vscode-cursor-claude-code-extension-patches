@@ -15,6 +15,7 @@ const realRequire = require;
 let focused = false;      // what vscode.window.state.focused answers
 let vscodeThrows = false; // or whether it can be read at all
 let notified = [];        // every toast that actually went out, by either route
+let folders = [{ uri: { fsPath: 'C:\\proj\\demo app' } }];  // this window's folder
 
 function loadHost() {
   const stub = (name) => {
@@ -24,12 +25,14 @@ function loadHost() {
         window: {
           state: { get focused() { return focused; } },
           showInformationMessage: (m) => notified.push({ via: 'editor', text: m })
-        }
+        },
+        workspace: { workspaceFolders: folders },
+        env: { uriScheme: 'vscode', appRoot: 'C:\\nowhere' }
       };
     }
     if (name === 'child_process') {
       return { spawn: (exe, args, opts) => {
-        notified.push({ via: 'toast', title: opts.env.CC_TOAST_TITLE, body: opts.env.CC_TOAST_BODY });
+        notified.push({ via: 'toast', title: opts.env.CC_TOAST_TITLE, body: opts.env.CC_TOAST_BODY, launch: opts.env.CC_TOAST_LAUNCH });
         return { on: () => {}, kill: () => {} };
       } };
     }
@@ -49,6 +52,7 @@ const done = (extra) => Object.assign({ type: '__ccnotify', op: 'done', title: '
 function run(label, setup, msg) {
   notified = [];
   focused = false; vscodeThrows = false;
+  folders = [{ uri: { fsPath: 'C:\\proj\\demo app' } }];
   setup();
   const handled = loadHost().handle(msg);
   return { label, handled, sent: notified.length };
@@ -80,7 +84,17 @@ r = run('payload', () => { focused = false; }, done({ skipWhenFocused: true }));
 ok(notified[0] && notified[0].title === 'Claude finished' && notified[0].body === 'proj',
    'title and body reach the toast: ' + JSON.stringify(notified[0]));
 
-// 7. somebody else's message is not ours
+// 7. the click target: this window's folder, ending in a slash so the editor
+//    treats it as a folder (a path without one opens an editor tab instead)
+r = run('launch uri', () => { focused = false; }, done({ skipWhenFocused: true }));
+ok(notified[0] && notified[0].launch === 'vscode://file/C:/proj/demo%20app/',
+   'launch uri is the window folder, slash-terminated and encoded: ' + (notified[0] || {}).launch);
+
+// a window with no folder has nothing to focus, so the toast gets no launch
+r = run('no folder', () => { folders = []; }, done({ skipWhenFocused: true }));
+ok(notified[0] && notified[0].launch === '', 'no workspace folder means no click target: ' + JSON.stringify((notified[0] || {}).launch));
+
+// 8. somebody else's message is not ours
 notified = [];
 ok(loadHost().handle({ type: 'something-else' }) === false, 'a foreign message must not be claimed');
 ok(notified.length === 0, 'a foreign message must not notify');

@@ -204,6 +204,43 @@ The count is trustworthy at that instant because of the queue's own 150ms flush
 tick: this runs synchronously on the signal falling, and that tick cannot have
 come round yet, so the next item is still in the queue when it is counted.
 
+## Clicking the toast raises that window
+
+The toast carries `activationType="protocol"` and a `launch` uri built by the
+host: the **window's own workspace folder**, slash-terminated, under the
+editor's own scheme (`vscode.env.uriScheme`, so Cursor gets `cursor://` without
+the patch knowing which editor it is in).
+
+Everything else was measured and ruled out first:
+
+- **We cannot focus the window ourselves.** `SetForegroundWindow` from a
+  background process returns **false** - Windows refuses a caller that did not
+  receive the last input.
+- **The click cannot run our code for free.** The BurntToast author's own
+  write-up states PowerShell cannot subscribe to a toast's WinRT events before
+  7.1 (this machine's toasts run on 5.1), and every published recipe registers a
+  custom scheme pointing at a `.cmd` or a `powershell` - both of which **flash a
+  console window**. The editor's scheme is already registered and the editor is
+  a windowed app, so nothing flashes at all.
+- **The trailing slash is load-bearing.** `getWindowOpenableFromProtocolUrl`
+  passes `gotoLineMode`, so a protocol path is a *file* unless it ends in `/`
+  (`if (e.charCodeAt(e.length-1) !== 47)`). Without it the click opens an editor
+  tab; a folder path without it lands in an empty new window. With it, a folder
+  already open in a window simply focuses that window.
+- **The extension's own deep link cannot do this.** `vscode://Anthropic.claude-code/open?session=…`
+  exists and reveals a conversation, but the source says extension authorities
+  are handled *inside* whichever window the uri is routed to - so it cannot
+  raise the window the run happened in. Measured: it raised nothing.
+
+### One setting it needs
+
+The first `file:` uri from an external app raises **"An external application
+wants to open '…' in Code. Do you want to open this folder?"** - that is
+`shouldBlockOpenable`. It is switched off by
+`security.promptForLocalFileProtocolHandling: false`, which is exactly what the
+dialog's own "don't ask again" checkbox sets. The patch does **not** write that
+setting: it is the user's, and a patch has no business editing settings.json.
+
 ## Why it was quiet
 
 This feature is silent by design, and that has one bad failure mode: when no
@@ -353,6 +390,20 @@ And for the focus gate, in a live panel and in Node:
   the one bit flipped **off** and two more items queued the same way, it gained
   **two**. Counted by how many toasts carry this session's own summary: 1 -> 2
   -> 4.
+- **The click, end to end, on a real toast.** Five editor windows open,
+  foreground on `llama.cpp-docvoice`. A toast was raised carrying
+  `launch="vscode://file/C:/Users/…/vscode-cursor-claude-code-extension-patches/"`
+  and clicked by hand. Foreground afterwards:
+  **`vscode-cursor-claude-code-extension-patches`**, window count still five,
+  nothing opened inside it, and no console appeared at any point. The same uri
+  launched directly moved the foreground from `docvoice` to the same window.
+  Before the trailing slash was added, the identical uri opened an **empty new
+  window** instead; pointing it at a file opened that file as a tab.
+- **The launch uri itself, in Node** (`tests/notify.test.js`): built from the
+  window's folder, backslashes flipped, spaces percent-encoded, and always
+  slash-terminated (`C:\proj\demo app` -> `vscode://file/C:/proj/demo%20app/`);
+  a window with no folder gets an empty launch, so its toast simply does
+  nothing when clicked.
 - **The queue gate's edge cases, in Node** (`tests/queue-gate.test.js`, 9
   assertions): a **paused** queue notifies rather than waiting for ever, a panel
   with no queue patch notifies, a `count()` or `paused()` that throws notifies,
