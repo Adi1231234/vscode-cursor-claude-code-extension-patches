@@ -204,6 +204,35 @@ The count is trustworthy at that instant because of the queue's own 150ms flush
 tick: this runs synchronously on the signal falling, and that tick cannot have
 come round yet, so the next item is still in the queue when it is counted.
 
+## Why it was quiet
+
+This feature is silent by design, and that has one bad failure mode: when no
+toast appears there is nothing to tell you whether it decided to stay quiet or
+never saw the run at all. One run in testing raised no toast and could not be
+explained afterwards, because nothing had been written down.
+
+So every decision leaves a line in the queue patch's own in-panel ring, under
+the tag `notify` (`Ctrl+Alt+L` opens the viewer; `window.__ccLogs()` reads it):
+
+```
+13:14:02.053 [notify] armed busy=false
+13:14:21.716 [notify] edge run ended
+13:14:21.716 [notify] sent Walnut
+```
+
+and instead of `sent`, one of `quiet the user pressed Stop` / `quiet
+notifyOnFinish is off` / `quiet queue still has work` / `lost no host connection
+to send on`. A missing `edge` line means the run was never seen at all, which is
+a different fault from any of those.
+
+The **focus gate is applied in the host**, so `sent` is not the same as shown
+while it is on - the line says so (`sent Walnut (host stays quiet if this window
+is focused)`), or a reader chasing a silence would read `sent` and conclude the
+message was lost when the host had deliberately swallowed it.
+
+If the queue patch is not installed there is nowhere to write and this is a
+no-op: the feature must not depend on its own diagnostics.
+
 ## The setting itself
 
 One global `localStorage` key, `ccSettings`, holding `{v:1, values:{…}}`. The
@@ -329,6 +358,20 @@ And for the focus gate, in a live panel and in Node:
   with no queue patch notifies, a `count()` or `paused()` that throws notifies,
   a queue API with no `count()` notifies, and a build with no `paused()` still
   holds while items remain.
+- **The trace, against both outcomes.** A notifying run logs
+  `armed busy=false` / `edge run ended` / `sent <summary>` and the toast
+  appears; with the focus gate on, the same run logs
+  `sent <summary> (host stays quiet if this window is focused)` and **no** toast
+  appears, which is the line that keeps a host-side suppression from reading as
+  a lost message.
+- **The one run that never explained itself.** During this work a single run
+  raised no toast with both gates open. It was chased through six targeted
+  reproductions - after a reload that restored the session, after a reload that
+  came back to a fresh one, after New session, as the first run on a
+  freshly-opened panel, with and without evals in between - and every one of
+  them notified correctly. A direct probe toast proved Windows was not
+  throttling. It stays unexplained rather than explained away; the trace above
+  exists so the next occurrence is one look rather than another afternoon.
 - **The dialog under the rest of the panel's conditions.** The shell's Tab trap
   counts **1** focusable setting row while the parent is off and **3** once it
   is on, so a locked row really does leave the Tab order. Under `direction: rtl`

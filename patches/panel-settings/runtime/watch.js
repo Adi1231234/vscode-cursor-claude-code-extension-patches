@@ -44,10 +44,17 @@ function __ccSettingsWatch(session) {
     function finished() {
         if (userStopped) {
             userStopped = false;
+            __ccSettingsNote("quiet", "the user pressed Stop");
             return;
         }
-        if (!__ccSettingsGet("notifyOnFinish")) return;
-        if (__ccSettingsGet("waitForQueue") && __ccSettingsQueuePending()) return;
+        if (!__ccSettingsGet("notifyOnFinish")) {
+            __ccSettingsNote("quiet", "notifyOnFinish is off");
+            return;
+        }
+        if (__ccSettingsGet("waitForQueue") && __ccSettingsQueuePending()) {
+            __ccSettingsNote("quiet", "queue still has work");
+            return;
+        }
         __ccSettingsNotifyHost(session);
     }
 
@@ -56,12 +63,18 @@ function __ccSettingsWatch(session) {
             session.busy.subscribe(function (busy) {
                 if (wasBusy === null) {
                     wasBusy = !!busy;
+                    __ccSettingsNote("armed", "busy=" + !!busy);
                     return;
                 }
-                if (wasBusy && !busy) finished();
+                if (wasBusy && !busy) {
+                    __ccSettingsNote("edge", "run ended");
+                    finished();
+                }
                 wasBusy = !!busy;
             });
-        } catch (e) {}
+        } catch (e) {
+            __ccSettingsNote("broken", "subscribe failed: " + (e && e.message));
+        }
     }, 0);
 }
 
@@ -98,7 +111,17 @@ function __ccSettingsQueuePending() {
 function __ccSettingsNotifyHost(session) {
     try {
         var connection = session.connection && session.connection.value;
-        if (!connection || typeof connection.send !== "function") return;
+        if (!connection || typeof connection.send !== "function") {
+            __ccSettingsNote("lost", "no host connection to send on");
+            return;
+        }
+        /* The focus gate is applied in the host, so "sent" is not the same as
+           "shown" while it is on - say so here, or a reader chasing a silence
+           sees `sent` and concludes the message was lost when in fact the host
+           deliberately swallowed it. */
+        var skipWhenFocused = __ccSettingsGet("skipWhenFocused") === true;
+        __ccSettingsNote("sent", __ccSettingsSessionLabel(session) +
+            (skipWhenFocused ? " (host stays quiet if this window is focused)" : ""));
         connection.send({
             type: "__ccnotify",
             op: "done",
@@ -108,37 +131,9 @@ function __ccSettingsNotifyHost(session) {
                the panel is an iframe and document.hasFocus() answers a
                different question, about the panel rather than the window. So
                the setting travels with the message and the host applies it. */
-            skipWhenFocused: __ccSettingsGet("skipWhenFocused") === true
+            skipWhenFocused: skipWhenFocused
         });
-    } catch (e) {}
-}
-
-/* What the toast says underneath the title: the conversation's own summary if
-   it has one yet, else the folder it is running in, else nothing. A toast that
-   only says "Claude finished" is useless with three windows open.
-
-   `unwrap` because these fields are signals, but not uniformly across versions
-   - reading .value off a plain string would quietly yield undefined and cost
-   the toast its only identifying line. The backslash is built rather than
-   written: this file is prepended to webview/index.js today, where a literal
-   one would be fine, but every other injected script in this repo lives inside
-   a template literal that would eat it, and the idiom should not differ per
-   file. */
-function __ccSettingsSessionLabel(session) {
-    try {
-        var summary = __ccSettingsUnwrap(session.summary);
-        if (summary) return String(summary);
-        var cwd = __ccSettingsUnwrap(session.cwd);
-        if (cwd) {
-            var parts = String(cwd).split(String.fromCharCode(92)).join("/").split("/").filter(Boolean);
-            return parts.length ? parts[parts.length - 1] : "";
-        }
-    } catch (e) {}
-    return "";
-}
-
-function __ccSettingsUnwrap(field) {
-    if (field === null || field === undefined) return undefined;
-    if (typeof field === "object" && "value" in field) return field.value;
-    return field;
+    } catch (e) {
+        __ccSettingsNote("lost", "send threw: " + (e && e.message));
+    }
 }
