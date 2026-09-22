@@ -13,8 +13,14 @@
    value written by a future version. */
 var __ccSettingsKey = "ccSettings";
 
+/* Both gates default ON, and both only do anything while notifyOnFinish is on -
+   which is why the dialog disables their rows until then. A toast about a
+   window you are already looking at is noise, and a queue of five prompts is
+   one piece of work, not five: the interesting moment is the end of it. */
 var __ccSettingsDefaults = {
-    notifyOnFinish: false
+    notifyOnFinish: false,
+    skipWhenFocused: true,
+    waitForQueue: true
 };
 
 function __ccSettingsRead() {

@@ -50,6 +50,19 @@
     outline-offset: -1px;
 }
 
+/* A row whose setting only means something while another one is on. The app's
+   own locked toggle row is exactly this and nothing more: opacity .5 and a
+   default cursor. The hover rule has to be undone too, or a row that cannot be
+   clicked still lights up under the pointer. */
+.__ccSetRowOff {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.__ccSetRowOff:hover {
+    background-color: transparent;
+}
+
 /* The label with its description stacked under it, the way the app's own
    settings toggles read in the command menu - and the shape that survives a
    narrow panel, where a nowrap detail beside the label wrapped the label to
