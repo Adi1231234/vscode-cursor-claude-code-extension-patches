@@ -41,6 +41,45 @@ globalThis.__ccNotify = globalThis.__ccNotify || (function () {
         return appId;
     }
 
+    /* Where clicking the toast should take you: this window.
+
+       Windows will not let a background process raise a window -
+       SetForegroundWindow returns false when the caller did not receive the
+       last input - so the click has to be handled by something the shell
+       itself launches. The editor already registers its own uri scheme, and it
+       is a windowed app, so handing the shell a uri flashes no console at all.
+       Every scripted route in the wild (a .cmd or a powershell behind a custom
+       scheme) shows one.
+
+       Two details decide whether this focuses the right window or opens junk,
+       both read off the editor's own source:
+
+       The path must end in a slash. The protocol handler treats a path as a
+       FILE unless it ends in one ("if (e.charCodeAt(e.length-1) !== 47)"),
+       because it passes gotoLineMode - so no trailing slash means it opens an
+       editor tab, and a folder without one lands in an empty window. With the
+       slash it is a folder openable, and a folder already open in a window
+       just focuses that window: no tab, no new window.
+
+       And it is the window's own folder, not the session's cwd, because that
+       is what the editor matches windows on.
+
+       Measured, with five windows open: foreground went from "docvoice" to
+       "vscode-cursor-claude-code-extension-patches" with the window count
+       unchanged and nothing opened inside it. */
+    function launchUri() {
+        try {
+            var vscode = require("vscode");
+            var folders = vscode.workspace.workspaceFolders;
+            if (!folders || !folders.length) return "";
+            var path = String(folders[0].uri.fsPath).split(String.fromCharCode(92)).join("/");
+            if (path.charAt(path.length - 1) !== "/") path += "/";
+            return vscode.env.uriScheme + "://file/" + encodeURI(path);
+        } catch (e) {
+            return "";
+        }
+    }
+
     /* Everywhere that is not Windows gets the editor's own notification rather
        than nothing, so the toggle still does something recognisable there. */
     function inEditor(title, body) {
@@ -54,7 +93,8 @@ globalThis.__ccNotify = globalThis.__ccNotify || (function () {
         var env = Object.assign({}, process.env, {
             CC_TOAST_APPID: editorAppId(),
             CC_TOAST_TITLE: String(title || ""),
-            CC_TOAST_BODY: String(body || "")
+            CC_TOAST_BODY: String(body || ""),
+            CC_TOAST_LAUNCH: launchUri()
         });
         var child;
         try {

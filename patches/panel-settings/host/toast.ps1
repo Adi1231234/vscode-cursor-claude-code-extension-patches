@@ -35,7 +35,16 @@ try {
     $title = ConvertTo-ToastText $env:CC_TOAST_TITLE
     $body = ConvertTo-ToastText $env:CC_TOAST_BODY
 
-    $xml = '<toast><visual><binding template="ToastGeneric"><text>' +
+    # Clicking the toast hands this uri to the shell, which gives it to the
+    # editor - a windowed app, so nothing flashes on screen. The host builds it
+    # (see notify.js); an empty value just means the toast does nothing when
+    # clicked, which is what a window with no folder gets.
+    $launch = ''
+    if ($env:CC_TOAST_LAUNCH) {
+        $launch = ' activationType="protocol" launch="' + (ConvertTo-ToastText $env:CC_TOAST_LAUNCH).Replace('"', '&quot;') + '"'
+    }
+
+    $xml = '<toast' + $launch + '><visual><binding template="ToastGeneric"><text>' +
         $title + '</text><text>' + $body + '</text></binding></visual></toast>'
 
     $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
