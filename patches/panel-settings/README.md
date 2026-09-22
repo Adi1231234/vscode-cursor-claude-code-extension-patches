@@ -1,8 +1,10 @@
 # panel-settings
 
 A **gear in the input footer row** that opens a **settings dialog**, and the
-first setting to live in it: **raise a Windows notification when a run
-finishes**.
+three settings in it: **raise a Windows notification when a run finishes**,
+**stay quiet while the window you are looking at is the one Claude runs in**,
+and **with a queue still to go, wait for the end of it rather than announcing
+every item**.
 
 ## Why a Windows notification is a patch at all
 
@@ -142,6 +144,61 @@ On anything that is not Windows the host falls back to
 `vscode.window.showInformationMessage`, so the toggle still does something
 recognisable there.
 
+## Staying quiet while you are already looking
+
+The second setting asks: when the run ends, is the focused window the one Claude
+is running in? If so, say nothing.
+
+**Only the host can answer that.** The panel is an out-of-process iframe, and
+`document.hasFocus()` answers a different question - it is about the *panel*,
+so it is false whenever the caret is in the editor beside it, and a run that
+ended while you were typing in a file would notify anyway. The host has the
+real answer in one property: there is exactly one extension host per editor
+window, and this is that window's, so `vscode.window.state.focused` *is* the
+question, with nothing to match up by hand.
+
+So the setting lives in the panel with the other one, travels on the message as
+`skipWhenFocused`, and the host applies it. If focus cannot be read at all the
+toast still goes out: a notification you did not need is a smaller failure than
+a silence you were relying on.
+
+It defaults **on** - a toast about a window you are already watching is noise -
+and it does nothing unless the first setting is on, which is why its row is
+disabled until then rather than left looking live. A switch you can move that
+changes nothing is worse than one you cannot.
+
+### Testing it needs two different harnesses
+
+A lab window **reports itself focused**, which is the opposite of what its own
+desktop object suggests: it is the only window on that desktop, so Windows gives
+it the focus there and `state.focused` is `true` even though nothing of it is on
+your screen. So the lab can only exercise the *quiet* branch, and it does that
+conclusively by changing one bit and nothing else (see Verified below). The
+branch that actually notifies is covered in Node, with `require` shadowed so
+`vscode` and `child_process` are both stubs:
+`node patches/panel-settings/tests/notify.test.js`.
+
+## Waiting for the whole queue
+
+A queue of five prompts is one piece of work, not five, so the moment worth
+announcing is the end of it. The third setting holds the notification back while
+anything is still lined up behind the run that just ended.
+
+Nothing is reached into to find that out. The prompt-queue patch publishes its
+own surface on `window.__qAuto` - the same one `auto-followup` reads - and two
+of its methods answer this exactly: `count()`, which already excludes parked
+items, and `paused()`.
+
+**A paused queue counts as nothing pending**, deliberately. A held queue will
+not send anything, so the run that just ended really was the last one, and
+treating it as "more to come" would mean never notifying at all. The same goes
+for a panel where the queue patch is not installed, and for anything here
+throwing: no queue, so nothing to wait for, so notify.
+
+The count is trustworthy at that instant because of the queue's own 150ms flush
+tick: this runs synchronously on the signal falling, and that tick cannot have
+come round yet, so the next item is still in the queue when it is counted.
+
 ## The setting itself
 
 One global `localStorage` key, `ccSettings`, holding `{v:1, values:{…}}`. The
@@ -238,3 +295,34 @@ And end to end, with the toggle on, read back out of the Windows Action Center
   `busy` true at the click, `Interrupted` in the transcript afterwards) and
   **no toast was raised** - the history still held exactly the three from
   before. That is the `interrupt()` decoration doing its job.
+
+And for the focus gate, in a live panel and in Node:
+
+- **The dialog's two rows behave as a pair.** Fresh profile: the parent reads
+  `aria-checked="false"`, enabled, opacity 1; the dependent reads `"true"` (its
+  default) but `disabled`, opacity `0.5`, `cursor: default`. Clicking the
+  dependent while locked changes nothing. Turning the parent on makes it
+  `disabled: false`, opacity 1, `cursor: pointer` in the same pass; toggling it
+  then writes `{"v":1,"values":{"notifyOnFinish":true,"skipWhenFocused":false}}`;
+  turning the parent off locks and dims it again.
+- **One bit, two outcomes, everything else identical.** With
+  `skipWhenFocused: true`, a real run finished (`busy` false, summary
+  `Pineapple`, `pineapple` in the transcript) and **no toast appeared** - the
+  Action Center still held the same 20. With the bit flipped off and nothing
+  else changed, the next finished run put **`Claude finished | Pineapple`** at
+  the top of that list. That is the gate, and it also proves a lab window
+  reports itself focused.
+- **The queue gate, driven by the real queue.** Two prompts pushed straight onto
+  it with `window.__qAuto.add(...)` (`count()` 2, `paused()` false), both ran to
+  completion (`beta` in the transcript, queue back to 0). With the setting
+  **on**, the Action Center gained **exactly one** toast for the two runs; with
+  the one bit flipped **off** and two more items queued the same way, it gained
+  **two**. Counted by how many toasts carry this session's own summary: 1 -> 2
+  -> 4.
+- **The notifying branch, in Node** (`patches/panel-settings/tests/notify.test.js`,
+  `vscode` and `child_process` stubbed): on+focused stays quiet and still
+  returns `true` so the message does not fall through to the app; on+unfocused
+  notifies; off+focused notifies; a message with no flag at all notifies (an
+  older panel against a newer host); an unreadable `vscode` fails open and
+  notifies; the title and body still reach the toast; and a foreign message is
+  neither claimed nor notified. 9 assertions, all passing.

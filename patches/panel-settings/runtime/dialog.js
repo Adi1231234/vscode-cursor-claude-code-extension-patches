@@ -5,19 +5,25 @@
    only place upstream puts preferences behind a dialog rather than in the
    command menu. One hairline group at radius 4, rows at 8px/12px divided by a
    1px --app-widget-border with none after the last, a 12px gap, the label at
-   13px primary taking the width, an 11px secondary detail, then the switch at
-   the trailing edge.
-
-   Each row is a real <button role="switch" aria-checked>, which is the app's
-   own accessible wrapper for that switch (it does the same on its plugin
-   cards, because the switch itself is a pure visual with no semantics). A
-   button also gets Enter, Space, focus and the shell's Tab trap for free,
-   which is why there is no roving-focus code here. */
+   13px primary taking the width, an 11px secondary description under it, then
+   the switch at the trailing edge. A row is built by runtime/row.js. */
 var __ccSettingsOptions = [
     {
         name: "notifyOnFinish",
         label: "Notify when a run finishes",
         detail: "A Windows notification when Claude stops working. Stopping a run yourself never notifies."
+    },
+    {
+        name: "skipWhenFocused",
+        dependsOn: "notifyOnFinish",
+        label: "Stay quiet while this window is focused",
+        detail: "If the window Claude is running in is the focused one when a run ends, skip the notification."
+    },
+    {
+        name: "waitForQueue",
+        dependsOn: "notifyOnFinish",
+        label: "Wait for the whole queue",
+        detail: "With prompts still queued, stay quiet until the last one has run, rather than after each."
     }
 ];
 
@@ -38,6 +44,7 @@ function __ccSettingsDialog() {
     __ccSettingsOptions.forEach(function (option) {
         group.appendChild(__ccSettingsRow(option, values[option.name]));
     });
+    __ccSettingsSyncDependents(group);
     shell.box.appendChild(group);
 
     var keys = document.createElement("p");
@@ -58,60 +65,6 @@ function __ccSettingsDialog() {
     shell.mount();
     var first = shell.box.querySelector(".__ccSetRow");
     if (first) first.focus();
-}
-
-function __ccSettingsRow(option, value) {
-    var row = document.createElement("button");
-    row.type = "button";
-    row.className = "__ccSetRow";
-    row.setAttribute("role", "switch");
-    row.setAttribute("aria-checked", value ? "true" : "false");
-
-    /* Label above description, stacked, rather than a short detail at the
-       trailing edge. Both shapes exist in the app - the Memory dialog puts a
-       one-word status after the label, the command menu stacks a sentence under
-       it - and the second is the one upstream uses for its *own* settings
-       toggles ("Focus view", "Thinking"). It is also the only one that holds up
-       in a narrow panel: measured at 300px, a nowrap detail beside the label
-       left it about 40px and wrapped it to three lines, 93px tall. */
-    var text = document.createElement("span");
-    text.className = "__ccSetText";
-
-    var label = document.createElement("span");
-    label.className = "__ccSetLabel";
-    label.textContent = option.label;
-    text.appendChild(label);
-
-    if (option.detail) {
-        var detail = document.createElement("span");
-        detail.className = "__ccSetDetail";
-        detail.textContent = option.detail;
-        text.appendChild(detail);
-    }
-    row.appendChild(text);
-
-    var track = document.createElement("span");
-    track.className = "__ccSw" + (value ? " __ccSwOn" : "");
-    var thumb = document.createElement("span");
-    thumb.className = "__ccSwThumb";
-    track.appendChild(thumb);
-    row.appendChild(track);
-
-    row.addEventListener("click", function () {
-        var next = row.getAttribute("aria-checked") !== "true";
-        /* Paint first, then store: the switch has a 150ms transition and
-           waiting on localStorage before moving it makes the row feel like it
-           did not take the click. A write that fails puts it straight back,
-           which is the only honest thing to show. */
-        __ccSettingsPaintRow(row, track, next);
-        if (!__ccSettingsSet(option.name, next)) __ccSettingsPaintRow(row, track, !next);
-    });
-    return row;
-}
-
-function __ccSettingsPaintRow(row, track, on) {
-    row.setAttribute("aria-checked", on ? "true" : "false");
-    track.className = "__ccSw" + (on ? " __ccSwOn" : "");
 }
 
 function __ccSettingsKbd(text) {

@@ -263,6 +263,23 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   branching on the editor**, because both publish a `win32AppUserModelId` in the
   `product.json` beside `vscode.env.appRoot`. Toasts can be read back for a test
   with `ToastNotificationManager.History.GetHistory(<appId>)`.
+- **"Is this editor window focused?" is a host question, never a panel one.**
+  There is exactly one extension host per window, so `vscode.window.state.focused`
+  in it *is* the answer, with nothing to match up. The panel cannot stand in for
+  it: it is an out-of-process iframe, so `document.hasFocus()` is about the panel
+  and reads false whenever the caret is in the editor beside it. A setting that
+  depends on focus therefore lives in the panel but is *applied* in the host -
+  send it along with the message (`patches/panel-settings` sends
+  `skipWhenFocused`). Fail open when focus cannot be read: a notification nobody
+  needed beats a silence somebody was relying on. **A lab window reports itself
+  focused**, which is the opposite of what its own desktop object suggests: it
+  is the only window on that desktop, so Windows hands it the focus there and
+  `state.focused` is `true` even though nothing is on your screen. Measured by
+  the one experiment that separates the two branches - same run twice, one bit
+  changed: with the setting on, no toast; with it off, `Claude finished |
+  Pineapple`. So the lab tests the *quiet* branch, and the notifying branch has
+  to be tested by loading the host module in Node with `require` shadowed
+  (`patches/panel-settings/tests/notify.test.js`).
 - **`session.busy` is the run-state signal, and it is subscribable.** `busy` is
   set true once on the SDK's `system`/`init` frame and false only in the store's
   own `endTurn()` on the `result` frame, so it does **not** flap between tool
@@ -276,7 +293,12 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   runs synchronously with the click, before the signal flips - the way
   `prompt-queue`, `auto-followup` and `panel-settings` all do. The store object
   is replaced when the conversation changes, so re-wire from a render that takes
-  `session` as a prop rather than once at load.
+  `session` as a prop rather than once at load. And "is more work lined up behind
+  this run?" has an answer already published: the queue exports `window.__qAuto`
+  with `count()` (parked items already excluded), `paused()` and `add()` - read
+  that rather than reaching into the queue's own state, the way `auto-followup`
+  and `panel-settings` both do. Treat a **paused** queue as nothing pending: it
+  will not send anything, so the run that just ended was the last one.
 
 ## Testing a change (without touching your real install)
 
