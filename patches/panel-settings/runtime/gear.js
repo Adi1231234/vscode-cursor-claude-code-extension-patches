@@ -12,7 +12,7 @@
    rule reserves between an icon and its text label, which on a button with no
    label is dead space that widens it and pushes the glyph off centre.
 
-   Note what is deliberately NOT copied from patches/remote-control-chip: it
+   Note what is deliberately NOT copied from the retired remote-control-chip: it
    reaches for css.footerButtonInactive, and that key does not exist in this
    bundle's module map, so it renders the literal string "undefined" as a class
    name. Every class named here was read back off the live map first.

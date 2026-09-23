@@ -13,15 +13,13 @@ in place. Read this before changing anything so the structure stays clean.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
-  - `Patch.ps1` - reusable inject helpers + the shared worktree resolver.
-  - `js/` - shared runtime JS, one copy each: `ccWtResolve.js` (the
-    `__ccWtResolve` transcript-dir resolver, pulled in with
-    `Add-CcWtResolveHelper`), `ccCopyText.js` (`window.__ccCopyText`),
-    `ccStore.js` (`__ccStore` / `__ccFiber`, the webview session-store finder),
-    `ccRow.js` (`window.__ccRow`, the relative order injected footer buttons
-    agree on) and `ccModal.js` (`window.__ccModal`, the dialog chrome - overlay,
-    head, foot, Esc, backdrop, focus trap) - all but the first pulled into a
-    patch's fragment list with `Get-LibJsPath`.
+  - `Patch.ps1` - reusable inject helpers.
+  - `js/` - shared runtime JS, one copy each: `ccCopyText.js`
+    (`window.__ccCopyText`), `ccStore.js` (`__ccStore` / `__ccFiber`, the webview
+    session-store finder), `ccRow.js` (`window.__ccRow`, the relative order
+    injected footer buttons agree on) and `ccModal.js` (`window.__ccModal`, the
+    dialog chrome - overlay, head, foot, Esc, backdrop, focus trap) - each pulled
+    into a patch's fragment list with `Get-LibJsPath`.
   - `css/` - the shared stylesheets, `Get-LibCssPath`: `ccScroll.css` (the
     scrollbar) and `ccModal.css` (the dialog chrome that goes with
     `lib/js/ccModal.js`). Whichever patch runs first appends them; the guard in
@@ -54,7 +52,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 ## Adding a new patch
 
 1. `mkdir patches/<kebab-name>`; add `patch.ps1` with `function Invoke-Patch { param($Ctx) ... }` and a short `README.md`.
-2. Add `<kebab-name>` to the `$order` array in `apply.ps1`. Order matters only for the webview-script chain (`zoom` -> `input-rtl` -> `prompt-queue`) and for `worktree-title-dir` before `worktree-fork-diff` (shared helper). Everything else is independent.
+2. Add `<kebab-name>` to the `$order` array in `apply.ps1`. Order matters only for the webview-script chain (`zoom` -> `input-rtl` -> `prompt-queue`); everything else is independent.
 3. Put any injected JS in its own `.js` file (never a PS string - see conventions below) and pull it in with the loaders:
    - `Get-InjectedJs <jsPath> @{ '__TOKEN__' = $value; ... }` - read a `.js` resource and substitute its `__TOKEN__` placeholders (literal `.Replace`). This is how zoom / input-rtl / reload-restore inject their scripts.
    - `Expand-JsTokens <string> @{ ... }` - same substitution on an already-built string (e.g. `prompt-queue`, which joins its `queue/*.js` fragments first).
@@ -66,7 +64,6 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
      hash in `Extension.ps1` and thread it in, never write it down.
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
-   - `Add-CcWtResolveHelper $js` - prepend the shared worktree resolver once (returns new text). Use this for anything that must resolve a `<sid>.jsonl` across worktree project dirs; never paste the helper inline.
    - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
    - `Add-WebviewMessageHook $js <hookPath>` - put a returning guard at the top of **every** chat surface's `onDidReceiveMessage` in `extension.js`, so a patch can answer messages of its own before the app's protocol switch logs them as unknown. The hook's `__WV__` / `__MSG__` / `__COMMS__` placeholders are filled for you; returns the new text, or `$null` when the shape is gone (then `Write-Miss` and write nothing). Several patches hook the same listener - what is already there is carried through, so their order does not matter (`background-tasks`, `panel-restart-button`).
 
@@ -82,7 +79,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **An identifier is `[\w$]`, never `\w`, and it is never written down.** Two separate facts, both measured on the pristine bundles. (1) The name mangler changed in **2.1.245**: `$` went from 0 uses as a parameter in 2.1.241 to 10,914 in 2.1.245 (15,683 in the webview bundle), and the whole alphabet moved from `r t n i e o s a` to `X J Y Q $ z W G`. `\w` is `[A-Za-z0-9_]` and cannot match `$`, so **eleven anchors across eight patches broke in that single release** - every one of them matched again the moment the class was widened. Names can also carry digits (`f0`), so `[A-Za-z]+` is not an identifier class either. (2) Even within one mangler the names are reassigned **every release** - `renameSession(e,t,r)` -> `($,J,X)` -> `($,Q,J)` with no code change between the last two - because they are allocated by global frequency, so any edit anywhere reshuffles the whole file. Anchor on what the mangler cannot touch (string literals, property names, `this.` paths, the shape of the code) and capture every identifier as `([\w$]+)`, threading it into the injected JS as a placeholder. `panel-restart-button` and `electron-run-as-node` are the worked counter-examples: they wrote `b(`, `c`, `e`, `r` into the anchor and broke hardest.
 - **A captured name spliced back into a regex must go through `[regex]::Escape`.** `reload-restore` builds its second anchor from the name captured by its first. Once that name became `$`, the unescaped splice turned into an end-of-string anchor and the site silently stopped matching - a `[miss]`, not an error.
 - **A re-anchored patch does not reach an already-patched install.** A multi-site patch writes its guard once *any* site matched, so an install patched before the fix reports `[skip]` and silently keeps the partial result. After changing an anchor, restore the pristine bundles (or reinstall the extension) and re-run `apply.ps1` - and say so in the PR, because everyone else's install is in the same state.
-- **No JS inside a PowerShell string - ever.** Every piece of JS that gets written into a bundle - a whole `<script>`, an injected runtime, a replacement expression, even a single swapped value like `20000` or `!0` - lives in its own real, formatted `.js` file, never as a string literal in a `.ps1`. Languages do not mix in one file. Pull it in with `Get-InjectedJs` (single resource) or `Expand-JsTokens` (a pre-joined string). The `.ps1` only *locates, fills placeholders, and writes* - it never *contains* authored JS. Parameterize the JS with `__TOKEN__` placeholders (e.g. `__NONCE__`, `__PE__`) that the loader substitutes with `.Replace` (literal, never regex). For a `[regex]::Replace`, map the placeholder to the `${n}` **backref** of the capture group (see `worktree-fork-diff`, `worktree-title-dir`) - the injected bytes then stay identical while the JS still lives in the file. The **only** JS-looking text allowed in a `.ps1` is a *search anchor* (a regex used to *find* existing bundle code - e.g. `electron-run-as-node`'s `Rx` / `RxAll` values) - that is the find-mechanism, not authored runtime, and every patch has one.
+- **No JS inside a PowerShell string - ever.** Every piece of JS that gets written into a bundle - a whole `<script>`, an injected runtime, a replacement expression, even a single swapped value like `20000` or `!0` - lives in its own real, formatted `.js` file, never as a string literal in a `.ps1`. Languages do not mix in one file. Pull it in with `Get-InjectedJs` (single resource) or `Expand-JsTokens` (a pre-joined string). The `.ps1` only *locates, fills placeholders, and writes* - it never *contains* authored JS. Parameterize the JS with `__TOKEN__` placeholders (e.g. `__NONCE__`, `__PE__`) that the loader substitutes with `.Replace` (literal, never regex). For a `[regex]::Replace`, map the placeholder to the `${n}` **backref** of the capture group (see `panel-settings`, `reload-restore`) - the injected bytes then stay identical while the JS still lives in the file. The **only** JS-looking text allowed in a `.ps1` is a *search anchor* (a regex used to *find* existing bundle code - e.g. `electron-run-as-node`'s `Rx` / `RxAll` values) - that is the find-mechanism, not authored runtime, and every patch has one.
 - **The extracted `.js` obeys the same rules as any code.** Injected JS is not exempt: SRP, DRY, reusable helpers, under 150 lines (split into named fragments like `patches/prompt-queue/queue/*.js`), and **properly formatted** - real indentation and line breaks, never a minified one-liner. This includes shared runtimes in `lib/js/`.
 - **No duplication.** Shared runtime JS goes in `lib/js/` and is injected via a `lib/Patch.ps1` helper. Shared PowerShell goes in `lib/`. If you copy a block twice, extract it.
 - **File size.** Every file under 150 lines (hard), aim under 100. Split large injected JS into descriptively named fragments (see `patches/prompt-queue/queue/*.js`, concatenated in the explicit `$order` list in that patch's `patch.ps1` - do not rely on filename sorting).
@@ -117,8 +114,9 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   And mind specificity when overriding an app rule - `.inputFooterV2 .footerButton`
   is (0,2,0) and beats a single class of ours whatever the order; double our own
   class instead of reaching for `!important` or hardcoding a hashed name.
-  `patches/remote-control-chip/` is the worked example. Three things measured
-  off the live DOM that a source read will not tell you, and that
+  `patches/panel-settings/` is the worked example (the retired
+  `remote-control-chip` was the first one, and `git log` still has it). Three
+  things measured off the live DOM that a source read will not tell you, and that
   `patches/prompt-queue/queue/modal.css` now depends on. (1) The app has a real
   token set - `--app-spacing-small/medium/large/xlarge` = 4/8/12/16,
   `--corner-radius-small/medium/large` = 4/6/8, `--app-list-item-padding: 4px 8px`
@@ -148,12 +146,13 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   shape to copy - a hairline `--app-widget-border` box at radius 4, rows at
   `8px 12px` divided by 1px with none after the last, the description stacked
   under the label. `patches/panel-settings/` is the worked example.
-- **`footerButtonInactive` does not exist** (checked on 2.1.278: the footer
-  module defines `footerButton`, `footerButtonPrimary`, `footerButtonStatic`
-  only). `patches/remote-control-chip/runtime/chip.js` reads it anyway, so its
-  off state renders `class="footerButton_… undefined cc-rc-chip"` - the exact
-  CSS-module-miss failure this file warns about two bullets down. Read every
-  class back off the live module map before using it.
+- **`footerButtonInactive` does not exist** (checked on 2.1.278 and still true on
+  2.1.280: the footer module defines `footerButton`, `footerButtonPrimary`,
+  `footerButtonStatic` only). The retired `remote-control-chip` read it anyway,
+  so its off state rendered `class="footerButton_… undefined cc-rc-chip"` - the
+  exact CSS-module-miss failure this file warns about two bullets down, shipped
+  for months because nobody read the class back off the live module map. Do that
+  before using any of them.
 - **An icon-only button in the footer row needs `flex-shrink: 0`.**
   `.footerButton` carries `flex-shrink: 1; min-width: 0`, which is right for the
   buttons it was written for - they hold a text label and are meant to ellipsize

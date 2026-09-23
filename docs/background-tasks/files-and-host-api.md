@@ -30,7 +30,7 @@ in the binary, so a finished task's log stays readable.
 **Do not recompute the `<cwd-slug>`** - drive-letter casing differs between
 `URI.fsPath` and git, and worktrees get their own slug (memory
 `windows-drive-letter-case-breaks-worktree-resume`). Scan for the session uuid the
-way `lib/js/ccWtResolve.js` already does: `%TEMP%/claude/*/<sid>/tasks` and
+way the retired `lib/js/ccWtResolve.js` did: `%TEMP%/claude/*/<sid>/tasks` and
 `~/.claude/projects/*/<sid>/subagents`.
 
 ## Host capabilities already reachable from the webview

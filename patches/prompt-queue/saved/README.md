@@ -171,7 +171,7 @@ their own copy of that; both now call `openShell()`, so all three dialogs are
 one design line and a change lands in all of them at once.
 
 That line is the app's **own confirm-dialog family**, measured off the live DOM
-and the same one `patches/remote-control-chip` settled on: a box on an
+and the same one the retired `remote-control-chip` settled on: a box on an
 `--app-modal-background` scrim, `--app-spacing-*` / `--corner-radius-*`
 throughout, and a 1px border **instead of a shadow**. Read the design-line
 bullet in the root `CLAUDE.md` before changing any of it - in particular the

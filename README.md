@@ -97,14 +97,36 @@ Each links to its folder's README for the full root cause + proof.
 
 - 🧵 [**ELECTRON_RUN_AS_NODE leak**](patches/electron-run-as-node) — the flag leaks into every subprocess the CLI spawns; stripped at each site.
 - 📜 [**Worktree sessions in history**](patches/worktree-history) — `includeWorktrees` was hardcoded off.
-- 🏷️ [**Worktree title dir**](patches/worktree-title-dir) — the title was written to the main repo dir, creating a phantom that shadows the real transcript → session opens **empty**.
-- 🍴 [**Worktree fork / diff**](patches/worktree-fork-diff) — "Session not found" because the loader only reads the main dir.
 - 🔤 [**cwd drive-letter case**](patches/cwd-drive-case) — from **CLI 2.1.222** on, IDE-started worktree sessions die on resume with `process exited with code 1`. `URI.fsPath` hands the CLI `c:\…`, git reports `C:/…`, and the new isolation-worktree guard compares them **case-sensitively**. *Proof:* same repo, same session, only the drive letter changed → exit 0 vs exit 1; and 2.1.221 resumes where 2.1.222 refuses.
-- 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the sessionID was dropped on deserialize; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s + retry `activate` instead of new-chatting. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`.
+- 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the saved sessionID is seeded on deserialize, which past **2.1.278** means overriding the app's own **10-minute** restore window rather than fixing a drop; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`. Its fourth sub-fix (retry `activate` instead of new-chatting) was retired — see below.
 
 - ↔️ [**Bidi marks printed as text**](patches/bidi-mark-strip) — the webview's Trojan-Source mitigation rewrites every bidi control character into printable escape text, so an invisible RLM inside an answer is *shown* mid-sentence. The three implicit marks (ALM / LRM / RLM) are now dropped instead; the characters that can actually reorder a run are still escaped.
 
-- 📱 [**Remote Control chip**](patches/remote-control-chip) — while Remote Control is on, a full-width banner sits above the input for the whole session and wraps to two, three, four lines in a sidebar. It carries one bit of state and one action, so it becomes a **small icon in the input footer row** instead: drawn to the bundle's own footer-icon metrics and wearing its `footerButton` class, green while connected, a hover tooltip that says what it is, and a click that opens a confirm dialog (session link, Close / Disconnect) rather than dropping the connection silently. *Measured in a live panel:* footer height identical before and after, so the composer does not move.
+## 🪦 Retired — the app shipped its own fix
+
+A `[miss]` is not always a drifted anchor. These were checked against the
+pristine bundles and dated from the VSIX cache, and every one of them is a
+feature the app now has: they are removed rather than re-anchored, so the
+remaining misses mean what they say. `git log` still has them.
+
+- 🏷️ **Worktree title dir** and 🍴 **Worktree fork / diff** — *gone between
+  2.1.258 and 2.1.278.* The app grew `resolveSessionFile()` /
+  `candidateProjectDirs()`, which run `git worktree list --porcelain` and probe
+  `<dir>/<sid>.jsonl` across every worktree. `renameSession` writes the title to
+  the file that resolve returns, and `ensureSessionLoaded` — which `forkSession`
+  and the diff view both go through — loads from it.
+- 📱 **Remote Control chip** — *gone in 2.1.252.* The full-width banner it
+  existed to replace no longer exists: Remote Control announces itself as a
+  single synthetic message in the transcript, and the status and the click live
+  on the footer pill the app already draws (see **Remote Control pill icon**,
+  which is still here). Its anchor looked like drift — the tooltip
+  `"Disconnect Remote Control"` now reads `"Disconnect browser"` — but that is a
+  *different* component, the browser-connection banner, so re-anchoring would
+  have neutered the wrong one.
+- 🔁 **Reload restore's webview half** — *gone in 2.1.278.* The boot path was
+  rewritten: `activateSessionFromServer` now checks the local list, asks the
+  server, tests an `isSuperseded` callback and looks again, which is the retry
+  the patch used to inject.
 
 ## 🔬 How the intermittent bugs were caught
 
