@@ -13,16 +13,29 @@ function Invoke-Patch {
     $wc = Read-Text $Ctx.WebJs
     if ($wc.Contains('/* BIDIMARKS */')) { Write-Skip 'already patched'; return }
 
-    # var <rx>=/[...]/g;function <fn>(<arg>){if(typeof <arg>==="string")return <arg>.replace(<rx>,(t)=>`...codePointAt...`
-    $rx = 'var ([\w$]+)=(/\[[^\]]*\]/g);function ([\w$]+)\(([\w$]+)\)\{if\(typeof \4==="string"\)' +
-          'return \4\.replace\(\1,(?=\([\w$]+\)=>.{0,40}codePointAt)'
-    if ($wc -notmatch $rx) { Write-Miss 'bidi sanitiser not found (older extension?)'; return }
+    # var <rx>=/[...]/g; <anything> <recv>.replace(<rx>,(<c>)=> ... codePointAt
+    #
+    # Only the two ends are the site: the character class declared as a var, and
+    # the one .replace() that consumes it with an escaping callback. What sits
+    # between them is the app's business and is captured, not matched - it was a
+    # recursive body (`function f(e){if(typeof e==="string")return `) up to
+    # 2.1.268 and is a deep-map callback (`function f($){return walk($,(J)=>`)
+    # from 2.1.269 on, which is exactly what the old anchor spelled out and what
+    # made it stop matching there. Verified: exactly one match on every
+    # win32-x64 webview bundle from 2.1.227 through 2.1.280.
+    $rx = 'var ([\w$]+)=(/\[[^\]]*\]/g);(.{0,200}?)([\w$]+)\.replace\(\1,' +
+          '(?=\([\w$]+\)=>.{0,60}codePointAt)'
+    $hits = [regex]::Matches($wc, $rx)
+    if ($hits.Count -ne 1) {
+        Write-Miss "bidi sanitiser not found ($($hits.Count) matches, expected 1)"
+        return
+    }
 
     $new = Get-InjectedJs (Join-Path $PSScriptRoot 'js\strip-marks.js') ([ordered]@{
             '__CLASS__' = '${2}'
             '__RPT__'   = '${1}'
-            '__UC__'    = '${3}'
-            '__E__'     = '${4}'
+            '__MID__'   = '${3}'
+            '__RECV__'  = '${4}'
         })
     Write-Text $Ctx.WebJs ([regex]::Replace($wc, $rx, $new))
     Write-Ok 'bidi marks dropped instead of rendered as escape text'

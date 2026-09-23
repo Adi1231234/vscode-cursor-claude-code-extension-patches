@@ -69,6 +69,9 @@ $script:CcStamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mmZ") +
 Write-Info "build stamp: $script:CcStamp"
 
 $script:failures = @()
+# Patches whose anchor did not match. Collected so the run ends by naming them:
+# see the comment in lib/Ui.ps1 for what a miss that scrolled past cost once.
+$script:missed = @()
 
 foreach ($Ctx in $installs) {
     Write-Head "Patching $($Ctx.Editor): $($Ctx.Name)"
@@ -95,6 +98,7 @@ foreach ($Ctx in $installs) {
         # patch does nothing" rather than as a broken patch, and tools/lab would go on
         # to measure a half-patched bundle. Catch it, report it, carry on - and make
         # the run itself fail at the end so nothing downstream mistakes it for success.
+        $missesBefore = Get-MissCount
         try {
             . $patchFile      # (re)defines Invoke-Patch for this folder
             Invoke-Patch $Ctx # $PSScriptRoot inside resolves to patches/<name>/
@@ -104,10 +108,16 @@ foreach ($Ctx in $installs) {
             $script:failures += "$($Ctx.Editor) / $name : $($_.Exception.Message)"
             Write-Fail "$name threw: $($_.Exception.Message)"
         }
+        if ((Get-MissCount) -gt $missesBefore) { $script:missed += "$($Ctx.Editor) / $name" }
     }
 }
 
 $editors = ($installs | ForEach-Object { $_.Editor }) -join ' / '
+if ($script:missed) {
+    Write-Host "`n$($script:missed.Count) patch(es) reported [miss] - they are NOT in the bundle:" -ForegroundColor DarkYellow
+    foreach ($m in $script:missed) { Write-Host "  $m" -ForegroundColor DarkYellow }
+    Write-Host "  An anchor that stopped matching in a new release looks exactly like this." -ForegroundColor DarkYellow
+}
 if ($script:failures) {
     Write-Host "`n$($script:failures.Count) patch(es) failed - the install below is only partly patched:" -ForegroundColor Red
     foreach ($f in $script:failures) { Write-Host "  $f" -ForegroundColor Red }
