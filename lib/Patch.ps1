@@ -114,12 +114,9 @@ function Get-LibJsPath { param([string]$Name) Join-Path $PSScriptRoot "js/$Name"
 # the file makes the second and third call a no-op.
 function Get-LibCssPath { param([string]$Name) Join-Path $PSScriptRoot "css/$Name" }
 
-# The shared worktree-session resolver (used by worktree-title-dir + worktree-fork-diff).
-function Get-CcWtResolveHelper { (Read-Text (Join-Path $PSScriptRoot 'js\ccWtResolve.js')).Trim() }
-
-# Prepend the resolver to $Js once (no-op if already present); returns the new text.
-function Add-CcWtResolveHelper {
-    param([string]$Js)
-    if ($Js -match '__ccWtResolve=async function') { return $Js }
-    "/* CCWTRESOLVE */`n" + (Get-CcWtResolveHelper) + "`n" + $Js
-}
+# There was a third loader here, Add-CcWtResolveHelper, which prepended a
+# resolver that found a <sid>.jsonl across the worktree project dirs. Its only
+# two callers were retired once the app grew resolveSessionFile() of its own
+# (see "Retired patches" in the root README), so it went with them rather than
+# sitting in lib/ looking like plumbing something depends on. `git log` has it if
+# a patch ever needs that walk again.

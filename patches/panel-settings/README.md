@@ -26,7 +26,7 @@ there are, and both require looking at the window.
 ## How the three pieces fit
 
 **The gear** is rendered from inside the input footer's own render, right after
-the flex spacer, the same way `remote-control-chip` renders its chip - a plain
+the flex spacer, the same way the retired `remote-control-chip` rendered its chip - a plain
 call in the children array rather than a component, so there are no hooks to
 hold state in. It wears the app's own `footerButton footerButtonPrimary`, which
 is what every icon in that row already is: 26px tall, 5px radius, the glyph
@@ -52,7 +52,7 @@ toast.
   what upstream puts on "Focus view", "Thinking" and "Remote control at
   startup". Those values are reproduced exactly. They are re-expressed against
   the same tokens rather than borrowed by class name, for the reason
-  `remote-control-chip` gives: a hashed module name ties the stylesheet to one
+  the retired `remote-control-chip` gave: a hashed module name ties the stylesheet to one
   release, and a hash that moves leaves the control with no styling at all.
 - **The rows.** The app has exactly one dialog that holds preferences - the
   Memory / Instructions dialog - and this is its group: one hairline
@@ -74,7 +74,7 @@ toast.
 
 ### One thing deliberately not copied
 
-`remote-control-chip` reads `css.footerButtonInactive` off the footer's module
+The retired `remote-control-chip` read `css.footerButtonInactive` off the footer's module
 map, and **that key does not exist** in 2.1.278 - so in its off state that chip
 renders `class="footerButton_gGYT1w undefined cc-rc-chip"`. It is the exact
 failure CLAUDE.md warns about under "Build the test harness from the markup the

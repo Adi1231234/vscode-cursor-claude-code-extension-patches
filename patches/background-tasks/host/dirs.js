@@ -9,9 +9,9 @@
      <config>/projects/<cwd-slug>/<sessionId>/subagents/[...]/agent-<id>.jsonl
    The <cwd-slug> is never recomputed here: its drive-letter casing differs between
    URI.fsPath and git, and a worktree gets its own slug. Session ids are uuids, so
-   scanning one level down for the id is unambiguous - the same trick ccWtResolve.js
-   uses. A caller that already knows a real output path can pass it as a hint and
-   skip the scan entirely. */
+   scanning one level down for the id is unambiguous - the same trick the retired
+   worktree resolver used. A caller that already knows a real output path can
+   pass it as a hint and skip the scan entirely. */
 globalThis.__ccBg = globalThis.__ccBg || (function () {
   var fs = require("fs"), path = require("path"), os = require("os");
 
