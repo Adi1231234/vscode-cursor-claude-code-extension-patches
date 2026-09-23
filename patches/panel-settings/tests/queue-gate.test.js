@@ -11,9 +11,9 @@
 const fs = require('fs');
 const path = require('path');
 
-// watch.js is a set of function declarations, so evaluating it just defines
-// them; nothing runs until they are called.
-eval(fs.readFileSync(path.resolve(__dirname, '..', 'runtime', 'watch.js'), 'utf8'));
+// queue-gate.js is a single function declaration, so evaluating it just defines
+// it; nothing runs until it is called.
+eval(fs.readFileSync(path.resolve(__dirname, '..', 'runtime', 'queue-gate.js'), 'utf8'));
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log('  FAIL: ' + m)); };

@@ -78,62 +78,32 @@ function __ccSettingsWatch(session) {
     }, 0);
 }
 
-/* Is more work already lined up behind this run?
-
-   A queue of five prompts is one piece of work, not five, so the moment worth
-   announcing is the end of it. The prompt-queue patch publishes exactly what is
-   needed on `window.__qAuto`: `count()`, which already excludes parked items,
-   and `paused()`. Nothing is reached into - that surface is the queue's own
-   export, the one auto-followup reads too.
-
-   Paused counts as nothing pending on purpose: a held queue will not send
-   anything, so this run really was the last one and staying silent would mean
-   never notifying at all. Same for a panel where the queue patch is not
-   installed, or where anything here throws: no queue, so nothing to wait for.
-
-   The 150ms flush tick is what makes the count trustworthy at this instant. The
-   next item cannot already have left the queue, because this runs synchronously
-   on the signal falling and that tick has not come round yet. */
-function __ccSettingsQueuePending() {
-    try {
-        var queue = window.__qAuto;
-        if (!queue || typeof queue.count !== "function") return false;
-        if (typeof queue.paused === "function" && queue.paused()) return false;
-        return queue.count() > 0;
-    } catch (e) {
-        return false;
-    }
-}
-
-/* The one message this patch sends. connection.value is the app's own host
-   back-channel - the same one every other injected patch here uses, and the
-   reason none of them goes anywhere near acquireVsCodeApi. */
+/* The one message this patch sends, through runtime/hostlink.js. */
 function __ccSettingsNotifyHost(session) {
-    try {
-        var connection = session.connection && session.connection.value;
-        if (!connection || typeof connection.send !== "function") {
-            __ccSettingsNote("lost", "no host connection to send on");
-            return;
-        }
-        /* The focus gate is applied in the host, so "sent" is not the same as
-           "shown" while it is on - say so here, or a reader chasing a silence
-           sees `sent` and concludes the message was lost when in fact the host
-           deliberately swallowed it. */
-        var skipWhenFocused = __ccSettingsGet("skipWhenFocused") === true;
-        __ccSettingsNote("sent", __ccSettingsSessionLabel(session) +
-            (skipWhenFocused ? " (host stays quiet if this window is focused)" : ""));
-        connection.send({
-            type: "__ccnotify",
-            op: "done",
-            title: "Claude finished",
-            body: __ccSettingsSessionLabel(session),
-            /* Whether the window is focused is a fact only the host can read -
-               the panel is an iframe and document.hasFocus() answers a
-               different question, about the panel rather than the window. So
-               the setting travels with the message and the host applies it. */
-            skipWhenFocused: skipWhenFocused
-        });
-    } catch (e) {
-        __ccSettingsNote("lost", "send threw: " + (e && e.message));
+    var skipWhenFocused = __ccSettingsGet("skipWhenFocused") === true;
+    var sent = __ccSettingsSend(session, {
+        type: "__ccnotify",
+        op: "done",
+        title: "Claude finished",
+        body: __ccSettingsSessionLabel(session),
+        /* Whether the window is focused is a fact only the host can read - the
+           panel is an iframe and document.hasFocus() answers a different
+           question, about the panel rather than the window. So the setting
+           travels with the message and the host applies it. */
+        skipWhenFocused: skipWhenFocused
+    });
+    if (!sent) {
+        __ccSettingsNote("lost", "no host connection to send on");
+        return;
     }
+    /* The gates are applied in the host, so "sent" is not the same as "shown" -
+       say so here, or a reader chasing a silence sees `sent` and concludes the
+       message was lost when in fact the host deliberately swallowed it. The
+       host's own answer follows under the `host` tag, and its absence is the
+       one failure the panel cannot see from anywhere else. */
+    __ccSettingsNote("sent", __ccSettingsSessionLabel(session) +
+        (skipWhenFocused ? " (the host decides, on focus)" : ""));
+    __ccSettingsAfterReply(function (answered) {
+        if (!answered) __ccSettingsNote("host", "no answer. " + __ccSettingsStaleText());
+    });
 }

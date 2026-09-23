@@ -91,40 +91,6 @@
     line-height: 1.4;
 }
 
-/* The app's toggle, to its measured values: a 32x18 track at radius 9 that goes
-   from --app-input-border to --app-accent-color, and a 14px thumb in
-   --app-primary-foreground travelling 2px -> 16px. Both transitions are .15s.
-   The app gives it no hover, focus or active state of its own - the row carries
-   those - so neither does this. */
-.__ccSw {
-    position: relative;
-    flex: none;
-    width: 32px;
-    height: 18px;
-    border-radius: 9px;
-    background: var(--app-input-border, #7f7f7f66);
-    transition: background 0.15s;
-}
-
-.__ccSwOn {
-    background: var(--app-accent-color, #d97757);
-}
-
-.__ccSwThumb {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--app-primary-foreground, #bfbfbf);
-    transition: left 0.15s;
-}
-
-.__ccSwOn .__ccSwThumb {
-    left: 16px;
-}
-
 /* The app puts a key legend under a dialog it expects to be driven from the
    keyboard, at 11px secondary with bordered kbd caps. */
 .__ccSetKeys {
@@ -141,9 +107,18 @@
     font-size: calc(var(--vscode-chat-font-size, 13px) - 3px);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .__ccSw,
-    .__ccSwThumb {
-        transition: none;
-    }
+/* "These switches are not wired to anything in this window." The app's own
+   warning box, the shape it repeats three times (scopeWarning, warningBanner,
+   warningMessage): its warning tokens, a 1px accent border, radius 4, 8px 12px,
+   12px - no colour of our own and no shadow, which is the loudest thing that
+   can be added to this panel. */
+.__ccSetStale {
+    margin: 0 0 var(--app-spacing-large, 12px);
+    padding: var(--app-spacing-medium, 8px) var(--app-spacing-large, 12px);
+    border: 1px solid var(--app-warning-accent, #e5a54b);
+    border-radius: var(--corner-radius-small, 4px);
+    background: var(--app-warning-background, #191a1b);
+    color: var(--app-warning-foreground, #cccccc);
+    font-size: calc(var(--vscode-chat-font-size, 13px) - 1px);
+    line-height: 1.45;
 }

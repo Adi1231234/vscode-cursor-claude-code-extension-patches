@@ -230,6 +230,24 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   possible. It survives a real window reload too, which is how the queue's own
   per-session persistence has always worked.
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
+- **A patch's two halves do not load at the same moment, and the host half is
+  the one that goes stale.** `webview/index.js` is read when a panel opens, so
+  the panel runs what the last `apply.ps1` wrote. `extension.js` is loaded
+  **once, when that window's extension host starts**, and only a real
+  `Developer: Reload Window` replaces it - so a window left open across an
+  `apply.ps1` run can show a control whose behaviour lives in code that window
+  has never loaded. Measured on 2026-09-23: a window on the `2026-09-22T08:43Z`
+  host raised a Claude-finished toast on every run while its own "Stay quiet
+  while this window is focused" switch was on, because the gate is applied in
+  the host and arrived hours after that host did - and the switch is a shared
+  `localStorage` key, so it read as on in every window. Ask the panel which host
+  is behind it (`window.__ccBuild` from `auto-followup`'s stamp says `running` /
+  `onDisk` / `stale`), and for anything a user can *toggle*, have the host
+  **answer** its messages so the panel can feature-detect it and say so
+  (`patches/panel-settings`: `done` -> `{op:"decided",shown,focused}`, `ping` ->
+  `{op:"pong"}`, a warning box in the dialog when nothing comes back). A version
+  compare would not have helped: what matters is whether that code is behind
+  this panel.
 - **One panel can be reloaded on its own, and that restarts its CLI too.**
   Re-assigning `webview.html` (rebuilt by the host's own `getHtmlForWebview`,
   which mints a fresh nonce every call, so the string always differs) re-runs

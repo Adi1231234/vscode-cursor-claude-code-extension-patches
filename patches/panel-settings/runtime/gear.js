@@ -30,7 +30,7 @@ function __ccSettingsGear(h, session, css) {
         "aria-label": "Settings",
         onClick: function (event) {
             event.preventDefault();
-            __ccSettingsDialog();
+            __ccSettingsDialog(session);
         },
         children: __ccSettingsIcon(h)
     });

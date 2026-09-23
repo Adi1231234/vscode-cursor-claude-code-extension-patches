@@ -1,6 +1,6 @@
 /* The host half of "tell me when the run finished": it decides whether one
-   message from the panel becomes a Windows toast, and hands it to host/show.js
-   if it does.
+   message from the panel becomes a Windows toast, hands it to host/show.js if
+   it does, and tells the panel which of the two it did.
 
    Why the host at all - the panel is a Chromium renderer and cannot reach the
    Action Center, and the app's own show_notification RPC (which does exist, and
@@ -29,12 +29,42 @@ globalThis.__ccNotify = globalThis.__ccNotify || (function () {
         }
     }
 
-    function handle(msg) {
+    /* The panel asked, so the panel is told. Everything this module decides is
+       invisible from the other side - the gate's whole job is that nothing
+       happens - and a panel that cannot tell "the host stayed quiet on purpose"
+       from "the host never got it" has no way to explain a toast it did not
+       expect, or a silence it did. The same reply doubles as the answer to the
+       ping below. */
+    function post(wv, msg) {
+        try {
+            if (!wv || typeof wv.postMessage !== "function") return;
+            var sent = wv.postMessage(msg);
+            if (sent && typeof sent.then === "function") sent.then(function () {}, function () {});
+        } catch (e) {}
+    }
+
+    function handle(msg, wv) {
         if (!msg || msg.type !== CH) return false;
         try {
+            /* "Does the host behind this panel apply the gates at all?" This
+               host answers; one from before the gates existed swallows the
+               message and answers nothing, which is exactly what the panel
+               tests for. The two halves of this patch load at different times -
+               webview/index.js when a panel opens, extension.js once when the
+               window's extension host starts - so a window that has been open
+               since before an apply.ps1 run really can show a toggle its own
+               host has never heard of. Feature detection, not a version
+               compare: what matters is whether this code is behind the panel,
+               not which build it came from. */
+            if (msg.op === "ping") {
+                post(wv, { type: CH, op: "pong" });
+                return true;
+            }
             if (msg.op === "done") {
-                if (msg.skipWhenFocused && windowFocused()) return true;
-                globalThis.__ccToastShow(msg.title, msg.body);
+                var focused = windowFocused();
+                var shown = !(msg.skipWhenFocused && focused);
+                if (shown) globalThis.__ccToastShow(msg.title, msg.body);
+                post(wv, { type: CH, op: "decided", shown: shown, focused: focused });
             }
         } catch (e) {}
         return true;

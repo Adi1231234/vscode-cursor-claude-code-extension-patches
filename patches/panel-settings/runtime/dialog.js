@@ -27,7 +27,7 @@ var __ccSettingsOptions = [
     }
 ];
 
-function __ccSettingsDialog() {
+function __ccSettingsDialog(session) {
     var shell = window.__ccModal({
         title: "Settings",
         sub: "Shared by every Claude panel in this window",
@@ -63,8 +63,26 @@ function __ccSettingsDialog() {
     shell.foot.appendChild(close);
 
     shell.mount();
+    __ccSettingsCheckHost(session, shell, group);
     var first = shell.box.querySelector(".__ccSetRow");
     if (first) first.focus();
+}
+
+/* Ask the host whether it is the one that applies these settings, and say so
+   in the dialog if it is not - this is the only place the answer matters to
+   somebody who is not reading a log. Nothing is shown while the question is
+   open: the healthy answer arrives in a message round trip, and a warning that
+   flashes on every open teaches people to ignore it. */
+function __ccSettingsCheckHost(session, shell, group) {
+    __ccSettingsSend(session, { type: "__ccnotify", op: "ping" });
+    __ccSettingsAfterReply(function (answered) {
+        if (answered || !group.isConnected) return;
+        var note = document.createElement("p");
+        note.className = "__ccSetStale";
+        note.setAttribute("role", "status");
+        note.textContent = __ccSettingsStaleText();
+        shell.box.insertBefore(note, group);
+    });
 }
 
 function __ccSettingsKbd(text) {
