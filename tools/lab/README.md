@@ -31,9 +31,17 @@ therefore no Inno Setup mutex, and point the lab at it.
 
 ```
 curl -L -o vscode.zip https://update.code.visualstudio.com/latest/win32-x64-archive/stable
-# unzip it somewhere, then
+# unzip it somewhere SHORT, e.g. %TEMP%\cc-lab\code, then
 node tools/lab/lab.mjs up --code <that>/Code.exe
 ```
+
+**Unzip it on a short path.** The build keeps its app under a commit-named
+subfolder, so the workbench is another ~90 characters below wherever you put it,
+and past MAX_PATH the window comes up **blank** with only
+`vscode-file: Failed to load resource ...workbench.html net::ERR_FILE_NOT_FOUND`
+in the lab's `main.log` - for a file that is plainly there. Unpacked under a
+session scratchpad it failed every time; moved to `%TEMP%\cc-lab\code` the same
+build started in seconds.
 
 That is still Visual Studio Code - same Electron, same webview, same window title
 - rather than a fork that merely resembles it, which matters when what you are

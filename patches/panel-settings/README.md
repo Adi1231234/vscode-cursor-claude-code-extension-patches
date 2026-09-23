@@ -279,13 +279,66 @@ notifyOnFinish is off` / `quiet queue still has work` / `lost no host connection
 to send on`. A missing `edge` line means the run was never seen at all, which is
 a different fault from any of those.
 
-The **focus gate is applied in the host**, so `sent` is not the same as shown
-while it is on - the line says so (`sent Walnut (host stays quiet if this window
-is focused)`), or a reader chasing a silence would read `sent` and conclude the
-message was lost when the host had deliberately swallowed it.
+The **gates are applied in the host**, so `sent` is not the same as shown while
+one is on - the line says so (`sent Walnut (the host decides, on focus)`), or a
+reader chasing a silence would read `sent` and conclude the message was lost
+when the host had deliberately swallowed it. The host then answers with what it
+did, and that answer is the next line:
+
+```
+13:14:21.716 [notify] sent Walnut (the host decides, on focus)
+13:14:21.740 [notify] host stayed quiet - this window was focused
+```
 
 If the queue patch is not installed there is nowhere to write and this is a
 no-op: the feature must not depend on its own diagnostics.
+
+## The two halves do not load at the same time
+
+`webview/index.js` is read **when a panel opens**, so the dialog and its
+switches are whatever the last `apply.ps1` wrote. `extension.js` is loaded
+**once, when the window's extension host starts**, and nothing short of a real
+`Developer: Reload Window` replaces it - a renderer reload does not, and neither
+does opening a new panel. Everything that decides whether a toast goes out lives
+in that second half.
+
+So a window left open across an `apply.ps1` run shows switches its own host has
+never heard of. Measured on 2026-09-23, on a window whose host was the
+`2026-09-22T08:43Z` build - from hours before these gates existed: **"Stay quiet
+while this window is focused" was on, and every single finish raised a toast
+anyway**, while the panel beside it, in a window started that morning, obeyed it.
+The setting is one shared `localStorage` key, so it read as on in all of them.
+
+The two are told apart from outside by what the toast carries: the click target
+arrived with the gates, so a toast from an older host has **no `launch`
+attribute** in the XML that
+`[Windows.UI.Notifications.ToastNotificationManager]::History.GetHistory(<appId>)`
+hands back, and one from a current host points at the window's focus shortcut.
+
+The gate itself was sound, and was checked the only way that settles it - in a
+real window, the one the person was actually looking at, by sending the message
+straight down the panel's own channel (`__ccStore().connection.value.send`) and
+reading the Action Center back: with `skipWhenFocused: true` nothing appeared,
+with `false` the same message raised a toast a second later.
+
+### So the host answers
+
+Every `__ccnotify` message is now replied to: `done` with
+`{op:"decided", shown, focused}`, and a `ping` with `{op:"pong"}`. A host from
+before the gates swallows both and says nothing, which is the whole test -
+**feature detection, not a version compare**: what matters is whether the code
+that applies the settings is behind this panel, not which build it came from.
+
+The dialog pings when it opens and, if nothing comes back within a message round
+trip, puts the app's own warning box above the switches:
+
+> This window is running an older build of these patches, so these settings are
+> not applied here. Reload the window (Developer: Reload Window).
+
+The watcher logs the same sentence under `host`, so the same answer is there for
+whoever finds the log afterwards. Nothing is shown while the question is open: a
+healthy host answers in a round trip, and a warning that flashes on every open
+teaches people to ignore it.
 
 ## The setting itself
 
@@ -434,9 +487,8 @@ And for the focus gate, in a live panel and in Node:
 - **The trace, against both outcomes.** A notifying run logs
   `armed busy=false` / `edge run ended` / `sent <summary>` and the toast
   appears; with the focus gate on, the same run logs
-  `sent <summary> (host stays quiet if this window is focused)` and **no** toast
-  appears, which is the line that keeps a host-side suppression from reading as
-  a lost message.
+  `sent <summary> (the host decides, on focus)` and **no** toast appears, which
+  is the line that keeps a host-side suppression from reading as a lost message.
 - **The one run that never explained itself.** During this work a single run
   raised no toast with both gates open. It was chased through six targeted
   reproductions - after a reload that restored the session, after a reload that
@@ -458,3 +510,21 @@ And for the focus gate, in a live panel and in Node:
   older panel against a newer host); an unreadable `vscode` fails open and
   notifies; the title and body still reach the toast; and a foreign message is
   neither claimed nor notified. 9 assertions, all passing.
+- **The host's answer, and the warning when there is none** (lab, VS Code
+  2.1.280, the archive build - the installer's `vscode-updating` mutex was held
+  by a pending update). The dialog opens with its three rows and **no** warning,
+  because the host answered the ping. Then, straight down the panel's own
+  channel: `skipWhenFocused: true` logged
+  `host stayed quiet - this window was focused` and raised nothing;
+  `skipWhenFocused: false` logged `host toast raised - this window was focused`
+  and the Action Center held exactly that one toast - two runs, two
+  suppressions, two toasts, none of them the suppressed one. With the panel's
+  `send` stubbed to swallow, as a host from before the gates does, the dialog
+  showed nothing at 900ms and the warning box at 2.9s, above the switches, in
+  the app's own warning colours.
+- **The failure that started this.** A real window running the
+  `2026-09-22T08:43Z` host - from before the gates - raised a toast on every
+  finish with "Stay quiet while this window is focused" on, while a window
+  started after the patch obeyed it, in the same editor, on the same shared
+  setting. The toasts tell themselves apart in the Action Center: the stale
+  window's carry no `launch` attribute.

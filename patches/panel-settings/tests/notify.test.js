@@ -55,12 +55,15 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : (fail++, console.log('  FAIL: ' + m)); };
 const done = (extra) => Object.assign({ type: '__ccnotify', op: 'done', title: 'Claude finished', body: 'proj' }, extra);
 
+let replies = [];                         // what the host told the panel back
+const webview = { postMessage: (m) => { replies.push(m); return Promise.resolve(true); } };
+
 function run(label, setup, msg) {
-  notified = [];
+  notified = []; replies = [];
   focused = false; vscodeThrows = false;
   folders = [{ uri: { fsPath: 'C:\\proj\\demo app' } }];
   setup();
-  const handled = loadHost().handle(msg);
+  const handled = loadHost().handle(msg, webview);
   return { label, handled, sent: notified.length };
 }
 
@@ -105,9 +108,35 @@ ok(notified[0] && notified[0].folder === '' && notified[0].exe === '',
    'no workspace folder means no click target: ' + JSON.stringify((notified[0] || {}).folder));
 
 // 8. somebody else's message is not ours
-notified = [];
-ok(loadHost().handle({ type: 'something-else' }) === false, 'a foreign message must not be claimed');
+notified = []; replies = [];
+ok(loadHost().handle({ type: 'something-else' }, webview) === false, 'a foreign message must not be claimed');
 ok(notified.length === 0, 'a foreign message must not notify');
+ok(replies.length === 0, 'a foreign message must not be answered either');
+
+// 9. every decision is reported back, because none of them is visible from the
+//    panel: staying quiet and never receiving the message look identical there.
+r = run('reply when quiet', () => { focused = true; }, done({ skipWhenFocused: true }));
+ok(replies.length === 1 && replies[0].op === 'decided' &&
+   replies[0].shown === false && replies[0].focused === true,
+   'a suppressed toast must be reported as suppressed: ' + JSON.stringify(replies));
+
+r = run('reply when shown', () => { focused = false; }, done({ skipWhenFocused: true }));
+ok(replies.length === 1 && replies[0].shown === true && replies[0].focused === false,
+   'a raised toast must be reported as raised: ' + JSON.stringify(replies));
+
+// 10. the capability probe: this host answers a ping, and a host from before
+//     the gates swallows it - which is how the panel knows to say so rather
+//     than showing a switch its own window has never heard of.
+r = run('ping', () => {}, { type: '__ccnotify', op: 'ping' });
+ok(r.handled === true && r.sent === 0 && replies.length === 1 && replies[0].op === 'pong',
+   'a ping must be answered with a pong and nothing else: ' + JSON.stringify(replies));
+
+// 11. a panel whose webview cannot be posted to must still get its toast: the
+//     reply is diagnostics, the toast is the feature.
+notified = []; replies = [];
+ok(loadHost().handle(done({ skipWhenFocused: true }), null) === true,
+   'a missing webview must not stop the message being claimed');
+ok(notified.length === 1, 'nor stop the toast, sent ' + notified.length);
 
 console.log((fail ? 'FAILED' : 'ok') + ' - ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -10,7 +10,7 @@
 #       rendered in the input footer right after the flex spacer
 #   (2) extension.js     - the toast raiser prepended, plus a __ccnotify guard at
 #       the top of every chat surface's onDidReceiveMessage
-#   (3) webview/index.css - the gear + dialog stylesheet
+#   (3) webview/index.css - the gear, dialog and switch stylesheets
 #
 # The PowerShell that actually raises the toast stays a real .ps1 in host/ and
 # travels as -EncodedCommand, so the injected JS carries one opaque constant
@@ -47,7 +47,8 @@ function Invoke-Patch {
     # same file); it guards itself, so whichever of the two lands first wins and
     # the other is a no-op.
     $parts = @(Get-LibJsPath 'ccModal.js') +
-             (@('store.js', 'icon.js', 'trace.js', 'label.js', 'watch.js', 'row.js', 'dialog.js', 'gear.js') |
+             (@('store.js', 'icon.js', 'trace.js', 'label.js', 'hostlink.js', 'queue-gate.js',
+                'watch.js', 'row.js', 'dialog.js', 'gear.js') |
                 ForEach-Object { Join-Path $PSScriptRoot "runtime/$_" })
     $runtime = ($parts | ForEach-Object { Read-Text $_ }) -join "`n"
 
@@ -62,4 +63,5 @@ function Invoke-Patch {
 
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'gear.css') '/* PANELSETTINGSGEAR */' 'settings gear CSS'
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'settings-dialog.css') '/* PANELSETTINGSDIALOG */' 'settings dialog CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'settings-switch.css') '/* PANELSETTINGSSWITCH */' 'settings switch CSS'
 }
