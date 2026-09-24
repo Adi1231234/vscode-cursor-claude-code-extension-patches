@@ -2,27 +2,32 @@
      An item may carry a schedule: mode 'timer' | 'time' with an absolute
      target 'at' (ms) and a 'start' (ms, the ring baseline). No schedule =>
      plain 'queue' item, sent in FIFO order. 'at' in the future = pending;
-     'at' reached = due (sent even while the queue is paused). */
+     'at' reached = due. Whether that schedule also holds the rest of the
+     queue is 'hold', and schedule-order.js owns what that means. */
   function isScheduled(it) { return it.mode === "timer" || it.mode === "time" || it.mode === "after"; }
   function isDue(it) { return it.at ? Date.now() >= it.at : false; }
 
-  function setSchedule(it, mode, at, dur) {
+  function setSchedule(it, mode, at, dur, hold) {
     it.missed = false; it.rearm = false;   /* (re)scheduling clears any restart flag */
+    it.hold = !!hold;
     if (mode === "after") {
       it.mode = "after"; it.at = null; it.start = null; it.dur = dur || 0;   /* armed later, when it reaches the front */
     } else if (mode === "timer" || mode === "time") {
       it.mode = mode; it.at = at; it.start = Date.now(); it.dur = dur || (at - it.start);
     } else {
-      it.mode = "queue"; it.at = null; it.start = null; it.dur = null;
+      it.mode = "queue"; it.at = null; it.start = null; it.dur = null; it.hold = false;
     }
     render();
   }
 
-  /* Re-arm a timer that was paused by a restart: run its stored duration from now. */
-  function rearmTimer(it) { setSchedule(it, "timer", Date.now() + (it.dur || 0), it.dur || 0); }
+  /* Re-arm a timer that was paused by a restart: run its stored duration from
+     now, and keep whether it holds the queue - a restart is not a decision. */
+  function rearmTimer(it) { setSchedule(it, "timer", Date.now() + (it.dur || 0), it.dur || 0, it.hold); }
 
+  /* The front of the LANE: floating items are not in it (they have no
+     position), and parked ones never send, so neither can arm an 'after'. */
   function firstActiveIndex() {
-    for (var k = 0; k < Q.length; k++) if (!Q[k].off && !Q[k].missed && !Q[k].rearm) return k;
+    for (var k = 0; k < Q.length; k++) if (!isParked(Q[k]) && !floats(Q[k])) return k;
     return -1;
   }
 
@@ -132,7 +137,13 @@
       if (a && a <= t && !r.__qDue) { r.__qDue = true; due = true; }
     }
     if (due) pass();   /* already a task of its own - no second timer hop */
-    var ws = panel.querySelectorAll(".__qWhen");
-    for (i = 0; i < ws.length; i++) window.__ccDom.setText(ws[i], fmtCountdown(+ws[i].getAttribute("data-at") - t));
+    /* Past its moment and still here: say so rather than sit on 00:00. Now
+       that a pause holds scheduled items too, "due" with nothing happening is
+       a state the user has to be able to read - and name its reason. */
+    var ws = panel.querySelectorAll(".__qWhen"), left;
+    for (i = 0; i < ws.length; i++) {
+      left = +ws[i].getAttribute("data-at") - t;
+      window.__ccDom.setText(ws[i], left > 0 ? fmtCountdown(left) : (paused ? "due · paused" : "due"));
+    }
   }
 

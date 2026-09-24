@@ -24,7 +24,9 @@
     if (it.mode === "after") return it.at
       ? "Running a " + afterMins(it) + " timer, started when the previous message finished."
       : "Waits for the message before it to finish, then runs a " + afterMins(it) + " timer. Click to change.";
-    if (isScheduled(it)) return "Scheduled " + fmtStamp(it.start) + "  →  sends " + fmtStamp(it.at);
+    if (isScheduled(it)) return "Scheduled " + fmtStamp(it.start) + "  →  sends " + fmtStamp(it.at) +
+      (gates(it) ? ". Holds the queue - nothing below it sends first."
+                 : ". Out of the queue order - the rest of the queue does not wait for it.");
     return "Schedule when to send";
   }
 

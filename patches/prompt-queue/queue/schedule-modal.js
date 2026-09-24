@@ -5,6 +5,11 @@
     var sel = isScheduled(it) ? it.mode : "queue";
     var timerMins = it.dur ? Math.max(1, Math.round(it.dur / 60000)) : 30;
     var timeVal = toLocalValue(it.mode === "time" && it.at ? it.at : Date.now() + 3600000);
+    /* Each mode owns a default (holdDefault); switching modes takes that
+       mode's default, and reopening an item on the mode it already has keeps
+       what was chosen for it. */
+    var hold = holdFor(sel);
+    function holdFor(k) { return (k === it.mode && isAbsolute(it)) ? !!it.hold : holdDefault(k); }
 
     /* The overlay, head, foot, Esc / backdrop dismissal and the focus trap all
        come from the shared shell; only Enter-to-commit is ours. */
@@ -12,12 +17,16 @@
     var seg = el("div", "__qSeg");
     var body = el("div", "__qModalBody");
     var sum = el("div", "__qSummary");
+    var note = el("div", "__qNote");
     var err = el("div", "__qModalErr");
 
     function curAt() { return sel === "timer" ? Date.now() + timerMins * 60000 : sel === "time" ? new Date(timeVal).getTime() : 0; }
     function updateSummary() {
-      if (sel === "after") { sum.textContent = "Sends " + labelMins(timerMins) + " after the message before it finishes."; return; }
-      sum.textContent = (sel === "time" && isNaN(curAt())) ? "Pick a date and time." : fmtSummary(sel, curAt());
+      var at = curAt();
+      if (sel === "after") sum.textContent = "Sends " + labelMins(timerMins) + " after the message before it finishes.";
+      else sum.textContent = (sel === "time" && isNaN(at)) ? "Pick a date and time." : fmtSummary(sel, at);
+      note.textContent = isNaN(at) ? "" : holdNote(it, at, sel === "after" || hold);
+      note.style.display = note.textContent ? "" : "none";
     }
     function close() { sh.close(); }
     function commit() {
@@ -25,13 +34,13 @@
       if (sel === "queue") { setSchedule(it, "queue"); return close(); }
       if (sel === "timer" || sel === "after") {
         if (!(timerMins >= 1)) { err.textContent = "Enter at least 1 minute."; return; }
-        if (sel === "after") { setSchedule(it, "after", null, timerMins * 60000); return close(); }
-        setSchedule(it, "timer", Date.now() + timerMins * 60000, timerMins * 60000); return close();
+        if (sel === "after") { setSchedule(it, "after", null, timerMins * 60000, true); return close(); }
+        setSchedule(it, "timer", Date.now() + timerMins * 60000, timerMins * 60000, hold); return close();
       }
       var at = new Date(timeVal).getTime();
       if (isNaN(at)) { err.textContent = "Pick a valid date and time."; return; }
       if (at <= Date.now() + 1000) { err.textContent = "Choose a time in the future."; return; }
-      setSchedule(it, "time", at); return close();
+      setSchedule(it, "time", at, 0, hold); return close();
     }
     function onKey(e) {
       if (e.key === "Enter" && e.target.type !== "datetime-local") { e.preventDefault(); commit(); }
@@ -71,6 +80,11 @@
     function renderBody() {
       body.innerHTML = ""; err.textContent = "";
       body.appendChild(sel === "queue" ? queueBody() : (sel === "timer" || sel === "after") ? durationBody() : timeBody());
+      /* Only an absolute schedule has the choice: 'after' is defined by the
+         order it sits in, so holding is the whole of what it means. */
+      if (sel === "timer" || sel === "time") {
+        body.appendChild(buildHoldRow(hold, function (v) { hold = v; renderBody(); }));
+      }
       [].slice.call(seg.children).forEach(function (c) { c.classList.toggle("__qSegOn", c.getAttribute("data-k") === sel); });
       ok.textContent = sel === "queue" ? "Done" : "Schedule";
       updateSummary();
@@ -78,7 +92,7 @@
 
     [["queue", "Queue"], ["timer", "Timer"], ["after", "After"], ["time", "At time"]].forEach(function (t) {
       var s = btn("__qSegBtn"); s.setAttribute("data-k", t[0]); s.textContent = t[1];
-      s.addEventListener("click", function () { sel = t[0]; renderBody(); });
+      s.addEventListener("click", function () { sel = t[0]; hold = holdFor(sel); renderBody(); });
       seg.appendChild(s);
     });
 
@@ -93,7 +107,7 @@
     ok.addEventListener("click", commit);
     sh.foot.appendChild(cancel); sh.foot.appendChild(ok);
 
-    sh.box.appendChild(seg); sh.box.appendChild(body); sh.box.appendChild(sum); sh.box.appendChild(err);
+    sh.box.appendChild(seg); sh.box.appendChild(body); sh.box.appendChild(sum); sh.box.appendChild(note); sh.box.appendChild(err);
     sh.mount();
     renderBody();
     try { (body.querySelector("input") || ok).focus(); } catch (e) {}

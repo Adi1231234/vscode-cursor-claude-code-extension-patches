@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..", "..");
 const jobs = [
+  ["order.test.js", [path.join(here, "order.test.js")]],
   ["saved.test.js", [path.join(here, "saved.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "prompt-queue"]],
   ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]],
