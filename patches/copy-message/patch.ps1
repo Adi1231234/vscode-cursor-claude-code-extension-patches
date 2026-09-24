@@ -4,7 +4,8 @@
 #                       into one script, injected after the QUEUE script (falling
 #                       back to the earlier links of the webview-script chain).
 # Order is explicit, not filename-sorted: 'config' opens the IIFE / <script> and
-# 'place-observe' closes it; lib/js/ccCopyText.js is the shared clipboard runtime.
+# 'place-observe' closes it; lib/js/ccCopyText.js is the shared clipboard runtime,
+# ccDom / ccWatch the shared write-only-on-change helpers and the one observer.
 function Invoke-Patch {
     param($Ctx)
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'copy-message.css') '/* COPYMSG */' 'copy-message CSS'
@@ -12,6 +13,8 @@ function Invoke-Patch {
     $parts = @(
         (Join-Path $PSScriptRoot 'copy/config.js')
         (Get-LibJsPath 'ccCopyText.js')
+        (Get-LibJsPath 'ccDom.js')
+        (Get-LibJsPath 'ccWatch.js')
         (Join-Path $PSScriptRoot 'copy/button.js')
         (Join-Path $PSScriptRoot 'copy/place-observe.js')
     )

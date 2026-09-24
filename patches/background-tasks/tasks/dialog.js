@@ -27,6 +27,7 @@
     forgetHistoryRequest();
     lastFocus = document.activeElement;
     back = el("div", "__bgBackdrop __bgRoot");
+    window.__ccDom.own(back);    /* its redraws never come back through the shared observer */
     modalEl = el("div", "__bgModal");
     modalEl.setAttribute("role", "dialog");
     modalEl.setAttribute("aria-modal", "true");

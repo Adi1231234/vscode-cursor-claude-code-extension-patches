@@ -46,12 +46,11 @@
 
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
-  /* Writes only on a real change. Assigning textContent replaces the node's
-     children even when the string is identical, and that replacement is itself a
-     childList mutation - with a MutationObserver on document.body driving the
-     render pass, an unconditional write re-triggers the pass that wrote it. */
+  /* Writes only on a real change - lib/js/ccDom.js, shared by every patch.
+     Assigning textContent replaces the node's children even when the string is
+     identical, and that replacement is itself a childList mutation. */
   function setText(node, s) {
-    if (node && node.textContent !== s) node.textContent = s;
+    window.__ccDom.setText(node, s);
   }
 
   function ago(ms) {
