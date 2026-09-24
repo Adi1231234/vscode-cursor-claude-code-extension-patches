@@ -34,12 +34,13 @@
     if (!b) {
       b = btn("__bgInd __bgRoot", "Background tasks");
       b.innerHTML = RUN_ICON + '<span class="__bgCount"></span><span class="__bgTip" aria-hidden="true"></span>';
-      /* Ours for the shared observer, and inside the app's footer contract: the
-         count changes width-neutrally in a fixed-width span and the tooltip is an
-         overlay, exactly the way the app's own countdown and hover popup are
-         marked - so neither change makes the app re-fit the row. */
+      /* Ours for the shared observer, and the tooltip is an overlay in the app's
+         footer contract (it is absolutely positioned), so rewriting it never
+         makes the app re-fit the row. The count is deliberately NOT marked
+         fixed-width: its width does change ("" to "1", 9 to 10), and the row has
+         to be re-fitted when it does. It only changes when a task starts or
+         ends, and the writes are compare-first, so that re-fit is rare. */
       window.__ccDom.own(b);
-      window.__ccDom.fixedWidth(b.querySelector(".__bgCount"));
       window.__ccDom.overlay(b.querySelector(".__bgTip"));
       b.addEventListener("click", function (ev) {
         ev.preventDefault();

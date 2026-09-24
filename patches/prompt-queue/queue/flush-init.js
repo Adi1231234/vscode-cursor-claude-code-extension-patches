@@ -15,7 +15,7 @@
   async function flush() {
     /* 'paused' is enforced inside firstSendableIndex (it still lets a *due*
        scheduled item through), so it is intentionally not gated here. */
-    if (flushing || editing || isBusy()) return;
+    if (flushing || editing || isBusy() || Date.now() < retryAt) return;
     var idx = firstSendableIndex();
     if (idx < 0) return;
     var e = inp();
@@ -34,8 +34,10 @@
       var files = await buildFiles(it.files);
       if (canSend) await sendViaSession(s, it, files);
       else await sendViaDom(e, it, files);
+      sendWorked();
     } catch (err) {
       Q.splice(idx, 0, it);
+      sendFailed();
       render();
     } finally {
       flushing = false;
@@ -62,8 +64,10 @@
       var files = await buildFiles(it.files);
       if (canSend) await sendViaSession(s, it, files);
       else await sendViaDom(e, it, files);
+      sendWorked();
     } catch (err) {
       Q.splice(Math.min(idx, Q.length), 0, it);
+      sendFailed();
       render();
     } finally {
       flushing = false;
@@ -81,7 +85,7 @@
        count()   items the queue will send on its own. Non-zero means the user
                  is driving. A parked item is not driving and never leaves.
        paused()  the user's hold. Nothing auto may send through it.
-       busy()    a turn is running.
+       busy()    a turn is running, or this queue is sending one.
        panel()   the queue panel node, or null - the lane renders inside it.
        send(t)   send one text now, by the same path a queued item takes.
        log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
@@ -110,13 +114,14 @@
       return false;
     } finally {
       flushing = false;
+      schedulePass();   /* an item queued while this was in flight is next */
     }
   }
 
   window.__qAuto = window.__qAuto || {
     count: function () { return Q.filter(function (it) { return !isParked(it); }).length; },
     paused: function () { return paused; },
-    busy: function () { return isBusy(); },
+    busy: function () { return isBusy() || flushing; },
     panel: function () { return panel && panel.isConnected ? panel : null; },
     send: sendText,
     log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },

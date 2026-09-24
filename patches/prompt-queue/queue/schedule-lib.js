@@ -122,12 +122,16 @@
      compare-first, so a label that did not change is not written. */
   function tickRings() {
     if (!panel) return;
-    var t = Date.now(), rings = panel.querySelectorAll(".__qRing"), i;
+    var t = Date.now(), rings = panel.querySelectorAll(".__qRing"), i, due = false;
     for (i = 0; i < rings.length; i++) {
       var r = rings[i], s = +r.getAttribute("data-start"), a = +r.getAttribute("data-at");
       var p = (!a || a <= s) ? 1 : (t - s) / (a - s);
       window.__ccDom.setStyle(r, "--p", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(4));
+      /* Reached zero on the wall clock: the due timer's clock may have stopped
+         through a sleep (drive.js), and this one is looking at the time. */
+      if (a && a <= t && !r.__qDue) { r.__qDue = true; due = true; }
     }
+    if (due) pass();   /* already a task of its own - no second timer hop */
     var ws = panel.querySelectorAll(".__qWhen");
     for (i = 0; i < ws.length; i++) window.__ccDom.setText(ws[i], fmtCountdown(+ws[i].getAttribute("data-at") - t));
   }

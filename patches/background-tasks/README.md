@@ -151,10 +151,12 @@ write must do the same.
 **The indicator lives in the composer footer, so it honours the footer contract.**
 The app re-fits the footer (stage 0, then `getComputedStyle` over every
 descendant) on any mutation inside it, except inside `data-footer-overlay` and
-character changes inside `data-footer-fixed-width`. The tooltip is marked the
-first (`__ccDom.overlay`) and the count the second (`__ccDom.fixedWidth`), so a
-ticking count or a tooltip rewrite does not re-fit the footer of every panel
-(see "The webview runtime" in `../../CLAUDE.md`).
+character changes inside `data-footer-fixed-width`. The tooltip is out of flow and
+marked the first (`__ccDom.overlay`), so rewriting it does not re-fit the footer
+of every panel. The count is deliberately left unmarked: its width does change
+("" to "1", 9 to 10) and the row has to be re-fitted when it does - which is rare,
+since it changes only when a task starts or ends (see "The webview runtime" in
+`../../CLAUDE.md`).
 
 **RTL.** Layout is logical-property only, so the panes mirror under the `rtl` patch.
 Latin phrases and tool-call rows are pinned so bidi cannot reorder them, and code

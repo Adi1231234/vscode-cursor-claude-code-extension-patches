@@ -47,8 +47,26 @@ push, so it now runs on those and nothing else:
 
 Passes are coalesced into one `setTimeout(0)` (not `requestAnimationFrame`: a
 hidden panel gets no frames, and the queue has to keep sending behind another
-view). Measured in the lab: an item queued while busy was sent **7 ms** after
-`busy` fell. See "The webview runtime" in `../../CLAUDE.md`.
+view). Measured in the lab: an item queued while busy was sent **1-7 ms** after
+`busy` fell, and scheduled items within 10-25 ms of their time. See "The webview
+runtime" in `../../CLAUDE.md`.
+
+Three rules keep a pass from asking for itself:
+
+- **`render()` is "the queue changed", `paint()` is only the DOM.** The pass puts
+  back a panel React dropped with `paint()`; going through `render()` asked for
+  another pass, and with no composer to paint into yet (a reload with a saved
+  queue) that repeated every few ms until the composer appeared.
+- **A failed send backs off** (1 s doubling to 30 s) instead of being retried by
+  the pass its own `render()` schedules.
+- **The due timer never looks more than a minute ahead.** `setTimeout` overflows
+  past ~24.8 days and fires at once, forever; and its clock may stop while the
+  machine sleeps, where `at` is wall-clock time. A visible countdown also pushes
+  when it reaches zero.
+
+`__qAuto.busy()` is true while the queue is sending as well as while a turn runs,
+so auto-followup never answers a reply in the gap between the queue taking an
+item and the app marking the turn busy.
 
 ## Stopping Claude parks the queue (`stop-pause.js`)
 

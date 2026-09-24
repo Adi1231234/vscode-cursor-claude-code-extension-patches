@@ -94,6 +94,7 @@
       press(it, function () { closeDrop(); set(o[0]); markDirty(); renderDialog(); }, "option");
       d.appendChild(it);
     });
+    window.__ccDom.own(d);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(d);
     /* As wide as the field it belongs to, and never wider than the dialog it
        opens inside. The 300px floor it used to carry in CSS was wider than the

@@ -102,8 +102,13 @@
 
    Do NOT key off the container's own hover class: the CSS module has no
    messageHovered entry, so the app renders it as the literal string
-   "undefined" and no selector can match it. That was the bug. */
-[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct {
+   "undefined" and no selector can match it. That was the bug.
+
+   The mark sits in :where() to keep this rule's specificity at (0,2,0): above
+   the app's plain .actionButton (so it reveals) and below its
+   .container:hover .actionButton (0,3,0), so hovering the actions area takes
+   ours to full opacity together with the app's, as it always did. */
+:where([data-cc-acts]) > [class*="subtleVisible"] ~ .__ccCopyAct {
   opacity: .7;
 }
 

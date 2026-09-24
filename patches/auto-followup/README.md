@@ -491,7 +491,7 @@ next reply took it to `1/20` with the follow-up waiting in the lane.
 
 ## What runs it - pushes, not a timer
 
-Everything happens in one pass (`af/runtime.js`): pick up a conversation switch,
+Everything happens in one pass (`af/runtime.js`, driven from `af/drive.js`): pick up a conversation switch,
 keep the stop hook and the button in place, ask for the responder list, and when
 a turn has settled, run the responder or send what it wrote. It used to run on a
 300 ms `setInterval` in every panel, armed or not, and every pass rewrote the
@@ -504,14 +504,26 @@ Now a pass runs only when something it reads can have changed: `busy`, the
 connection and the conversation (`lib/js/ccSession.js`), the composer being
 re-rendered (the shared observer, scoped to it), the queue changing
 (`__qAuto.subscribe`, told after every queue pass) and any state change of ours
-(`renderAll`). The settle is not polled either: the pass that sees `busy` fall
-arms one one-shot timer for the moment the reply has been quiet for `SETTLE_MS`,
-and so does a list retry. The live view's elapsed clock is the shared one
-(`lib/js/ccClock.js`), which ticks only while the view is open and visible.
+(`renderAll`). While the loop waits for a reply, and only then, a change in the
+transcript asks for a pass too, so a reply painted late (a hidden panel) is still
+read. The settle is not polled either: the pass that sees `busy` fall arms one
+one-shot timer for the moment the reply has been quiet for `SETTLE_MS`, and so
+does a list retry. A send the queue refuses is retried after a back-off (1 s
+doubling to 30 s), never on the next pass, which would retry in a loop. The live
+view's elapsed clock is the shared one (`lib/js/ccClock.js`), which ticks only
+while the view is open and visible.
 
-The button's writes are compare-first (`lib/js/ccDom.js`), and it keeps the footer
-contract: the tooltip is marked `data-footer-overlay` and the `7/20` count
-`data-footer-fixed-width`, the two places the app's footer fitter ignores.
+**Everything this patch puts on the page is marked `data-cc`** - the button, the
+lane's own container, the menu, the dialogs, the live view. The lane is rebuilt on
+every pass and sits in the composer area the pass watches: while its container
+was unmarked, each rebuild came back as a composer change and asked for the next
+pass, 365 times a second for as long as a responder was writing (measured in the
+lab; `tests/ui.test.js` now fails if the container loses the mark).
+
+The button's writes are compare-first (`lib/js/ccDom.js`), and its tooltip keeps
+the footer contract: it is marked `data-footer-overlay`, which the app's footer
+fitter ignores. The `7/20` count is not marked `data-footer-fixed-width`: it does
+change width, and the row has to be re-fitted when it does.
 
 ## Installing it over an already-patched bundle
 

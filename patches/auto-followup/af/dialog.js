@@ -43,6 +43,7 @@
     if (dlg) closeDialog();
     dlg = el("div", "__afOverlay");
     on(dlg, "mousedown", function (ev) { if (ev.target === dlg) closeDialog(); });
+    window.__ccDom.own(dlg);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(dlg);
     fitOverlay();
     window.addEventListener("resize", fitDlgNow);

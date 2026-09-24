@@ -113,9 +113,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
     and `textContent =` of the same text are still mutations. Use `__ccDom`
     (`setText`, `setClass`, `toggle`, `setAttr`, `setStyle`).
   - **Honour the footer contract.** Inside the composer footer, a tooltip or
-    anything that changes without changing width goes under
-    `__ccDom.overlay(el)`, and a counter that ticks in a fixed width under
-    `__ccDom.fixedWidth(el)` - the fitter ignores exactly those.
+    anything else out of flow goes under `__ccDom.overlay(el)`, and text that
+    changes in place inside a box whose width really is fixed (CSS, not just
+    tabular digits) under `__ccDom.fixedWidth(el)` - the fitter ignores exactly
+    those. Anything whose width can change must stay unmarked: the row has to be
+    re-fitted when it does.
   - **A clock on screen gets `__ccClock.every(fn)`**, which ticks only while
     something is subscribed and the panel is visible; stop it when nothing
     needs it.

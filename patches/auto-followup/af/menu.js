@@ -135,6 +135,7 @@
       confirmArmingChange("off", "", function () { disarm(null); });
     }));
 
+    window.__ccDom.own(m);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(m);
     place(m, anchor);
     menuNode = m;

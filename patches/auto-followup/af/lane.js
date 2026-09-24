@@ -28,6 +28,11 @@
       var form = e && e.closest("form");
       if (!form || !form.parentNode) return null;
       soloNode = el("div", "__qPanel __afSolo");
+      /* Ours, and it sits in the composer area the pass watches: renderLane
+         rebuilds the lane inside it on every pass, and unowned, each rebuild
+         came back as a composer change and asked for the next pass - 365 a
+         second for as long as a responder was writing (measured in the lab). */
+      window.__ccDom.own(soloNode);
       soloNode.style.display = "flex";
       form.parentNode.insertBefore(soloNode, form);
     }

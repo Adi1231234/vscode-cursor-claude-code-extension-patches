@@ -18,11 +18,11 @@
     ccLog("queue", "stop pressed - queue parked", "n=" + Q.length);
   }
 
-  /* Idempotent (marked on the object, like the FileReader hook), and re-run per
-     tick because the session object is replaced when the conversation changes.
-     Wrapped in its own try/catch: this is an optional decoration on someone
-     else's object, and a throw here would otherwise skip the rest of the tick -
-     the add button and the flush loop - on this tick and every one after it. */
+  /* Idempotent (marked on the object, like the FileReader hook), and re-run on
+     every pass because the session object is replaced when the conversation
+     changes. Wrapped in its own try/catch: this is an optional decoration on
+     someone else's object, and a throw here would otherwise skip the rest of the
+     pass - the add button and the flush - on this pass and every one after it. */
   function hookStopPause() {
     try {
       var s = getSession();

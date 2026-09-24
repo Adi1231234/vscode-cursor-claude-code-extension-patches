@@ -1,7 +1,9 @@
 /* The ordered fragment lists tools/check-injected.mjs checks, mirroring what
- * each patch.ps1 concatenates. A patch whose script is a single file needs no
- * entry. Every path is resolved against the repo root, so the check gives the
- * same answer from whatever directory it is run in.
+ * each patch.ps1 concatenates. Only lists read from a file both sides share
+ * belong here - a copy written down twice goes stale (see below). A patch not
+ * listed is still parsed as the browser gets it by the lab selftest, which
+ * checks every guarded script in the patched bundle. Every path is resolved
+ * against the repo root, so the check gives the same answer from any directory.
  */
 import fs from "node:fs";
 import path from "node:path";

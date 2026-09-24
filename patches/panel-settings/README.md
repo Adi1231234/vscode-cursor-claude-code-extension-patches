@@ -200,9 +200,10 @@ treating it as "more to come" would mean never notifying at all. The same goes
 for a panel where the queue patch is not installed, and for anything here
 throwing: no queue, so nothing to wait for, so notify.
 
-The count is trustworthy at that instant because of the queue's own 150ms flush
-tick: this runs synchronously on the signal falling, and that tick cannot have
-come round yet, so the next item is still in the queue when it is counted.
+The count is trustworthy at that instant because this runs synchronously on the
+signal falling, and the queue hears the same fall later - through
+`lib/js/ccSession.js` (a microtask) and then its own pass (a task) - so the next
+item is still in the queue when it is counted.
 
 ## Clicking the toast raises that window
 

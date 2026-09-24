@@ -6,7 +6,7 @@
      entirely when nothing is queued, which is exactly the state the loop spends
      most of its time in.
 
-     Re-anchored whenever the app changes the composer (see runtime.js): it
+     Re-anchored whenever the app changes the composer (see drive.js): it
      re-renders its own footer children, and insertBefore on an attached node just
      moves it, so this never duplicates. */
   function counterText() {
@@ -117,14 +117,13 @@
       b.innerHTML = icon("loop") +
         (want ? '<span class="__afCn"></span>' : "") +
         '<span class="__afTip"></span>';
-      /* The app's own footer contract (read off its fitter): a text change
-         inside [data-footer-fixed-width] and anything inside
-         [data-footer-overlay] do not make it re-fit the row - its countdown
-         label and its hover popup carry exactly these. This tooltip used to be
-         rewritten three times a second without either, and each rewrite made
-         the app re-measure the whole row: 47% of the renderer thread all the
-         panels share, measured 2026-09-24. */
-      window.__ccDom.fixedWidth(b.querySelector(".__afCn"));
+      /* The app's own footer contract (read off its fitter): anything inside
+         [data-footer-overlay] does not make it re-fit the row - its hover popup
+         carries it. This tooltip used to be rewritten three times a second
+         without it, and each rewrite made the app re-measure the whole row: 47%
+         of the renderer thread all the panels share, measured 2026-09-24. The
+         count is not marked fixed-width: it changes width (9/20 to 10/20), and
+         it changes by this rebuild, which the fitter has to see. */
       window.__ccDom.overlay(b.querySelector(".__afTip"));
     }
     /* Both lookups are guarded, and the guard is not defensive noise: paintButton

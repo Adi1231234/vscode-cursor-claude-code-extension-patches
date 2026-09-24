@@ -74,6 +74,7 @@
 
     ov.appendChild(box);
     press(ov, function (ev) { if (ev && ev.target === ov) closeConfirm(); });
+    window.__ccDom.own(ov);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(ov);
     ov.__afGo = go;
     confirmNode = ov;

@@ -1,5 +1,5 @@
   /* ---------- The loop ----------
-     One pass per event (see runtime.js): notice a turn ending, ask the host for
+     One pass per event (see drive.js): notice a turn ending, ask the host for
      a follow-up, and send it when the lane is clear.
 
      Three brakes, and they are not the same brake. The stop condition the
@@ -109,14 +109,25 @@
     if (!autosend()) return;                   /* held for the first approval */
     var api = qApi();
     if (!api || api.busy() || api.paused() || api.count()) return;
-    var text = slot.message;
+    if (Date.now() < sendRetryAt) { wakeAt(sendRetryAt); return; }
+    var text = slot.message, recorded = slot.recorded;
     slot = null;
-    recordAsked(text);          /* what was sent, so the next turn can see it */
+    if (!recorded) recordAsked(text);   /* what was sent, so the next turn can see it */
     renderAll();
     Promise.resolve(api.send(text)).then(function (ok) {
-      if (!ok) { slot = { message: text, why: "", invalid: false }; renderAll(); }
+      if (ok) { sendRetryMs = 0; sendRetryAt = 0; return; }
+      sendRetryMs = Math.min(sendRetryMs ? sendRetryMs * 2 : 1000, 30000);
+      sendRetryAt = Date.now() + sendRetryMs;
+      slot = { message: text, why: "", invalid: false, recorded: true };
+      renderAll();
     });
   }
+
+  /* A send the queue refused (it was sending something itself, the composer
+     was gone) is tried again after a pause that doubles from 1 s to 30 s. Not
+     on the next pass: renderAll asks for one straight away, and it would retry,
+     fail and ask again in a loop - recording the same ask each time. */
+  var sendRetryMs = 0, sendRetryAt = 0;
 
   /* Approving the first one is what releases the rest of this arming. */
   function approve() {

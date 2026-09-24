@@ -36,7 +36,13 @@ const SUBS = {
   __TOOLRES__: 'toolResult_uq5aLg',
 };
 
-let script = ORDER.map((f) => readFileSync(join(patch, 'af', `${f}.js`), 'utf8')).join('');
+/* The lib/js runtime goes right after the opener, as in patch.ps1 - from the
+   same list. Without it the button's first compare-first write throws. */
+const LIBS = JSON.parse(readFileSync(join(patch, 'af', 'libs.json'), 'utf8'));
+const frag = (f) => readFileSync(join(patch, 'af', `${f}.js`), 'utf8');
+let script = frag(ORDER[0])
+  + LIBS.map((f) => readFileSync(join(repo, 'lib', 'js', f), 'utf8')).join('')
+  + ORDER.slice(1).map(frag).join('');
 for (const [k, v] of Object.entries(SUBS)) script = script.split(k).join(v);
 script = script.split('${testnonce}').join('testnonce');   /* the literal, evaluated */
 

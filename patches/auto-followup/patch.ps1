@@ -9,7 +9,7 @@
 #                       because it consumes window.__qAuto which that one defines
 #
 # Order inside each list is explicit, not filename-sorted: 'config' opens the
-# IIFE / <script> and 'runtime' closes it, and on the host side 'format' must be
+# IIFE / <script> and 'drive' closes it, and on the host side 'format' must be
 # defined before 'store' reads through it.
 function Invoke-Patch {
     param($Ctx)
@@ -43,11 +43,13 @@ function Invoke-Patch {
     # transcript is read from the DOM, because nothing in the app exposes a
     # message list on the session store.
     # The lib/js runtime goes right after the opener: ccRow (footer order),
-    # ccCopyText (clipboard), ccDom (write only on change), ccWatch (the one
-    # observer), ccSession (state pushes), ccClock (the one clock). The queue's
+    # ccCopyText (clipboard), ccStore (the session store, which ccSession and the
+    # stop hook read), ccDom (write only on change), ccWatch (the one observer),
+    # ccSession (state pushes), ccClock (the one clock). The queue's
     # script, which runs first, defines most of them already; the guards make every
     # later copy a no-op.
-    $libs = @('ccRow.js', 'ccCopyText.js', 'ccDom.js', 'ccWatch.js', 'ccSession.js', 'ccClock.js') |
+    # The list is af/libs.json, read here and by tests/browser/build.mjs.
+    $libs = (Get-Content (Join-Path $PSScriptRoot 'af/libs.json') -Raw | ConvertFrom-Json) |
         ForEach-Object { Get-LibJsPath $_ }
     $parts = @((Join-Path $PSScriptRoot "af/$($order[0]).js")) + $libs +
         ($order | Select-Object -Skip 1 | ForEach-Object { Join-Path $PSScriptRoot "af/$_.js" })

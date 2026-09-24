@@ -53,6 +53,7 @@
     if (liveNode) { closeLive(); return; }
     liveNode = el("div", "__afOverlay __afLiveOverlay");
     on(liveNode, "mousedown", function (ev) { if (ev.target === liveNode) closeLive(); });
+    window.__ccDom.own(liveNode);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(liveNode);
     fitOverlay(liveNode);
     window.addEventListener("resize", fitLiveNow);

@@ -96,6 +96,7 @@
     function onDoc(ev) { if (!menu.contains(ev.target) && !anchor.contains(ev.target)) close(); }
     function onKey(ev) { if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); close(); } }
 
+    window.__ccDom.own(menu);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(menu);
     placeMenu(menu, anchor);
     anchor.classList.add("__qMenuOn");

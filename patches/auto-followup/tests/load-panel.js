@@ -37,13 +37,13 @@ function panelSource() {
 
 /* expose: the source of an object literal of internals the caller needs. It is
    spliced in at the one point the panel is fully built and has not been wired
-   to anything yet - the Wiring section of runtime.js.
+   to anything yet - the Wiring section of drive.js.
 
    A test drives the pass by hand with __tick(), the way it always has, so the
    splice also takes the scheduler and the one-shot wake-up out: the stubbed
    setTimeout runs its callback synchronously, and a scheduled pass would
    otherwise run in the middle of the step the test is making. What is tested is the pass; when it runs is the
-   product's business (runtime.js, and the lab for the real thing). */
+   product's business (drive.js, and the lab for the real thing). */
 function loadPanel(expose) {
   eval(fs.readFileSync(ROW, 'utf8'));
   eval(fs.readFileSync(DOM, 'utf8'));
@@ -57,7 +57,7 @@ function loadPanel(expose) {
     '  globalThis.__tick=function(){ try { tick(); } catch (e) {} };' + NL +
     '  schedulePass=function(){}; wakeAt=function(){};' + NL + WIRE);
   if (src.indexOf('globalThis.__t=') < 0)
-    throw new Error('load-panel: the splice point in runtime.js moved');
+    throw new Error('load-panel: the splice point in drive.js moved');
   eval(src);
   return globalThis.__t;
 }

@@ -24,5 +24,6 @@
   "live-view",
   "arming",
   "loop",
-  "runtime"
+  "runtime",
+  "drive"
 ]

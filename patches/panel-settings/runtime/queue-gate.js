@@ -11,9 +11,10 @@
    never notifying at all. Same for a panel where the queue patch is not
    installed, or where anything here throws: no queue, so nothing to wait for.
 
-   The 150ms flush tick is what makes the count trustworthy at this instant. The
-   next item cannot already have left the queue, because this runs synchronously
-   on the signal falling and that tick has not come round yet. */
+   The count is trustworthy at this instant because this runs synchronously on
+   the signal falling, and the queue hears the same fall later - through
+   lib/js/ccSession.js (a microtask) and then its own pass (a task) - so the
+   next item cannot already have left the queue. */
 function __ccSettingsQueuePending() {
     try {
         var queue = window.__qAuto;
