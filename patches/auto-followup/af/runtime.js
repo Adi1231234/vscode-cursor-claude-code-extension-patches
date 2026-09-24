@@ -1,10 +1,8 @@
   /* ---------- Runtime ----------
      The stop hook, the session switch, and the one pass that drives everything.
-
-     A turn is 'over' only after the reply has been quiet for SETTLE_MS. Reading
-     it the instant busy drops catches a half-streamed message, and a responder
-     given half an answer writes a follow-up to something Claude had not finished
-     saying. */
+     A turn is 'over' only after the reply has been quiet for SETTLE_MS: read the
+     instant busy drops, it is half a message, and a follow-up to half an answer
+     answers something Claude had not finished saying. */
   /* Same funnel every stop path goes through, decorated per session because the
      object is replaced when the conversation changes. No condition on the queue:
      that is precisely the check that would make this fail, because the slot is
@@ -55,43 +53,97 @@
     renderAll();
   }
 
+  /* Keep asking until the host answers once. The first request is simply lost
+     (measured: twelve seconds after a reload, button on screen, no list; the
+     next ask came back in 24 ms), and with no list nothing works, so there is no
+     cap on attempts. There is a back-off: 0.5 s doubling to 8 s, reset to 0.5 s
+     whenever there is a new store or connection to ask through - which is when
+     an answer can first come back. */
+  var listRetryMs = 500, nextAskAt = 0;
+
+  function askForList() {
+    if (listSeen) return;
+    var now = Date.now();
+    if (now < nextAskAt) { wakeAt(nextAskAt); return; }
+    askedListAt = now;
+    requestList();
+    nextAskAt = now + listRetryMs;
+    listRetryMs = Math.min(listRetryMs * 2, 8000);
+    wakeAt(nextAskAt);
+  }
+
+  function askAgainSoon() {
+    if (listSeen) return;
+    nextAskAt = 0;
+    listRetryMs = 500;
+  }
+
   function tick() {
     syncSession();
     hookStop();
-    /* Keep asking until the host answers once.
-
-       The request at the bottom of this file is sent the moment the script
-       runs, and measured in a real panel it is simply lost: twelve seconds
-       after a reload, with the button on screen and the store resolvable, no
-       list had ever arrived. The first click asked again and the answer came
-       back in 24ms - after the menu had been built, empty. That is the whole
-       of "the first time I open it there is nothing in it".
-
-       Half a second between attempts, and no cap: this only runs while there
-       is no list at all, which is a state nothing works in. A cap would put
-       the bug back in exactly the window where it hurts - an extension host
-       busy for a few seconds at startup. */
-    if (!listSeen && Date.now() - askedListAt > 500) {
-      askedListAt = Date.now();
-      requestList();
-    }
+    askForList();
     ensureButton();
     var busy = qApi() ? qApi().busy() : false;
     if (busy) { wasBusy = true; idleAt = 0; renderLane(); saveState(); return; }
     if (wasBusy) { wasBusy = false; idleAt = Date.now(); }
-    if (idleAt && Date.now() - idleAt < SETTLE_MS) return;
+    if (idleAt && Date.now() - idleAt < SETTLE_MS) { wakeAt(idleAt + SETTLE_MS); return; }
     maybeRun();
     maybeSend();
     renderLane();
     saveState();
   }
 
-  /* No requestList() here any more. It cannot work: the only route to the host
-     is the app session store, the store is found by walking the React fiber tree
-     up from the composer input, and this script runs before the app has rendered
-     one. Measured in a real panel - "no composer input yet" twice, then "bridge
-     ready after 902ms" - so a send from here does not race and sometimes lose, it
-     loses every time by about a second, and leaves a confusing line in the log
-     saying so. tick() owns it instead, and asks until the host answers once. */
-  setInterval(function () { try { tick(); } catch (e) {} }, TICK);
+  /* ---------- What runs the pass ----------
+     Nothing on a timer. It used to be a setInterval of 300 ms in every panel,
+     armed or not, and each pass rewrote the button's tooltip - the clock that
+     woke every other observer in the panel, 47% of the renderer thread all the
+     panels share (measured 2026-09-24). Now a pass runs when something it reads
+     can have changed: busy (a push), the conversation or the connection (a
+     push), the composer being re-rendered (the shared observer), the queue
+     changing (its own push), and any state change of ours (renderAll). The one
+     timer left is a one-shot wake-up for the end of a settle or a list retry. */
+  var inPass = false, passQueued = false, wakeT = 0, wakeTime = 0;
+
+  function pass() {
+    passQueued = false;
+    if (inPass) return;
+    inPass = true;
+    try { tick(); } catch (e) {}
+    inPass = false;
+  }
+
+  function schedulePass() {
+    if (passQueued) return;
+    passQueued = true;
+    setTimeout(pass, 0);
+  }
+
+  function wakeAt(t) {
+    if (wakeT && wakeTime <= t) return;
+    if (wakeT) clearTimeout(wakeT);
+    wakeTime = t;
+    wakeT = setTimeout(function () { wakeT = 0; wakeTime = 0; pass(); }, Math.max(0, t - Date.now()));
+  }
+
+  function composerArea() {
+    var e = qInp(), form = e && e.closest("form");
+    return form ? form.parentElement : null;
+  }
+
+  /* ---------- Wiring ---------- */
+  function wire() {
+    var S = window.__ccSession, W = window.__ccWatch, q = qApi();
+    if (S) {
+      /* Remembered in the callback, not only read in the pass: a turn short
+         enough to rise and fall between two passes still has to settle. */
+      S.on("busy", function (v) { if (v) wasBusy = true; schedulePass(); });
+      S.on("connection", function (v, s, initial) { if (!initial) askAgainSoon(); schedulePass(); });
+      S.onStore(function () { askAgainSoon(); schedulePass(); });
+    }
+    if (W) W.on(schedulePass, { scope: composerArea });
+    if (q && typeof q.subscribe === "function") q.subscribe(schedulePass);
+    schedulePass();
+  }
+
+  wire();
 })();</script>

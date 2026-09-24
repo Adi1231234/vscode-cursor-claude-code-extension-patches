@@ -42,8 +42,14 @@ function Invoke-Patch {
     # The message selectors are the same detected names copy-message uses: the
     # transcript is read from the DOM, because nothing in the app exposes a
     # message list on the session store.
-    $parts = @((Join-Path $PSScriptRoot "af/$($order[0]).js"), (Get-LibJsPath 'ccRow.js'),
-                (Get-LibJsPath 'ccCopyText.js')) +
+    # The lib/js runtime goes right after the opener: ccRow (footer order),
+    # ccCopyText (clipboard), ccDom (write only on change), ccWatch (the one
+    # observer), ccSession (state pushes), ccClock (the one clock). The queue's
+    # script, which runs first, defines most of them already; the guards make every
+    # later copy a no-op.
+    $libs = @('ccRow.js', 'ccCopyText.js', 'ccDom.js', 'ccWatch.js', 'ccSession.js', 'ccClock.js') |
+        ForEach-Object { Get-LibJsPath $_ }
+    $parts = @((Join-Path $PSScriptRoot "af/$($order[0]).js")) + $libs +
         ($order | Select-Object -Skip 1 | ForEach-Object { Join-Path $PSScriptRoot "af/$_.js" })
     $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{

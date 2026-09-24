@@ -123,6 +123,11 @@
     /* Every state change in this script ends by rendering, so this is the one
        place that catches all of them. tick() calls saveState() too, which is
        what covers a change made outside a render - but relying on the tick
-       alone left a 300ms window in which a reload lost the last transition. */
+       alone left a window in which a reload lost the last transition. */
     try { saveState(); } catch (e) {}
+    /* And it is also what runs the next pass: a change of ours is one of the
+       things the loop acts on (arming, an approval, a result arriving), and
+       there is no timer any more to pick it up. Coalesced, so a pass that
+       renders schedules at most one more. */
+    try { schedulePass(); } catch (e) {}
   }

@@ -20,7 +20,7 @@
   var liveChars = 0;
   var liveStart = 0;
   var liveNode = null;
-  var liveTimer = 0;
+  var stopLiveClock = null;
   var LIVE_MAX = 262144;
 
   function liveReset(rid) {
@@ -61,7 +61,7 @@
        this view shows is a wait, and a wait with no number on it reads as nothing
        happening - the clock is the difference between "it is stuck" and "it has
        not started talking yet". */
-    liveTimer = setInterval(function () { try { renderLive(); } catch (e) {} }, 1000);
+    stopLiveClock = window.__ccClock.every(function () { renderLive(); });
     document.addEventListener("keydown", onLiveKey, true);
     renderLive();
   }
@@ -69,7 +69,7 @@
   function closeLive() {
     if (liveNode && liveNode.parentNode) liveNode.parentNode.removeChild(liveNode);
     liveNode = null;
-    if (liveTimer) { clearInterval(liveTimer); liveTimer = 0; }
+    if (stopLiveClock) { stopLiveClock(); stopLiveClock = null; }
     window.removeEventListener("resize", fitLiveNow);
     document.removeEventListener("keydown", onLiveKey, true);
   }

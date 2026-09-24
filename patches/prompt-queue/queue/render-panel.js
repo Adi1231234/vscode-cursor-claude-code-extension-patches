@@ -2,6 +2,7 @@
   function ensurePanel(e) {
     if (panel && panel.isConnected) return;
     panel = el("div", "__qPanel");
+    window.__ccDom.own(panel);   /* a rebuild of ours is not a change the pass has to see */
     var anchor = e.closest('[class*="messageInputContainer_"]') || e.parentNode;
     anchor.parentNode.insertBefore(panel, anchor);
   }

@@ -29,6 +29,7 @@
 
   function btn(cls, title) {
     var b = el("button", cls);
+    window.__ccDom.own(b);    /* the shared observer never hands back our own buttons */
     b.type = "button";
     if (title) b.title = title;
     return b;

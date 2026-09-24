@@ -30,7 +30,6 @@
      waiting in it, so a batch the user typed is never overtaken. */
 
   /* ---------- Config and state ---------- */
-  var TICK = 300;                  /* the loop's own poll, independent of the queue's */
   var SETTLE_MS = 700;             /* quiet after busy drops, before reading the reply */
   var CLAIM_KEY = "ccAfClaims:";   /* + session id */
   var ARM_KEY = "ccAfArmed:";      /* + session id */
@@ -108,8 +107,10 @@
     return x;
   }
 
+  /* Compare-first, through lib/js/ccDom.js: a write of the same text is still a
+     mutation, and it wakes every observer in the panel - see that file. */
   function txt(node, s) {
-    node.textContent = s == null ? "" : String(s);
+    window.__ccDom.setText(node, s);
     return node;
   }
 

@@ -17,6 +17,8 @@ function mkEl(tag){
     dispatchEvent(ev){return __afDispatch(this,ev);},
     removeEventListener(k,f){if(this.listeners[k])this.listeners[k]=this.listeners[k].filter(x=>x!==f);},setAttribute(k,v){this.attrs[k]=v;},
     getAttribute(k){return this.attrs[k];},
+    hasAttribute(k){return Object.prototype.hasOwnProperty.call(this.attrs,k);},
+    removeAttribute(k){delete this.attrs[k];},
     querySelectorAll(sel){ return __afQueryAll(sel, this); },
     querySelector(sel){
       var m=String(sel).match(/^\[class\*=["']?([^"'\]]+)["']?\]$/);
@@ -49,6 +51,7 @@ function mkEl(tag){
       while((m=re.exec(v))){ var c=mkEl('span'); c.className=m[1]; c.parentNode=this; this.children.push(c); }
     },
     get firstChild(){return this.children[0]||null;},
+    get lastChild(){return this.children[this.children.length-1]||null;},
     get previousElementSibling(){
       if(!this.parentNode)return null;
       var i=this.parentNode.children.indexOf(this);

@@ -117,16 +117,18 @@
     [].slice.call(container.children).forEach(function (c, i) { c.classList.toggle("__qChipOn", values[i] === current); });
   }
 
-  /* Advance every visible countdown ring + tick the HH:MM:SS labels (cheap, 150ms). */
+  /* Advance every visible countdown ring + tick the HH:MM:SS labels. Once a
+     second on the shared clock, only while one is showing (drive.js), and
+     compare-first, so a label that did not change is not written. */
   function tickRings() {
     if (!panel) return;
     var t = Date.now(), rings = panel.querySelectorAll(".__qRing"), i;
     for (i = 0; i < rings.length; i++) {
       var r = rings[i], s = +r.getAttribute("data-start"), a = +r.getAttribute("data-at");
       var p = (!a || a <= s) ? 1 : (t - s) / (a - s);
-      r.style.setProperty("--p", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(4));
+      window.__ccDom.setStyle(r, "--p", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(4));
     }
     var ws = panel.querySelectorAll(".__qWhen");
-    for (i = 0; i < ws.length; i++) ws[i].textContent = fmtCountdown(+ws[i].getAttribute("data-at") - t);
+    for (i = 0; i < ws.length; i++) window.__ccDom.setText(ws[i], fmtCountdown(+ws[i].getAttribute("data-at") - t));
   }
 

@@ -1,6 +1,6 @@
   /* ---------- The loop ----------
-     One pass every TICK: notice a turn ending, ask the host for a follow-up, and
-     send it when the lane is clear.
+     One pass per event (see runtime.js): notice a turn ending, ask the host for
+     a follow-up, and send it when the lane is clear.
 
      Three brakes, and they are not the same brake. The stop condition the
      responder evaluates ends the task. max_turns ends the arming. The stop button

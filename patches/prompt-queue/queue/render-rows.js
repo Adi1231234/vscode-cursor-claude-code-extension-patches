@@ -23,6 +23,7 @@
     });
     num.addEventListener("blur", function () {
       editing = false;
+      schedulePass();   /* an edit in progress held the flush back */
       var cur = Q.indexOf(it) + 1;
       if (canceled) { canceled = false; num.value = cur; return; }
       var p = parseInt(num.value, 10);
@@ -67,6 +68,7 @@
     /* A rebuild destroys any focused position input, so clear the edit flag -
        otherwise an external re-render could leave it stuck true and freeze flushing. */
     editing = false;
+    schedulePass();   /* every queue change comes through here, and the pass sends */
     closeRowMenu();   /* the popup is body-mounted: a rebuild would orphan it */
     saveQueue();
     var e = inp();

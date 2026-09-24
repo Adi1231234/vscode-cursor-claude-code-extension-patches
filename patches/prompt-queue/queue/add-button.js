@@ -36,6 +36,7 @@
       b = btn("__qAdd");                                       /* no native title - styled tooltip instead */
       b.setAttribute("aria-label", "Add to queue (Alt+Enter)");
       b.innerHTML = ADD_ICON + TIP_HTML;
+      window.__ccDom.overlay(b.querySelector(".__qTip"));
       b.addEventListener("click", onAddClick);
     }
     /* insertBefore an already-attached node just moves it: idempotent, never duplicates */
@@ -57,6 +58,7 @@
       sv = btn("__qSaved");                                    /* no native title - styled tooltip instead */
       sv.setAttribute("aria-label", "Saved queues");
       sv.innerHTML = IC_BOOK + '<span class="__qTip" aria-hidden="true">Saved queues</span>';
+      window.__ccDom.overlay(sv.querySelector(".__qTip"));
       sv.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openSavedModal(false); });
     }
     if (sv.parentNode !== send.parentNode) send.parentNode.insertBefore(sv, b);

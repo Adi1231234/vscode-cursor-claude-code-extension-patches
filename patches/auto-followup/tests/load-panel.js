@@ -13,7 +13,12 @@
 const fs = require('fs'), path = require('path');
 
 const AF = path.resolve(__dirname, '..', 'af') + '/';
-const ROW = path.resolve(__dirname, '..', '..', '..', 'lib', 'js', 'ccRow.js');
+const LIB = path.resolve(__dirname, '..', '..', '..', 'lib', 'js') + '/';
+const ROW = LIB + 'ccRow.js';
+/* The shared compare-first writer every paint goes through. ccWatch, ccSession
+   and ccClock are left out on purpose: the panel wires to them only when they
+   exist, and a test drives the pass itself (see the splice below). */
+const DOM = LIB + 'ccDom.js';
 const NL = String.fromCharCode(10);
 const CR = String.fromCharCode(13);
 
@@ -31,13 +36,26 @@ function panelSource() {
 }
 
 /* expose: the source of an object literal of internals the caller needs. It is
-   spliced in at the one point the panel is fully built and has not started
-   ticking yet, which is the line that asks the host for the list. */
+   spliced in at the one point the panel is fully built and has not been wired
+   to anything yet - the Wiring section of runtime.js.
+
+   A test drives the pass by hand with __tick(), the way it always has, so the
+   splice also takes the scheduler and the one-shot wake-up out: the stubbed
+   setTimeout runs its callback synchronously, and a scheduled pass would
+   otherwise run in the middle of the step the test is making. What is tested is the pass; when it runs is the
+   product's business (runtime.js, and the lab for the real thing). */
 function loadPanel(expose) {
   eval(fs.readFileSync(ROW, 'utf8'));
-  const src = panelSource().replace(
-    '  setInterval(',
-    '  globalThis.__t=' + expose + ';' + NL + '  setInterval(');
+  eval(fs.readFileSync(DOM, 'utf8'));
+  /* The one clock (lib/js/ccClock.js) re-arms itself through setTimeout, which
+     the stubs run synchronously - loading the real one would recurse. A clock
+     that never ticks is what a test wants anyway: time moves when it says so. */
+  window.__ccClock = window.__ccClock || { every: function () { return function () {}; } };
+  const WIRE = '  /* ---------- Wiring ---------- */';
+  const src = panelSource().replace(WIRE,
+    '  globalThis.__t=' + expose + ';' + NL +
+    '  globalThis.__tick=function(){ try { tick(); } catch (e) {} };' + NL +
+    '  schedulePass=function(){}; wakeAt=function(){};' + NL + WIRE);
   if (src.indexOf('globalThis.__t=') < 0)
     throw new Error('load-panel: the splice point in runtime.js moved');
   eval(src);

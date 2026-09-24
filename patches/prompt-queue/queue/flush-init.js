@@ -86,6 +86,8 @@
        send(t)   send one text now, by the same path a queued item takes.
        log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
        sid()     the conversation id, resolved and cached by persist.js.
+       subscribe(fn)  fn() after every queue pass - a push instead of polling
+                 count() / paused() (see drive.js).
      Guarded so the first definition wins, like every other shared global here.
 
      send() cannot go through sendNow: that one takes an item already in Q and
@@ -119,6 +121,7 @@
     send: sendText,
     log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },
     sid: function () { return _curSid || ""; },
+    subscribe: onQueueChange,
 
     /* Put a line in the queue as an ordinary item. Not through the composer:
        commitComposerToQueue pauses the queue on an idle add, which is exactly
@@ -137,28 +140,3 @@
     }
   };
 
-  /* ---------- Init ---------- */
-  hookFileReader();
-  document.addEventListener("keydown", onComposerKeydown, true);
-  /* Ctrl+Alt+L opens the log viewer on demand (the button itself is hidden). */
-  document.addEventListener("keydown", function (ev) {
-    if (ev.ctrlKey && ev.altKey && (ev.key === "l" || ev.key === "L")) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); }
-  }, true);
-  try {
-    window.__ccLogs = function () { return _ccLogs.slice(); };            /* read logs programmatically */
-    window.__ccLogBtn = function () { window.__ccLogBtnOn = 1; return "queue log button enabled"; };
-    window.__ccLog = ccLog;   /* any patch can trace under its own tag, not __qAuto.log's */
-  } catch (e) {}
-  ensureAddButton();
-  setInterval(function () {
-    try {
-      syncSession();
-      hookStopPause();
-      ensureAddButton();
-      if (Q.length && (!panel || !panel.isConnected)) render();
-      armAfterItems();
-      tickRings();
-      if (!isBusy() && Q.length) flush();
-    } catch (e) {}
-  }, 150);
-})();</script>

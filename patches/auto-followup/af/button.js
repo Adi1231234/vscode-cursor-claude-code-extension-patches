@@ -6,9 +6,9 @@
      entirely when nothing is queued, which is exactly the state the loop spends
      most of its time in.
 
-     Re-anchored on every tick, like the queue's add button: the app re-renders its
-     own footer children, and insertBefore on an attached node just moves it, so
-     this never duplicates. */
+     Re-anchored whenever the app changes the composer (see runtime.js): it
+     re-renders its own footer children, and insertBefore on an attached node just
+     moves it, so this never duplicates. */
   function counterText() {
     if (stopped) return turns + " · done";
     var max = maxTurns();
@@ -90,6 +90,7 @@
     var b = form.querySelector(".__afBtn");
     if (!b) {
       b = el("button", "__afBtn");
+      window.__ccDom.own(b);      /* its repaints never come back through the shared observer */
       b.type = "button";
       b.setAttribute("aria-label", "Auto follow-up");
       on(b, "click", toggleMenu);
@@ -108,7 +109,7 @@
     var cls = "__afBtn";
     if (stopped) cls += " __afDone";
     else if (armed) cls += paused ? " __afHold" : " __afOn";
-    if (b.className !== cls) b.className = cls;
+    window.__ccDom.setClass(b, cls);
 
     var want = (armed || stopped) ? counterText() : "";
     if (b.__afCount !== want || !b.firstChild) {
@@ -116,6 +117,15 @@
       b.innerHTML = icon("loop") +
         (want ? '<span class="__afCn"></span>' : "") +
         '<span class="__afTip"></span>';
+      /* The app's own footer contract (read off its fitter): a text change
+         inside [data-footer-fixed-width] and anything inside
+         [data-footer-overlay] do not make it re-fit the row - its countdown
+         label and its hover popup carry exactly these. This tooltip used to be
+         rewritten three times a second without either, and each rewrite made
+         the app re-measure the whole row: 47% of the renderer thread all the
+         panels share, measured 2026-09-24. */
+      window.__ccDom.fixedWidth(b.querySelector(".__afCn"));
+      window.__ccDom.overlay(b.querySelector(".__afTip"));
     }
     /* Both lookups are guarded, and the guard is not defensive noise: paintButton
        runs on every tick from inside tick()'s try/catch, so if innerHTML ever
@@ -128,7 +138,7 @@
     var tip = b.querySelector(".__afTip");
     if (tip) {
       txt(tip, t);
-      tip.className = "__afTip" + (stopped ? " __afTipWide" : "");
+      window.__ccDom.setClass(tip, "__afTip" + (stopped ? " __afTipWide" : ""));
     }
     /* On the node as well as in it: the tip span is produced by innerHTML and
        is not reachable in every host, and what the button is saying should be
