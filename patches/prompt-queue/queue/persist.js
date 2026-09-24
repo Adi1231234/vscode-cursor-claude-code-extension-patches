@@ -56,7 +56,7 @@
         var o = { t: it.text };
         if (it.off) o.o = 1;
         if (it.auto) o.a = 1;
-        if (isScheduled(it)) { o.md = it.mode; if (it.at) { o.at = it.at; o.st = it.start; } if (it.dur) o.du = it.dur; }
+        if (isScheduled(it)) { o.md = it.mode; if (it.at) { o.at = it.at; o.st = it.start; } if (it.dur) o.du = it.dur; if (it.hold) o.h = 1; }
         if (withFiles && it.files && it.files.length) {
           var f = it.files.filter(function (x) { return x.dataUrl; })
                           .map(function (x) { return { n: x.name, d: x.dataUrl }; });
@@ -101,7 +101,7 @@
             text: o.t || "",
             off: !!o.o,
             files: (o.f || []).map(function (x) { return { name: x.n, dataUrl: x.d, file: null }; }),
-            mode: "queue", at: null, start: null, dur: null, missed: false, rearm: false, auto: !!o.a
+            mode: "queue", at: null, start: null, dur: null, hold: !!o.h, missed: false, rearm: false, auto: !!o.a
           };
           /* Restart policy (decided with the user):
              - 'time' still in the future -> keep ticking, fires at its time.
@@ -113,7 +113,7 @@
             if (o.at > Date.now()) it.start = o.st || Date.now();
             else it.missed = true;
           } else if (o.md === "timer") {
-            it.mode = "timer"; it.dur = o.du || null; it.rearm = true;
+            it.mode = "timer"; it.dur = o.du || null; it.rearm = true; if (!("h" in o)) it.hold = true;   /* saved before the flag existed */
           } else if (o.md === "after") {
             it.mode = "after"; it.dur = o.du || null;   /* un-armed; re-arms when it reaches the front */
           }

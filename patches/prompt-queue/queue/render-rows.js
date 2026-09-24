@@ -1,5 +1,11 @@
-  function buildRow(it, i) {
-    var row = el("div", "__qRow" + (it.off ? " __qOff" : ""));
+  /* ord is the item's 1-based position in the LANE, or 0 for a floating
+     scheduled one. A floating item is out of the order, so it is drawn
+     without the position field and without the reorder column - there is no
+     number to show and nothing for an arrow to mean. That absence is the
+     point: the numbers now only ever appear on rows that really do send in
+     the order they are printed. */
+  function buildRow(it, ord, n) {
+    var row = el("div", "__qRow" + (it.off ? " __qOff" : "") + (ord ? "" : " __qFloat"));
     var check = el("span", "__qCheck" + (it.off ? "" : " __qOn"));
     check.textContent = it.off ? "" : "\u2713";
     check.title = it.off ? "Skipped - won't be sent (click to enable)" : "Will be sent (click to skip)";
@@ -7,7 +13,7 @@
     var num = el("input", "__qNum");
     num.type = "text";
     num.inputMode = "numeric";
-    num.value = (i + 1);
+    num.value = ord;
     num.title = "Position - type a number, Enter to move (Esc to cancel)";
     num.setAttribute("aria-label", "Queue position");
     var canceled = false;
@@ -23,7 +29,7 @@
     });
     num.addEventListener("blur", function () {
       editing = false;
-      var cur = Q.indexOf(it) + 1;
+      var cur = laneOrdinal(it);
       if (canceled) { canceled = false; num.value = cur; return; }
       var p = parseInt(num.value, 10);
       if (isNaN(p)) { num.value = cur; return; }
@@ -39,7 +45,7 @@
       ev.stopPropagation();
       if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); text.blur(); }
     });
-    row.appendChild(buildNav(i));
+    if (ord) row.appendChild(buildNav(it, ord, n));
     row.appendChild(buildRowMenu(it));
     if (it.auto) {
       var ai = el("span", "__qAi");
@@ -49,17 +55,26 @@
       row.appendChild(ai);
     }
     row.appendChild(check);
-    row.appendChild(num);
+    if (ord) row.appendChild(num);
     row.appendChild(text);
     if (it.files && it.files.length) row.appendChild(buildThumbs(it.files));
     row.appendChild(buildClock(it));
     return row;
   }
 
+  /* Two groups, because the queue runs two (see schedule-order.js): the lane,
+     whose printed order is the send order, and scheduled messages, which are
+     committed to a clock and to nothing else. The "In order" heading appears
+     only when both exist - a single group needs no name - but "Scheduled"
+     always does, because rows without numbers have to say why. */
   function buildBody() {
     var body = el("div", "__qBody __ccScroll");
     if (bodyMax) body.style.maxHeight = bodyMax + "px";
-    Q.forEach(function (it, i) { body.appendChild(buildRow(it, i)); });
+    var lane = laneItems(), floating = floatItems();
+    if (lane.length && floating.length) body.appendChild(buildGroup("In order", ""));
+    lane.forEach(function (it, i) { body.appendChild(buildRow(it, i + 1, lane.length)); });
+    if (floating.length) body.appendChild(buildGroup("Scheduled", "sent at their time, out of order"));
+    floating.forEach(function (it) { body.appendChild(buildRow(it, 0, 0)); });
     return body;
   }
 

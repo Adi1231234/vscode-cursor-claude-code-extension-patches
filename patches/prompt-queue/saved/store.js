@@ -32,22 +32,23 @@
   function savedItemOf(it) {
     var o = { t: it.text || "" };
     if (it.off) o.o = 1;
-    if (it.mode === "timer" || it.mode === "after") { o.md = it.mode; o.du = it.dur || 0; }
+    if (it.mode === "timer" || it.mode === "after") { o.md = it.mode; o.du = it.dur || 0; if (it.hold) o.h = 1; }
     return o;
   }
 
   /* The reverse, and the draft shape the editor works on. A saved 'timer'
      restores exactly as a restart restores one - inactive, "Restart Nm", one
      click to run it from now - because its origin was never saved and a loaded
-     queue is held anyway; a due timer is the one thing that fires THROUGH the
-     hold (see firstSendableIndex), so arming it here would send behind the
-     user's back. 'after' needs no origin: it arms itself by position. */
+     queue is held anyway, and arming it here would start a countdown the user
+     never watched. Whether it holds the queue rides along with it, defaulting
+     to yes for anything saved before the flag existed - that is a timer's
+     default now. 'after' needs no origin: it arms itself by position. */
   function queueItemOf(o) {
     var it = {
       id: ++idc, text: o.t || "", off: !!o.o, files: [],
-      mode: "queue", at: null, start: null, dur: null, missed: false, rearm: false, auto: false
+      mode: "queue", at: null, start: null, dur: null, hold: false, missed: false, rearm: false, auto: false
     };
-    if (o.md === "timer") { it.mode = "timer"; it.dur = o.du || 0; it.rearm = true; }
+    if (o.md === "timer") { it.mode = "timer"; it.dur = o.du || 0; it.rearm = true; it.hold = ("h" in o) ? !!o.h : true; }
     else if (o.md === "after") { it.mode = "after"; it.dur = o.du || 0; }
     return it;
   }

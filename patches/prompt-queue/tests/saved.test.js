@@ -10,8 +10,8 @@
  * The rules being pinned are the ones with a reason behind them, all of which
  * are decisions rather than mechanics: an at-time cannot be replayed, a data
  * URL must not live in localStorage for ever, a loaded timer must not arm
- * itself because a due timer fires THROUGH the paused hold, and loading parks
- * the queue exactly as one typed add does. */
+ * itself because nobody was watching the countdown it would start, and loading
+ * parks the queue exactly as one typed add does. */
 const fs = require('fs'), path = require('path');
 const SRC = path.resolve(__dirname, '..', 'saved', 'store.js');
 const NL = String.fromCharCode(10);
@@ -68,7 +68,7 @@ ok(backPlain.text === 'hello' && backPlain.mode === 'queue' && backPlain.off ===
 ok(backPlain.files.length === 0 && backPlain.auto === false, 'restored with no files and not marked written');
 const backTimer = s.queueItemOf({ t: 'x', md: 'timer', du: 600000 });
 ok(backTimer.mode === 'timer' && backTimer.rearm === true && backTimer.at === null,
-   'a timer restores INACTIVE - a due timer fires through the paused hold, so arming it would send behind the user');
+   'a timer restores INACTIVE - arming it would start a countdown nobody watched begin');
 const backAfter = s.queueItemOf({ t: 'x', md: 'after', du: 300000 });
 ok(backAfter.mode === 'after' && backAfter.rearm === false && backAfter.dur === 300000,
    'an after restores live - it arms itself by position and needs no origin');
