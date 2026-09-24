@@ -23,9 +23,50 @@ Without this the flush loop would send the item immediately, making an idle
 queue impossible. Adding while busy leaves the queue draining normally after
 the turn.
 
-The add button is re-anchored every tick (`ensureAddButton`) because the app
+The add button is re-anchored on every pass (`ensureAddButton`) because the app
 re-renders its own footer; `insertBefore` on the existing node just moves it,
 so it never duplicates.
+
+## What runs the queue (`drive.js`)
+
+One **pass** does everything the queue needs from the outside world: pick up a
+conversation switch, keep the stop hook and the footer buttons in place, bring
+the panel back if React dropped it, arm `after` items, and send the next item
+when Claude is idle. It used to run on a 150 ms `setInterval`, in every panel,
+whether anything had changed or not. Everything it reads can only change on a
+push, so it now runs on those and nothing else:
+
+- `busy`, the session id and the conversation itself, through
+  `lib/js/ccSession.js` (signal subscriptions that follow a conversation switch);
+- the app re-rendering the composer, through the shared observer
+  (`lib/js/ccWatch.js`) scoped to the composer's container - the panel and the
+  buttons are marked `data-cc`, so the queue's own re-render is not one;
+- the queue itself changing (`render()` schedules a pass);
+- a scheduled item coming due: one one-shot timer for the earliest `at`, re-armed
+  by every pass.
+
+Passes are coalesced into one `setTimeout(0)` (not `requestAnimationFrame`: a
+hidden panel gets no frames, and the queue has to keep sending behind another
+view). Measured in the lab: an item queued while busy was sent **1-7 ms** after
+`busy` fell, and scheduled items within 10-25 ms of their time. See "The webview
+runtime" in `../../CLAUDE.md`.
+
+Three rules keep a pass from asking for itself:
+
+- **`render()` is "the queue changed", `paint()` is only the DOM.** The pass puts
+  back a panel React dropped with `paint()`; going through `render()` asked for
+  another pass, and with no composer to paint into yet (a reload with a saved
+  queue) that repeated every few ms until the composer appeared.
+- **A failed send backs off** (1 s doubling to 30 s) instead of being retried by
+  the pass its own `render()` schedules.
+- **The due timer never looks more than a minute ahead.** `setTimeout` overflows
+  past ~24.8 days and fires at once, forever; and its clock may stop while the
+  machine sleeps, where `at` is wall-clock time. A visible countdown also pushes
+  when it reaches zero.
+
+`__qAuto.busy()` is true while the queue is sending as well as while a turn runs,
+so auto-followup never answers a reply in the gap between the queue taking an
+item and the app marking the turn busy.
 
 ## Stopping Claude parks the queue (`stop-pause.js`)
 
@@ -37,16 +78,16 @@ is the opposite of what the gesture asked for. The panel header shows
 other pause; one click releases it.
 
 The hook is on the **session's own `interrupt()`**, decorated per session
-(`hookStopPause`, re-run each tick because the object is replaced when the
+(`hookStopPause`, re-run on every pass because the object is replaced when the
 active conversation changes; guarded by `__qStopHook` so it decorates once,
 and isolated in its own try/catch - it decorates someone else's object, and a
-throw there would otherwise take the rest of the tick down with it, on that
-tick and every one after).
+throw there would otherwise take the rest of the pass down with it, on that
+pass and every one after).
 That is the single funnel every stop path goes through - the composer's stop
 button (`onClick` -> `session.interrupt()`), a plain Escape (the app's
 body-level handler), and `restartClaude`. It runs **synchronously with the
-gesture**, i.e. before `busy` flips false and before the 150ms flush tick wakes
-up. Watching for the same gestures in the DOM instead would mean
+gesture**, i.e. before `busy` flips false and before the pass that flip
+schedules. Watching for the same gestures in the DOM instead would mean
 re-implementing the app's own conditions *and* would still race the flush; and
 `busy` going false is not a signal on its own - it is identical for a normal
 turn end.
@@ -82,7 +123,7 @@ The queue survives a full editor restart, per session:
      hits. (An earlier version relied only on this and silently never
      persisted; the URL param is what fixed it. Note ids may be a signal
      `{value}` not a string - `sidFromVal` unwraps both.)
-  `syncSession` (run each tick) swaps `Q` when the active id changes.
+  `syncSession` (run on every pass) swaps `Q` when the active id changes.
 - **Saved on every change:** `render()` calls `saveQueue()`; inline text edits
   call `scheduleSave()` (debounced). Emptying the queue removes the key.
   Serialized shape is compact (`{p:paused, c:collapsed, items:[{t,o?,f?:[{n,d}]}]}`);
@@ -204,7 +245,9 @@ is drawn in its own group, and the lane renumbers without it.
 - **After** - a timer that only starts once the item reaches the front (the
   message before it has finished). Always gates - a countdown measured from
   "the one before me finished" only means anything in order. Shown as
-  "Waiting · Nm" until armed, then a live ring. Moving it back resets it
+  "Waiting · Nm" until armed, then a live ring (advanced once a second by
+  `tickRings()` on the shared clock, `lib/js/ccClock.js`, only while a ring is
+  showing and the panel is visible). Moving it back resets it
   (`armAfterItems`), and it re-arms when it is at the front again.
 - **At time** - an exact `datetime-local` plus quick presets, must be in the
   future. **Does not hold by default**: an hour is a moment in the world, and

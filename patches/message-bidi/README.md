@@ -93,11 +93,15 @@ message, past the list padding (which sits on the opposite side), where the mark
 root's `overflow-x: hidden` clips it away entirely. `bidi/observe.js` marks exactly
 those items and the stylesheet draws their marker inline instead.
 
-A `MutationObserver` re-asserts the verdict, rescanning only the message roots a
-mutation actually touched (a streaming reply mutates one block per frame, while a
-long chat holds hundreds that cannot have changed). `characterData` is observed
-because a streaming reply grows an existing text node in place; attributes are
-deliberately **not** observed, or our own `dir` writes would feed back. A reply that
+The shared observer (`lib/js/ccWatch.js`, subscribed with `chars: true`) re-asserts
+the verdict, rescanning only the message roots a mutation actually touched (a
+streaming reply mutates one block per frame, while a long chat holds hundreds that
+cannot have changed); a change outside every message root marks only the roots it
+added, never the whole transcript. `characterData` is observed because a streaming
+reply grows an existing text node in place; attributes are deliberately **not**
+observed, or our own `dir` writes would feed back. Those writes are compare-first
+(`lib/js/ccDom.js`), so a rescan that reaches the same verdict writes nothing and
+wakes nobody else (see "The webview runtime" in `../../CLAUDE.md`). A reply that
 opens in one language and continues in the other therefore flips direction once,
 mid-stream, and settles on the final count.
 

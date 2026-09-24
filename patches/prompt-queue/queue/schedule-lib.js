@@ -122,22 +122,28 @@
     [].slice.call(container.children).forEach(function (c, i) { c.classList.toggle("__qChipOn", values[i] === current); });
   }
 
-  /* Advance every visible countdown ring + tick the HH:MM:SS labels (cheap, 150ms). */
+  /* Advance every visible countdown ring + tick the HH:MM:SS labels. Once a
+     second on the shared clock, only while one is showing (drive.js), and
+     compare-first, so a label that did not change is not written. */
   function tickRings() {
     if (!panel) return;
-    var t = Date.now(), rings = panel.querySelectorAll(".__qRing"), i;
+    var t = Date.now(), rings = panel.querySelectorAll(".__qRing"), i, due = false;
     for (i = 0; i < rings.length; i++) {
       var r = rings[i], s = +r.getAttribute("data-start"), a = +r.getAttribute("data-at");
       var p = (!a || a <= s) ? 1 : (t - s) / (a - s);
-      r.style.setProperty("--p", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(4));
+      window.__ccDom.setStyle(r, "--p", (p < 0 ? 0 : p > 1 ? 1 : p).toFixed(4));
+      /* Reached zero on the wall clock: the due timer's clock may have stopped
+         through a sleep (drive.js), and this one is looking at the time. */
+      if (a && a <= t && !r.__qDue) { r.__qDue = true; due = true; }
     }
+    if (due) pass();   /* already a task of its own - no second timer hop */
     /* Past its moment and still here: say so rather than sit on 00:00. Now
        that a pause holds scheduled items too, "due" with nothing happening is
        a state the user has to be able to read - and name its reason. */
     var ws = panel.querySelectorAll(".__qWhen"), left;
     for (i = 0; i < ws.length; i++) {
       left = +ws[i].getAttribute("data-at") - t;
-      ws[i].textContent = left > 0 ? fmtCountdown(left) : (paused ? "due · paused" : "due");
+      window.__ccDom.setText(ws[i], left > 0 ? fmtCountdown(left) : (paused ? "due · paused" : "due"));
     }
   }
 

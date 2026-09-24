@@ -5,13 +5,18 @@
 #                       one script, injected after the COPYMSG script (falling
 #                       back to the earlier links of the webview-script chain).
 # Order is explicit, not filename-sorted: 'direction' opens the IIFE / <script>
-# and 'observe' closes it.
+# and 'observe' closes it; the shared ccDom / ccWatch runtime goes between them.
 function Invoke-Patch {
     param($Ctx)
     Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'message-bidi.css') '/* MSGBIDI */' 'message-bidi CSS'
 
-    $order = @('direction', 'observe')
-    $script = ($order | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "bidi/$_.js") }) -join ''
+    $parts = @(
+        (Join-Path $PSScriptRoot 'bidi/direction.js')
+        (Get-LibJsPath 'ccDom.js')
+        (Get-LibJsPath 'ccWatch.js')
+        (Join-Path $PSScriptRoot 'bidi/observe.js')
+    )
+    $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script ([ordered]@{
         '__NONCE__' = $Ctx.Nonce
         '__MD__'    = $Ctx.MdRootClass

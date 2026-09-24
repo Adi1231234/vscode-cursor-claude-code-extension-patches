@@ -29,6 +29,7 @@
     });
     num.addEventListener("blur", function () {
       editing = false;
+      schedulePass();   /* an edit in progress held the flush back */
       var cur = laneOrdinal(it);
       if (canceled) { canceled = false; num.value = cur; return; }
       var p = parseInt(num.value, 10);
@@ -78,12 +79,24 @@
     return body;
   }
 
+  /* The queue changed: save it, paint it, and let the pass act on it - every
+     queue change comes through here, and the pass is what sends. */
   function render() {
+    schedulePass();
+    saveQueue();
+    paint();
+  }
+
+  /* Paint only. The pass uses this to put back a panel React dropped, which is
+     not a change to the queue: going through render() there asked for another
+     pass, and with no composer to paint into yet, that pass asked again - every
+     few ms until the composer appeared (the composer's arrival is its own push,
+     see lib/js/ccWatch.js). */
+  function paint() {
     /* A rebuild destroys any focused position input, so clear the edit flag -
        otherwise an external re-render could leave it stuck true and freeze flushing. */
     editing = false;
     closeRowMenu();   /* the popup is body-mounted: a rebuild would orphan it */
-    saveQueue();
     var e = inp();
     if (!e) return;
     ensurePanel(e);

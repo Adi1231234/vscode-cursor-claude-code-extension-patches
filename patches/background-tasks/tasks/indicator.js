@@ -34,6 +34,14 @@
     if (!b) {
       b = btn("__bgInd __bgRoot", "Background tasks");
       b.innerHTML = RUN_ICON + '<span class="__bgCount"></span><span class="__bgTip" aria-hidden="true"></span>';
+      /* Ours for the shared observer, and the tooltip is an overlay in the app's
+         footer contract (it is absolutely positioned), so rewriting it never
+         makes the app re-fit the row. The count is deliberately NOT marked
+         fixed-width: its width does change ("" to "1", 9 to 10), and the row has
+         to be re-fitted when it does. It only changes when a task starts or
+         ends, and the writes are compare-first, so that re-fit is rare. */
+      window.__ccDom.own(b);
+      window.__ccDom.overlay(b.querySelector(".__bgTip"));
       b.addEventListener("click", function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
@@ -49,13 +57,15 @@
 
     /* Animated with a count while something runs; a quiet glyph afterwards, so the
        finished list stays reachable without a permanent fixture in the footer.
-       Every write below is conditional. This pass is scheduled by the observer in
-       init.js, which watches document.body for childList; writing textContent
-       unconditionally is a childList mutation whatever the value, so it wakes that
-       observer, which schedules this pass again, and the pair spins for as long as
-       the indicator is on screen - measured in the lab at 0% -> 55% of a core. */
+       Every write below is conditional. It had to be even before the shared
+       observer: writing textContent unconditionally is a childList mutation
+       whatever the value, it woke this patch's own observer, which scheduled this
+       pass again, and the pair spun for as long as the indicator was on screen -
+       measured in the lab at 0% -> 55% of a core. The button is owned now, so the
+       shared observer drops its changes anyway; the comparison is what keeps the
+       app's own footer observer quiet. */
     var cls = "__bgInd __bgRoot" + (n ? "" : " __bgIdle");
-    if (b.className !== cls) b.className = cls;
+    window.__ccDom.setClass(b, cls);
     setText(b.querySelector(".__bgCount"), n ? String(n) : "");
     setText(b.querySelector(".__bgTip"), n ? tipText(n) : (done === 1 ? "1 finished task" : done + " finished tasks"));
   }
@@ -90,5 +100,19 @@
       try { askHistory(); } catch (e) {}
       try { ensureIndicator(); } catch (e) {}
       try { renderDialog(); } catch (e) {}
+      try { keepClock(); } catch (e) {}
     }, 0);
+  }
+
+  /* Elapsed times would freeze between events, so while the dialog is open or
+     something is running this pass also runs once a second - on the shared
+     clock (lib/js/ccClock.js), which ticks only while subscribed and only while
+     the panel is visible. It used to be a setInterval of its own, in every
+     panel, forever, checking whether it had anything to do. */
+  var stopClock = null;
+
+  function keepClock() {
+    var need = !!(back || runningCount());
+    if (need && !stopClock) stopClock = window.__ccClock.every(changed);
+    else if (!need && stopClock) { stopClock(); stopClock = null; }
   }

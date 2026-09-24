@@ -50,9 +50,12 @@ survey. In short:
   one `statSync` a tick, no timer at all when nothing is open, and the read returns
   immediately when the size has not moved. Verified after the fix: the pane tracked
   the file byte for byte (56, 79, 103, 119, 143, 167, 191, 215, 231, 239 bytes).
-- **The other timers.** A 1 s clock so elapsed times do not freeze, and the render
-  coalescer is a `setTimeout` rather than `requestAnimationFrame` because a hidden
-  panel never gets a frame.
+- **The other timers.** Elapsed times would freeze between events, so while the
+  dialog is open or a task is running the pass also runs once a second - on the
+  shared clock (`lib/js/ccClock.js`), which ticks only while subscribed and only
+  while the panel is visible, instead of a `setInterval` of its own in every panel
+  forever. The render coalescer is a `setTimeout` rather than
+  `requestAnimationFrame` because a hidden panel never gets a frame.
 
 ## The dialog
 
@@ -130,17 +133,30 @@ and are styled off the same variables Monaco uses for its own sliders, so they d
 fall back to the platform's bright slab with stepper arrows.
 
 **Every render write is conditional.** The indicator and the dialog are redrawn
-from a `MutationObserver` on `document.body` watching `childList` (React
-re-renders the composer footer, so a timer would either lag or spin). Assigning
+from the shared observer (`lib/js/ccWatch.js`), scoped to the composer's
+container (React re-renders the composer footer, so a timer would either lag or
+spin), and from the session push (`lib/js/ccSession.js`) when the conversation
+changes. Assigning
 `textContent` replaces the node's children *whatever the value*, and that
 replacement is itself a childList mutation - so an unconditional write wakes the
 observer that scheduled the pass, which schedules the pass again, and the two
 feed each other for as long as the indicator is on screen. It costs nothing
 visible, which is why it hid: no layout, no paint, no network, just a renderer
 pinned at 55% of a core (measured in the lab, 0% -> 55% -> 0% as the guard is
-removed and put back). Writes go through `setText` in `config-dom.js`, which
-compares before it writes; `className` is guarded the same way inline. Any new
-per-pass write must do the same.
+removed and put back). Writes go through `lib/js/ccDom.js` (`setText`,
+`setClass`), which compares before it writes, and every node the patch creates is
+marked `data-cc`, which the shared observer never reports back. Any new per-pass
+write must do the same.
+
+**The indicator lives in the composer footer, so it honours the footer contract.**
+The app re-fits the footer (stage 0, then `getComputedStyle` over every
+descendant) on any mutation inside it, except inside `data-footer-overlay` and
+character changes inside `data-footer-fixed-width`. The tooltip is out of flow and
+marked the first (`__ccDom.overlay`), so rewriting it does not re-fit the footer
+of every panel. The count is deliberately left unmarked: its width does change
+("" to "1", 9 to 10) and the row has to be re-fitted when it does - which is rare,
+since it changes only when a task starts or ends (see "The webview runtime" in
+`../../CLAUDE.md`).
 
 **RTL.** Layout is logical-property only, so the panes mirror under the `rtl` patch.
 Latin phrases and tool-call rows are pinned so bidi cannot reorder them, and code

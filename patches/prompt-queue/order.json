@@ -2,6 +2,10 @@
   "patches/prompt-queue/queue/config-dom.js",
   "lib/js/ccStore.js",
   "lib/js/ccRow.js",
+  "lib/js/ccDom.js",
+  "lib/js/ccWatch.js",
+  "lib/js/ccSession.js",
+  "lib/js/ccClock.js",
   "patches/prompt-queue/queue/log.js",
   "lib/js/ccModal.js",
   "patches/prompt-queue/queue/modal-shell.js",
@@ -28,5 +32,7 @@
   "patches/prompt-queue/queue/render-rows.js",
   "patches/prompt-queue/queue/resize-input.js",
   "patches/prompt-queue/queue/stop-pause.js",
-  "patches/prompt-queue/queue/flush-init.js"
+  "patches/prompt-queue/queue/flush-init.js",
+  "patches/prompt-queue/queue/drive.js",
+  "patches/prompt-queue/queue/init.js"
 ]

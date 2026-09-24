@@ -38,6 +38,7 @@
     var b = document.createElement("button");
     b.type = "button";
     b.className = "__ccCopy";
+    window.__ccDom.own(b);     /* its own moves and repaints never wake an observer */
     b.title = "Copy message";
     b.setAttribute("aria-label", "Copy message");
     b.innerHTML = COPY_ICON;

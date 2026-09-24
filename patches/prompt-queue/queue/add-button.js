@@ -1,7 +1,7 @@
   /* ---------- Add-to-queue button (beside the app's send button) ----------
      A quiet ghost button sitting just left of the primary send button, so
      "queue" never competes with "send" for attention. Re-anchored on every
-     tick because the app re-renders (React) its own footer children. */
+     pass (drive.js) because the app re-renders (React) its own footer children. */
   var ADD_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h12"></path><path d="M4 12h12"></path><path d="M4 17h7"></path><path d="M17.5 14v7"></path><path d="M14 17.5h7"></path></svg>';
   /* Styled tooltip mirroring the app's own mic-button tooltip (shortcut chip). */
   var TIP_HTML = '<span class="__qTip" aria-hidden="true">Add to queue<span class="__qKbd">Alt+Enter</span></span>';
@@ -36,6 +36,7 @@
       b = btn("__qAdd");                                       /* no native title - styled tooltip instead */
       b.setAttribute("aria-label", "Add to queue (Alt+Enter)");
       b.innerHTML = ADD_ICON + TIP_HTML;
+      window.__ccDom.overlay(b.querySelector(".__qTip"));
       b.addEventListener("click", onAddClick);
     }
     /* insertBefore an already-attached node just moves it: idempotent, never duplicates */
@@ -57,6 +58,7 @@
       sv = btn("__qSaved");                                    /* no native title - styled tooltip instead */
       sv.setAttribute("aria-label", "Saved queues");
       sv.innerHTML = IC_BOOK + '<span class="__qTip" aria-hidden="true">Saved queues</span>';
+      window.__ccDom.overlay(sv.querySelector(".__qTip"));
       sv.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openSavedModal(false); });
     }
     if (sv.parentNode !== send.parentNode) send.parentNode.insertBefore(sv, b);

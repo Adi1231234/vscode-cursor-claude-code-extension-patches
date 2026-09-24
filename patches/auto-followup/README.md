@@ -257,7 +257,7 @@ store, and both were wrong here first:
   `.userMessage_<hash>` inside it, with thinking blocks and tool calls stripped.
   Nothing in this repo reads a message list off the store, and the first version
   here assumed `s.messages.value`. That is `undefined`, so `lastAssistant()`
-  returned `""` on every tick and **the loop would never have fired once** -
+  returned `""` on every pass and **the loop would never have fired once** -
   silently, with a green test suite, because the stub modelled the assumption.
 - **The session id** comes through `window.__qAuto.sid()`, which is
   `persist.js`'s resolved and cached value. Its own note says where it really
@@ -272,7 +272,7 @@ Everything except a run that was in flight: the arming, the turn count, the
 answer waiting for approval, the stop reason, a released approval, the claims
 ledger and the once-ledger. They live in `localStorage` under the session id,
 and `af/persist.js` writes them from the one place every state change ends -
-`renderAll()` - with `tick()` as the catch-all.
+`renderAll()` - with every pass as the catch-all.
 
 **It comes back held.** Everything returns except the permission to act on it: a
 window that reopens is one nobody has looked at yet, the conversation may have
@@ -435,16 +435,12 @@ built empty. That is the whole of "the first time I open it there is nothing in
 it, the second time there is".
 
 The call at load is gone: it could not work, and it left a line in the log saying
-so. `tick()` owns it and keeps asking, every half second, until the host answers
-once. No cap: it only runs while there is no list at all, which is a state
-nothing works in, and a cap would put the bug back exactly where it hurts - an
-extension host busy for a few seconds at startup. One answer stops it, even an
-empty one.
-
-So `tick()` keeps asking, every half second, until the host answers once. No cap:
-it only runs while there is no list at all, which is a state nothing works in,
-and a cap would put the bug back exactly where it hurts - an extension host busy
-for a few seconds at startup. One answer stops it, even an empty one.
+so. The pass owns it and keeps asking until the host answers once. No cap: it
+only runs while there is no list at all, which is a state nothing works in, and a
+cap would put the bug back exactly where it hurts - an extension host busy for a
+few seconds at startup. It backs off instead, 0.5 s doubling to 8 s, and drops
+back to 0.5 s whenever the panel gets a new store or connection, which is exactly
+when an answer can first come back. One answer stops it, even an empty one.
 
 Measured again after the change: twelve seconds after a reload, with no click,
 the list is there; and the first open shows all of it in its first frame rather
@@ -492,6 +488,42 @@ Two decisions inside it:
 Measured in a real editor at opus/max: paused, two real replies arrived and the
 counter stayed `0/20` with nothing in the lane and nothing typed; resumed, the
 next reply took it to `1/20` with the follow-up waiting in the lane.
+
+## What runs it - pushes, not a timer
+
+Everything happens in one pass (`af/runtime.js`, driven from `af/drive.js`): pick up a conversation switch,
+keep the stop hook and the button in place, ask for the responder list, and when
+a turn has settled, run the responder or send what it wrote. It used to run on a
+300 ms `setInterval` in every panel, armed or not, and every pass rewrote the
+button's tooltip in the composer footer. That write woke every other observer in
+the panel and made the app re-fit the footer; on the day every editor window froze
+it was 47% of the one renderer thread all the Claude panels share (see "The
+webview runtime" in `../../CLAUDE.md`).
+
+Now a pass runs only when something it reads can have changed: `busy`, the
+connection and the conversation (`lib/js/ccSession.js`), the composer being
+re-rendered (the shared observer, scoped to it), the queue changing
+(`__qAuto.subscribe`, told after every queue pass) and any state change of ours
+(`renderAll`). While the loop waits for a reply, and only then, a change in the
+transcript asks for a pass too, so a reply painted late (a hidden panel) is still
+read. The settle is not polled either: the pass that sees `busy` fall arms one
+one-shot timer for the moment the reply has been quiet for `SETTLE_MS`, and so
+does a list retry. A send the queue refuses is retried after a back-off (1 s
+doubling to 30 s), never on the next pass, which would retry in a loop. The live
+view's elapsed clock is the shared one (`lib/js/ccClock.js`), which ticks only
+while the view is open and visible.
+
+**Everything this patch puts on the page is marked `data-cc`** - the button, the
+lane's own container, the menu, the dialogs, the live view. The lane is rebuilt on
+every pass and sits in the composer area the pass watches: while its container
+was unmarked, each rebuild came back as a composer change and asked for the next
+pass, 365 times a second for as long as a responder was writing (measured in the
+lab; `tests/ui.test.js` now fails if the container loses the mark).
+
+The button's writes are compare-first (`lib/js/ccDom.js`), and its tooltip keeps
+the footer contract: it is marked `data-footer-overlay`, which the app's footer
+fitter ignores. The `7/20` count is not marked `data-footer-fixed-width`: it does
+change width, and the row has to be re-fitted when it does.
 
 ## Installing it over an already-patched bundle
 

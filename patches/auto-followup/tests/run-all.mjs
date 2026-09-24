@@ -14,7 +14,8 @@ const jobs = [
   ["ui.test.js", [path.join(here, "ui.test.js")]],
   ["host-run.test.js", [path.join(here, "host-run.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "auto-followup"]],
-  ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]]
+  ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]],
+  ["check-runtime", [path.join(root, "tools", "check-webview-runtime.mjs")]]
 ];
 
 const NL = String.fromCharCode(10);

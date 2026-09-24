@@ -15,39 +15,11 @@
  *   node tools/check-injected.mjs --all
  *
  * Exit code is non-zero when any fragment loses an escape or fails to parse.
+ * The fragment lists it checks are in tools/injected-scripts.mjs.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-/* The ordered fragment lists, mirroring what each patch.ps1 concatenates. A
-   patch whose script is a single file needs no entry. */
-const SCRIPTS = {
-  "prompt-queue": {
-    /* Read, not repeated. Kept here as well as in patch.ps1, this list went
-       stale the moment saved/ landed: "ok (18 fragments)" for a bundle that
-       ships 27, six files never scanned. Repo-root paths - the assembly
-       reaches outside the patch folder. */
-    files: JSON.parse(fs.readFileSync("patches/prompt-queue/order.json", "utf8"))
-  },
-  "shared-lib": {
-    dir: "lib/js/",
-    order: ["ccRow", "ccStore", "ccCopyText", "ccWtResolve"],
-    /* Each of these is its own file, injected into somebody else's script -
-       concatenating them is not a program, so only the escape scan applies.
-       They were not scanned at all before, and ccRow.js shipped a swallowed
-       backslash because of it. */
-    escapesOnly: true
-  },
-  "auto-followup": {
-    dir: "patches/auto-followup/af/",
-    /* Read, not repeated. This list lived in five places; once.js was added to
-       four of them and this one kept scanning a bundle the patch no longer ships. */
-    order: JSON.parse(fs.readFileSync("patches/auto-followup/af/order.json", "utf8"))
-  }
-};
+import { root, SCRIPTS } from "./injected-scripts.mjs";
 
 const BS = String.fromCharCode(92);
 

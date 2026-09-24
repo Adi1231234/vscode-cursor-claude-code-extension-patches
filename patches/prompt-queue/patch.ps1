@@ -3,11 +3,11 @@
 #   queue.css / queue/modal.css / saved/saved.css -> appended to the webview stylesheet
 #   order.json  -> THE ordered fragment list, concatenated into one injected
 #                  script (each fragment < 150 lines). 'queue/config-dom' must
-#                  open the IIFE / <script> and 'queue/flush-init' must close it;
+#                  open the IIFE / <script> and 'queue/init' must close it;
 #                  the middle is grouped by concern, with saved/ (the
-#                  saved-queues feature) as its own block, and lib/js/ccStore +
-#                  ccRow dropped in right after the fragment that opens the IIFE
-#                  (background-tasks pulls in the same two files).
+#                  saved-queues feature) as its own block, and the lib/js
+#                  runtime (ccStore, ccRow, ccDom, ccWatch, ccSession, ccClock)
+#                  dropped in right after the fragment that opens the IIFE.
 #
 # The list is READ, not repeated. tools/check-injected.mjs reads the same file:
 # when each kept its own copy the checker went stale the moment saved/ landed and

@@ -1,5 +1,6 @@
 [
   "config",
+  "dom",
   "bridge",
   "once",
   "claims",
@@ -23,5 +24,6 @@
   "live-view",
   "arming",
   "loop",
-  "runtime"
+  "runtime",
+  "drive"
 ]

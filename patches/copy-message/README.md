@@ -31,20 +31,31 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
 
 ## Why it is built this way
 
-- **Re-attached *and re-placed* from a `MutationObserver`, not once at load.**
+- **Re-attached *and re-placed* on DOM changes, not once at load.**
   The message list is React-rendered and re-renders on every stream chunk, so a
   one-shot pass would only decorate the messages that existed at load. The
   actions container also appears after the bubble does, so placement is
-  re-asserted every pass - `appendChild` on an already-attached node just moves
-  it, which makes that idempotent. Observer bursts are coalesced into one
-  `requestAnimationFrame` pass.
-- **In normal flow the button is kept as the *last* child, every pass.**
+  re-asserted on each pass. The changes come from the shared observer
+  (`lib/js/ccWatch.js`), and a pass visits only the messages a mutation
+  touched, not all of them - one full pass on the first run, then only the
+  dirty ones. Bursts are coalesced into one `requestAnimationFrame` pass.
+- **A pass that finds everything in place writes nothing.** Every write is
+  compare-first (`lib/js/ccDom.js`) and the button moves only when it is
+  actually out of place. A no-op `appendChild` is still a remove plus an
+  insert, i.e. a mutation that woke every other observer in the panel on
+  every pass; the button is also marked `data-cc`, so moving it does not wake
+  the shared observer either (see "The webview runtime" in `../../CLAUDE.md`).
+- **In normal flow the button is kept as the *last* child.**
   Checking only "is it still parented to the message" is not enough: React
   knows nothing about our node, so while a reply streams in it appends each new
   paragraph *after* it, stranding the icon in the middle - visually at the top
   of the answer, which is what it looked like from the outside. Inside the
-  actions container the opposite rule applies: only re-parent, never re-order,
-  or we would fight React each time it mounts or unmounts its popup there.
+  actions container the opposite rule applies: it only has to sit after the
+  app's own button, never be re-ordered past React's popup, or we would fight
+  React each time it mounts or unmounts it. The container is marked
+  `data-cc-acts` once, so the stylesheet targets it directly instead of through
+  a `:has()` over every `div`, which the browser re-checks on every class
+  change anywhere in the panel.
 - **Anchored on `[title="Message actions"]`,** a semantic string, rather than on
   the container's minified class.
 - **Copies the bubble, not the wrapper.** A user message's wrapper also holds
@@ -54,11 +65,11 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   button; the next mutation picks it up.
 - **That "is there text yet" test reads `textContent`, never `innerText`.**
   `innerText` is defined in terms of *rendered* text, so reading it flushes
-  pending style and layout synchronously. The question is asked from the
-  observer pass about every message that has no button yet - which is every
-  thinking block and every tool call, on every burst, for as long as the
-  transcript stays open - so the forced flushes grow with the conversation and
-  on a long one cost more than the rest of the patch together. `textContent`
+  pending style and layout synchronously. The question is asked about every
+  message that has no button yet - every thinking block and every tool call -
+  each time one of them changes, and on the first pass about all of them at
+  once, so the forced flushes grow with the conversation and on a long one
+  cost more than the rest of the patch together. `textContent`
   answers the same question off the tree and forces nothing. The *copy* still
   reads `innerText`, where the rendering is the point: it is what puts the
   blank lines between blocks on the clipboard.
@@ -70,7 +81,7 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   constraint in the patch. The app decides whether to keep the transcript
   pinned with `stuck = scrollHeight - scrollTop - clientHeight < 50` and then,
   in a layout effect, sets `scrollTop = scrollHeight`. Our button is attached
-  one frame *later*, from the MutationObserver - so any height it adds lands
+  one frame *later*, from the observer pass - so any height it adds lands
   after the app has already scrolled. The view then sits that many pixels above
   the bottom with the app unaware, and the next update re-pins and takes up the
   slack in one step: a visible jump on every block of reply text. A negative
@@ -109,7 +120,7 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   literally emits `class="container_<hash> undefined"`. Nothing can select that.
   The signal that does work is `subtleVisible_<hash>`, which the app adds to its
   own button in the same render, so the rule is
-  `div:has(> [class*="subtleVisible"]) > .__ccCopyAct`. Our icon then appears
+  `[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct`. Our icon then appears
   and disappears exactly with the app's, never on its own.
 - **The pointer must not focus the button.** Inheriting the app's
   `actionButton_<hash>` also inherits its `:focus{opacity:1}`, so a click left
@@ -124,7 +135,7 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   stays owned by hover, so the check shows while you are there and vanishes
   with the app's button when you leave.
 - **Hash-free CSS.** The stylesheet names only our own classes plus generic
-  attribute matches (`[class*="subtleVisible"]`, `div:has(> .__ccCopyAct)`).
+  attribute matches (`[class*="subtleVisible"]`, `[data-cc-acts]`).
   The minified names live in `lib/Extension.ps1` and are substituted into the
   JS. Each is anchored on a key that is unique across the whole bundle, since
   the obvious ones are not: `$Ctx.MsgHash` from `messagesContainer_<hash>`;

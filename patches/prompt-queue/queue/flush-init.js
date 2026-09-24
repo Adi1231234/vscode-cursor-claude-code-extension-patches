@@ -15,7 +15,7 @@
   async function flush() {
     /* 'paused' is enforced inside firstSendableIndex (it still lets a *due*
        scheduled item through), so it is intentionally not gated here. */
-    if (flushing || editing || isBusy()) return;
+    if (flushing || editing || isBusy() || Date.now() < retryAt) return;
     var idx = firstSendableIndex();
     if (idx < 0) return;
     var e = inp();
@@ -34,8 +34,10 @@
       var files = await buildFiles(it.files);
       if (canSend) await sendViaSession(s, it, files);
       else await sendViaDom(e, it, files);
+      sendWorked();
     } catch (err) {
       Q.splice(idx, 0, it);
+      sendFailed();
       render();
     } finally {
       flushing = false;
@@ -62,8 +64,10 @@
       var files = await buildFiles(it.files);
       if (canSend) await sendViaSession(s, it, files);
       else await sendViaDom(e, it, files);
+      sendWorked();
     } catch (err) {
       Q.splice(Math.min(idx, Q.length), 0, it);
+      sendFailed();
       render();
     } finally {
       flushing = false;
@@ -81,11 +85,13 @@
        count()   items the queue will send on its own. Non-zero means the user
                  is driving. A parked item is not driving and never leaves.
        paused()  the user's hold. Nothing auto may send through it.
-       busy()    a turn is running.
+       busy()    a turn is running, or this queue is sending one.
        panel()   the queue panel node, or null - the lane renders inside it.
        send(t)   send one text now, by the same path a queued item takes.
        log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
        sid()     the conversation id, resolved and cached by persist.js.
+       subscribe(fn)  fn() after every queue pass - a push instead of polling
+                 count() / paused() (see drive.js).
      Guarded so the first definition wins, like every other shared global here.
 
      send() cannot go through sendNow: that one takes an item already in Q and
@@ -108,17 +114,19 @@
       return false;
     } finally {
       flushing = false;
+      schedulePass();   /* an item queued while this was in flight is next */
     }
   }
 
   window.__qAuto = window.__qAuto || {
     count: function () { return Q.filter(function (it) { return !isParked(it); }).length; },
     paused: function () { return paused; },
-    busy: function () { return isBusy(); },
+    busy: function () { return isBusy() || flushing; },
     panel: function () { return panel && panel.isConnected ? panel : null; },
     send: sendText,
     log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },
     sid: function () { return _curSid || ""; },
+    subscribe: onQueueChange,
 
     /* Put a line in the queue as an ordinary item. Not through the composer:
        commitComposerToQueue pauses the queue on an idle add, which is exactly
@@ -137,28 +145,3 @@
     }
   };
 
-  /* ---------- Init ---------- */
-  hookFileReader();
-  document.addEventListener("keydown", onComposerKeydown, true);
-  /* Ctrl+Alt+L opens the log viewer on demand (the button itself is hidden). */
-  document.addEventListener("keydown", function (ev) {
-    if (ev.ctrlKey && ev.altKey && (ev.key === "l" || ev.key === "L")) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); }
-  }, true);
-  try {
-    window.__ccLogs = function () { return _ccLogs.slice(); };            /* read logs programmatically */
-    window.__ccLogBtn = function () { window.__ccLogBtnOn = 1; return "queue log button enabled"; };
-    window.__ccLog = ccLog;   /* any patch can trace under its own tag, not __qAuto.log's */
-  } catch (e) {}
-  ensureAddButton();
-  setInterval(function () {
-    try {
-      syncSession();
-      hookStopPause();
-      ensureAddButton();
-      if (Q.length && (!panel || !panel.isConnected)) render();
-      armAfterItems();
-      tickRings();
-      if (!isBusy() && Q.length) flush();
-    } catch (e) {}
-  }, 150);
-})();</script>

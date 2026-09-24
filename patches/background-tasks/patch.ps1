@@ -38,14 +38,18 @@ function Invoke-Patch {
 
     # ---------------- webview script ----------------
     # Explicit order, not filename-sorted: 'config-dom' opens the <script> and the
-    # IIFE, 'init' closes both. lib/js/ccStore.js is the shared session-store finder
-    # (prompt-queue pulls in the same file; its guards make the second copy a no-op).
+    # IIFE, 'init' closes both. The lib/js runtime goes right after the opener:
+    # ccStore (session-store finder), ccRow (footer order), ccDom (write only on
+    # change), ccWatch (the one observer), ccSession (state pushes), ccClock (the one
+    # clock). Other patches pull in the same files; their guards make every later
+    # copy a no-op.
     $names = @(
         'config-dom', 'store', 'shells', 'stream', 'bridge', 'entry',
         'logpane', 'toolbar', 'footer', 'tail', 'workflow', 'dialog', 'keys',
         'list', 'indicator', 'init'
     )
-    $parts = @((Join-Path $PSScriptRoot 'tasks/config-dom.js'), (Get-LibJsPath 'ccStore.js'), (Get-LibJsPath 'ccRow.js')) +
+    $libs = @('ccStore.js', 'ccRow.js', 'ccDom.js', 'ccWatch.js', 'ccSession.js', 'ccClock.js') | ForEach-Object { Get-LibJsPath $_ }
+    $parts = @((Join-Path $PSScriptRoot 'tasks/config-dom.js')) + $libs +
         ($names | Select-Object -Skip 1 | ForEach-Object { Join-Path $PSScriptRoot "tasks/$_.js" })
     $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
     $script = Expand-JsTokens $script @{ '__NONCE__' = $Ctx.Nonce }

@@ -16,7 +16,8 @@ const jobs = [
   ["order.test.js", [path.join(here, "order.test.js")]],
   ["saved.test.js", [path.join(here, "saved.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "prompt-queue"]],
-  ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]]
+  ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]],
+  ["check-runtime", [path.join(root, "tools", "check-webview-runtime.mjs")]]
 ];
 
 const NL = String.fromCharCode(10);

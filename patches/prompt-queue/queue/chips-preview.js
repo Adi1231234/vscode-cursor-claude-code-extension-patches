@@ -66,6 +66,7 @@
     cont.appendChild(img);
     cont.appendChild(x);
     ov.appendChild(cont);
+    window.__ccDom.own(ov);   /* body-mounted UI of ours: wakes no observer */
     document.body.appendChild(ov);
     pvClose = close;
   }

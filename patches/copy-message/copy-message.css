@@ -1,6 +1,6 @@
 /* COPYMSG */
 /* Copy-to-clipboard icon for chat messages. Two placements, both driven by
-   copy-message.js:
+   copy/place-observe.js:
      - user messages: inside the app's own "Message actions" container, wearing
        the app's actionButton class - so everything visual is inherited and
        nothing is duplicated here;
@@ -18,7 +18,7 @@
    keep the transcript pinned to the bottom with
        stuck = scrollHeight - scrollTop - clientHeight < 50
    and then, in a layout effect, sets scrollTop = scrollHeight. Our button is
-   attached one frame LATER, from the MutationObserver. Any height it added
+   attached one frame LATER, from the observer pass. Any height it added
    would therefore land after the app had already scrolled: the view would sit
    that many pixels above the bottom, with the app unaware, and the next update
    would re-pin and take up the slack all at once - a visible jump on every
@@ -79,8 +79,15 @@
 
 /* ---------- alongside the app's message-actions button (user messages) ----------
    The container stacks block-level children, so it has to become a row once a
-   second button joins it. :has() keeps this scoped to that one container. */
-div:has(> .__ccCopyAct) {
+   second button joins it. place-observe.js marks that one container with
+   data-cc-acts when it puts the button in, and the rule keys off the mark.
+
+   It used to be div:has(> .__ccCopyAct), and the reveal below was
+   div:has(> [class*="subtleVisible"]). A :has() whose subject is every div, with
+   a substring match inside it, is re-checked on every class change anywhere on
+   the page - and the page is sixteen panels sharing one renderer thread. React
+   leaves an attribute it did not set alone, so the mark survives its renders. */
+[data-cc-acts] {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -88,22 +95,28 @@ div:has(> .__ccCopyAct) {
 }
 
 /* Reveal, mirroring the app's own button exactly: while the message is hovered
-   the app adds a "subtly visible" class to that button, so :has() on the
-   container is the faithful signal - our icon appears and disappears with
-   the app's, never on its own.
+   the app adds a "subtly visible" class to that button, which sits before ours
+   in the container (ours is appended), so the sibling combinator is the
+   faithful signal - our icon appears and disappears with the app's, never on
+   its own.
 
    Do NOT key off the container's own hover class: the CSS module has no
    messageHovered entry, so the app renders it as the literal string
-   "undefined" and no selector can match it. That was the bug. */
-div:has(> [class*="subtleVisible"]) > .__ccCopyAct {
+   "undefined" and no selector can match it. That was the bug.
+
+   The mark sits in :where() to keep this rule's specificity at (0,2,0): above
+   the app's plain .actionButton (so it reveals) and below its
+   .container:hover .actionButton (0,3,0), so hovering the actions area takes
+   ours to full opacity together with the app's, as it always did. */
+:where([data-cc-acts]) > [class*="subtleVisible"] ~ .__ccCopyAct {
   opacity: .7;
 }
 
 /* Direct interaction wins - last, and at least as specific as the rule above. */
 .__ccCopyAct:hover,
 .__ccCopyAct:focus-visible,
-div:has(> [class*="subtleVisible"]) > .__ccCopyAct:hover,
-div:has(> [class*="subtleVisible"]) > .__ccCopyAct:focus-visible {
+[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct:hover,
+[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct:focus-visible {
   opacity: 1;
 }
 

@@ -425,6 +425,10 @@ try{
   const solo = document.querySelector('.__afSolo');
   ok(!!solo, 'lane: a panel with no layout box is not used - the lane gets a container of its own');
   ok(!!solo && !!solo.querySelector('.__afText'), 'lane: and the message is inside it');
+  /* It sits in the composer area the pass watches and is rebuilt on every
+     pass: unowned, each rebuild asked for the next pass - 365 a second in the
+     lab for as long as a responder was writing. */
+  ok(!!solo && solo.hasAttribute('data-cc'), 'lane: its container is ours (data-cc), so rebuilding it wakes no pass');
   globalThis.window.__qAuto.add = keepAdd;
 
   panel._shown = true;                        // the user queues something; the panel is back
