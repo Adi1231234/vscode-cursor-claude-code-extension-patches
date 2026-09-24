@@ -34,7 +34,10 @@ const SCRIPTS = {
   },
   "shared-lib": {
     dir: "lib/js/",
-    order: ["ccRow", "ccStore", "ccCopyText", "ccWtResolve"],
+    /* Every file in lib/js, read off the folder rather than written down: a
+       list here named ccWtResolve for months after the file was retired, and
+       never named ccModal at all. */
+    order: fs.readdirSync("lib/js").filter((f) => f.endsWith(".js")).map((f) => f.slice(0, -3)).sort(),
     /* Each of these is its own file, injected into somebody else's script -
        concatenating them is not a program, so only the escape scan applies.
        They were not scanned at all before, and ccRow.js shipped a swallowed

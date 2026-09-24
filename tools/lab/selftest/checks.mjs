@@ -7,6 +7,7 @@ import { readFileSync, readdirSync, existsSync, writeFileSync, rmSync } from 'no
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { REPO } from '../paths.mjs';
+import { webviewRuntimeViolations } from '../../check-webview-runtime.mjs';
 
 const parses = (file) => {
     try { execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' }); return null; }
@@ -41,6 +42,11 @@ export function staticChecks(check) {
         }
     }
     check('no source file over 150 lines', !big.length, big.join(', '));
+
+    /* No timer and no observer of its own in any panel script: every panel runs
+       every script, on one thread they all share (tools/check-webview-runtime.mjs). */
+    const rt = webviewRuntimeViolations();
+    check('webview runtime: no setInterval, one MutationObserver', !rt.bad.length, rt.bad.join(' | '));
 
 }
 
