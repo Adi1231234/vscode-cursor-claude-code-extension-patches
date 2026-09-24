@@ -56,9 +56,12 @@ while **idle** (the app's handler is not gated on busy), which is not a stop -
 so `isBusy()` must hold; and an empty queue has nothing to park, so `paused` is
 never set behind the user's back when the queue isn't in use.
 
-Note this is the same `paused` as the play/pause button, so a **due** scheduled
-item still fires (see `firstSendableIndex`) - a commitment to a wall-clock
-moment is deliberately not cancelled by a pause, however that pause arrived.
+Note this is the same `paused` as the play/pause button, and it now holds
+**everything**, scheduled messages included (see `firstSendableIndex`). A due
+scheduled item used to fire straight through it, on the grounds that a
+commitment to a wall-clock moment should outlive a pause; that made this very
+gesture - Stop - not stop, and a hold that silently lets some items through is
+the one thing a hold must not be.
 
 Decorating an instance method is safe here (an own property over the prototype,
 `orig.apply(this, arguments)` returns the original promise untouched) - it is
@@ -134,9 +137,10 @@ the to-top button used to be omitted on the first row, which made that one row
 shorter than the rest. The fourth button costs ~9px of row height; the glyphs
 are drawn at 10px with tighter padding so it is not more.
 
-Both jump-to-end buttons go through `moveToEnd(i, last)`, which is a call to
-the existing `moveItemTo(it, p)` with a clamped position - the queue is never
-spliced a second way.
+All four go through `moveItemTo(it, p)` with a clamped **lane** position - the
+queue is never spliced a second way, and the number they move against is the
+one printed on the row (see Scheduling below: a floating scheduled item eats
+no slot).
 
 ## Row actions menu (`row-menu.js`)
 
@@ -180,56 +184,97 @@ Two things the popup has to get right:
 Menu actions are **identity-based** (`Q.indexOf(it)`), not index-based: an
 item above can flush between opening the menu and clicking an entry.
 
-## Scheduling (`schedule-lib.js`, `schedule-clock.js`, `schedule-modal.js`)
+## Scheduling (`schedule-*.js`)
 
-Every row has a clock button. Clicking it opens a modal with three choices:
+Every row has a clock button opening a modal with four choices. The thing to
+understand first is **which of them keep their place in the queue**, because
+that is what the list is printing.
 
-- **Queue** (default) - sent in normal FIFO order.
-- **Timer** - a relative delay from now (preset chips + custom minutes).
+### The lane, and the ones committed to a clock (`schedule-order.js`)
+
+An item **gates** when the queue must not go past it. An item **floats** when
+it is committed to a wall-clock moment and to nothing else. That single
+property decides everything: a gating item is in the lane, carries a position
+number, and holds everything below it; a floating item has no position at all,
+is drawn in its own group, and the lane renumbers without it.
+
+- **Queue** (default) - in the lane, sent in FIFO order.
+- **Timer** - a delay from now. **Holds by default**: "wait 10 minutes" is
+  about pacing the queue.
 - **After** - a timer that only starts once the item reaches the front (the
-  message before it has finished). Shown as "Waiting · Nm" until then, then a
-  live ring. Position-relative: moving it back resets the countdown, which
-  re-arms after its new predecessor finishes (`armAfterItems` in `schedule-lib.js`,
-  gated in `firstSendableIndex`). Un-armed on restart, re-arms by order.
-- **At time** - quick presets (In 1 hour / This evening / Tomorrow 9 AM ...)
-  plus an exact `datetime-local`; must be in the future.
+  message before it has finished). Always gates - a countdown measured from
+  "the one before me finished" only means anything in order. Shown as
+  "Waiting · Nm" until armed, then a live ring. Moving it back resets it
+  (`armAfterItems`), and it re-arms when it is at the front again.
+- **At time** - an exact `datetime-local` plus quick presets, must be in the
+  future. **Does not hold by default**: an hour is a moment in the world, and
+  freezing four messages behind it for eighteen hours is almost never what was
+  meant.
 
-The modal follows current UX guidance: a live **natural-language summary**
-(`fmtSummary`, e.g. "Sends tomorrow at 9:00 AM") updates as you choose so the
-outcome is always explicit; the CTA label reflects the choice (Schedule / Done);
-and it is accessible - `role="dialog"` + `aria-modal`, focus trap, focus
-returned to the clock on close, Esc / X / backdrop all dismiss, and a subtle
-entrance animation that respects `prefers-reduced-motion`.
+Either absolute mode can be switched with the dialog's one toggle, **"Hold the
+queue until this sends"** (`schedule-hold.js`, the app's own switch reproduced
+from its measurements). Turning it on for an at-time is the case that had no
+expression before: *run the migration at 02:00, then these three follow-ups.*
 
-Choosing Timer/At-time sets `it.mode` + an absolute target `it.at` (and
-`it.start` as the ring baseline). The clock icon changes (stopwatch / calendar,
-in accent colour) and a **conic-gradient countdown ring** (`__qRing`) fills
-0->100% as the send time approaches; `tickRings()` advances it every 150ms and
-refreshes the "in Xm" label. "Clear schedule" reverts to a plain queue item.
+### Why this exists
 
-**Send logic** lives in `firstSendableIndex` (`model.js`): a *due* scheduled
-item (its time arrived) fires even while the queue is paused; future-scheduled
-items are pending and skipped; plain items send in order only when not paused;
-`missed` / `rearm` items are inactive (skipped) until the user acts.
+A scheduled item used to do both at once: it kept its position number **and**
+let the row below overtake it. `firstSendableIndex` scanned the whole queue for
+anything due before it ever looked at the front, then skipped every pending
+schedule on the way down - so a 10-minute timer on item 1 sent item 2 first,
+and a timer that came due at position 5 jumped over a plain item at position 1.
+The numbers promised an order the queue did not run, in both directions. There
+is no way to draw that honestly: the fix is that an item either keeps its
+number and holds the lane, or gives up its number.
+
+### Send logic (`firstSendableIndex` in `model.js`)
+
+Two scans, in the order the panel draws them: the scheduled group first (a due
+floating item fires from wherever it sits, a pending one blocks nothing), then
+the lane strictly from the front (the first gate holds everything behind it
+until it is armed and due; the first plain item sends).
+
+**`paused` stops both**, scheduled items included. It used to let a due one
+fire through, which meant Stop - which pauses (`stop-pause.js`) - did not stop.
+The cost is real and deliberate: nothing sends while you are away. Combined
+with the restore rule below, a schedule only ever fires in a window you left
+running and un-paused.
+
+Parked items (skipped / missed / rearm) are never gates - a skipped gate would
+be a deadlock with nothing on screen to explain it - but they keep their place
+in the lane, so un-skipping puts them back where they were.
+
+### What the dialog says before it commits
+
+Beside the live natural-language summary (`fmtSummary`), a note states the cost
+of the choice: how many messages would wait behind a hold, and - the case with
+no other way of being seen - that a chosen hour **cannot be kept** because
+something above already holds the lane past it ("An item above holds the queue
+until 11:37 PM, so this sends then, not at 8:37 PM"). Both come from
+`gateAbove` / `heldBelow`.
 
 ### Restart policy
 
 We are a client-side scheduler (like classic Outlook's Outbox, not Gmail's
 server side): a schedule only fires while the editor is open. The full schedule
-(`at`, `start`, `mode`, `dur`) is in localStorage, so on reopen (`persist.js`
-`loadQueue`) each item is restored by type - a decision made deliberately for
-an AI agent, where auto-running a prompt you weren't watching is the real risk:
+(`at`, `start`, `mode`, `dur`, `hold`) is in localStorage, so on reopen
+(`persist.js` `loadQueue`) each item is restored by type - a decision made
+deliberately for an AI agent, where auto-running a prompt you weren't watching
+is the real risk:
 
 - **At-time still in the future** -> stays active, keeps ticking, fires at its
-  time (if the editor is open then).
+  time (if the editor is open and the queue is not paused then).
 - **At-time whose moment passed while closed** -> flagged `missed` (amber, held,
   "Missed · H:MM"); never auto-sent. Click to reschedule.
 - **Timer** (a relative countdown - its origin is lost across a restart) ->
   `rearm`: inactive, shown as "Restart Nm"; one click re-runs the duration from
-  now (`rearmTimer`).
+  now (`rearmTimer`), keeping its hold, because a restart is not a decision.
 
 This is the Quartz "discard / do-nothing" misfire stance plus a visible state,
 chosen over "fire-once" / "fire-all" catch-up because our messages execute.
+A restore also forces `paused`, so between that and the pause rule above there
+is **no unattended scheduling at all** - chosen knowingly over a hold that
+silently lets some items through.
 
 > Injected JS lands inside a template literal in `extension.js`, so the queue
 > fragments must contain **no backticks and no `${`** (even in comments) - they
@@ -239,6 +284,15 @@ chosen over "fire-once" / "fire-all" catch-up because our messages execute.
 ## Tests
 
     node patches/prompt-queue/tests/run-all.mjs
+
+`order.test.js` (32 checks) runs `model.js` + `schedule-lib.js` +
+`schedule-order.js` themselves, eval'd with only `Q`, `paused`, `isBusy` and
+`render` stubbed. It pins the decisions above rather than the mechanics: a
+holding timer not being overtaken, the same timer released leaving the lane
+entirely, a due floating item firing past a gate it was never behind, `paused`
+stopping scheduled items too, a parked gate holding nothing, lane positions
+skipping floating rows, and the two defaults (a timer holds, an at-time does
+not) - each of which was a live bug or is the reason one is gone.
 
 `saved.test.js` (38 checks) runs `saved/store.js` itself - eval'd, not
 re-implemented - with only its outside world stubbed (localStorage, `Q`,
