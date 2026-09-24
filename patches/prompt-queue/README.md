@@ -23,9 +23,32 @@ Without this the flush loop would send the item immediately, making an idle
 queue impossible. Adding while busy leaves the queue draining normally after
 the turn.
 
-The add button is re-anchored every tick (`ensureAddButton`) because the app
+The add button is re-anchored on every pass (`ensureAddButton`) because the app
 re-renders its own footer; `insertBefore` on the existing node just moves it,
 so it never duplicates.
+
+## What runs the queue (`drive.js`)
+
+One **pass** does everything the queue needs from the outside world: pick up a
+conversation switch, keep the stop hook and the footer buttons in place, bring
+the panel back if React dropped it, arm `after` items, and send the next item
+when Claude is idle. It used to run on a 150 ms `setInterval`, in every panel,
+whether anything had changed or not. Everything it reads can only change on a
+push, so it now runs on those and nothing else:
+
+- `busy`, the session id and the conversation itself, through
+  `lib/js/ccSession.js` (signal subscriptions that follow a conversation switch);
+- the app re-rendering the composer, through the shared observer
+  (`lib/js/ccWatch.js`) scoped to the composer's container - the panel and the
+  buttons are marked `data-cc`, so the queue's own re-render is not one;
+- the queue itself changing (`render()` schedules a pass);
+- a scheduled item coming due: one one-shot timer for the earliest `at`, re-armed
+  by every pass.
+
+Passes are coalesced into one `setTimeout(0)` (not `requestAnimationFrame`: a
+hidden panel gets no frames, and the queue has to keep sending behind another
+view). Measured in the lab: an item queued while busy was sent **7 ms** after
+`busy` fell. See "The webview runtime" in `../../CLAUDE.md`.
 
 ## Stopping Claude parks the queue (`stop-pause.js`)
 
@@ -37,16 +60,16 @@ is the opposite of what the gesture asked for. The panel header shows
 other pause; one click releases it.
 
 The hook is on the **session's own `interrupt()`**, decorated per session
-(`hookStopPause`, re-run each tick because the object is replaced when the
+(`hookStopPause`, re-run on every pass because the object is replaced when the
 active conversation changes; guarded by `__qStopHook` so it decorates once,
 and isolated in its own try/catch - it decorates someone else's object, and a
-throw there would otherwise take the rest of the tick down with it, on that
-tick and every one after).
+throw there would otherwise take the rest of the pass down with it, on that
+pass and every one after).
 That is the single funnel every stop path goes through - the composer's stop
 button (`onClick` -> `session.interrupt()`), a plain Escape (the app's
 body-level handler), and `restartClaude`. It runs **synchronously with the
-gesture**, i.e. before `busy` flips false and before the 150ms flush tick wakes
-up. Watching for the same gestures in the DOM instead would mean
+gesture**, i.e. before `busy` flips false and before the pass that flip
+schedules. Watching for the same gestures in the DOM instead would mean
 re-implementing the app's own conditions *and* would still race the flush; and
 `busy` going false is not a signal on its own - it is identical for a normal
 turn end.
@@ -79,7 +102,7 @@ The queue survives a full editor restart, per session:
      hits. (An earlier version relied only on this and silently never
      persisted; the URL param is what fixed it. Note ids may be a signal
      `{value}` not a string - `sidFromVal` unwraps both.)
-  `syncSession` (run each tick) swaps `Q` when the active id changes.
+  `syncSession` (run on every pass) swaps `Q` when the active id changes.
 - **Saved on every change:** `render()` calls `saveQueue()`; inline text edits
   call `scheduleSave()` (debounced). Emptying the queue removes the key.
   Serialized shape is compact (`{p:paused, c:collapsed, items:[{t,o?,f?:[{n,d}]}]}`);
@@ -204,8 +227,9 @@ entrance animation that respects `prefers-reduced-motion`.
 Choosing Timer/At-time sets `it.mode` + an absolute target `it.at` (and
 `it.start` as the ring baseline). The clock icon changes (stopwatch / calendar,
 in accent colour) and a **conic-gradient countdown ring** (`__qRing`) fills
-0->100% as the send time approaches; `tickRings()` advances it every 150ms and
-refreshes the "in Xm" label. "Clear schedule" reverts to a plain queue item.
+0->100% as the send time approaches; `tickRings()` advances it once a second on
+the shared clock (`lib/js/ccClock.js`), only while a ring is showing and the
+panel is visible, and refreshes the "in Xm" label. "Clear schedule" reverts to a plain queue item.
 
 **Send logic** lives in `firstSendableIndex` (`model.js`): a *due* scheduled
 item (its time arrived) fires even while the queue is paused; future-scheduled

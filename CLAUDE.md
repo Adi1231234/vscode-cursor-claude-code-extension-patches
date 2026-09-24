@@ -19,7 +19,13 @@ in place. Read this before changing anything so the structure stays clean.
     session-store finder), `ccRow.js` (`window.__ccRow`, the relative order
     injected footer buttons agree on) and `ccModal.js` (`window.__ccModal`, the
     dialog chrome - overlay, head, foot, Esc, backdrop, focus trap) - each pulled
-    into a patch's fragment list with `Get-LibJsPath`.
+    into a patch's fragment list with `Get-LibJsPath`. Plus the **webview
+    runtime** every patch that watches or ticks is built on (see "The webview
+    runtime" under conventions): `ccDom.js` (`__ccDom`, writes only on a real
+    change, and the `data-cc` / footer-contract markers), `ccWatch.js`
+    (`__ccWatch`, the one shared DOM observer), `ccSession.js` (`__ccSession`,
+    the session store's signals as pushes, across conversation switches) and
+    `ccClock.js` (`__ccClock`, the one clock, only while visible and needed).
   - `css/` - the shared stylesheets, `Get-LibCssPath`: `ccScroll.css` (the
     scrollbar) and `ccModal.css` (the dialog chrome that goes with
     `lib/js/ccModal.js`). Whichever patch runs first appends them; the guard in
@@ -87,6 +93,36 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
 - **Injected webview JS lives inside a template literal - two hazards.** Scripts injected via `Add-ScriptAfterMarker`/`Add-ScriptAfterRegex` land *inside a `` `...` `` template literal* in `extension.js`. Two distinct failure modes, BOTH from the same fact, neither caught by a plain `node --check`:
   1. **No `` ` `` or `${` anywhere (even in comments)** - they *break out* of the template literal and corrupt `extension.js`. Caught by `node --check` of the **patched `extension.js`** (not the fragment).
   2. **No backslash at all, beyond a \u escape** - the literal evaluates every escape *before the browser sees the script*. \n / \t / \r become real newlines and break the string they sit in; \d, \w, \. in a regex silently lose the backslash and change what the pattern matches; a lone backslash in a string is a syntax error. A \u escape is the one exception (it yields a normal glyph, and the icons rely on it). For a newline use `String.fromCharCode(10)`, for a backslash `String.fromCharCode(92)`, and write regexes with character classes (`[0-9]`, `[.]`) rather than escapes. Grep the fragment for backslashes before shipping. This is invisible to `node --check` of *both* the fragment and the patched `extension.js` (both still hold the two-char `\n`); only checking the **template-literal-evaluated** script catches it: extract the injected `<script>` body and `` node -e 'eval("`"+body+"`")' `` then `node --check` the result (that is exactly what the webview executes). Make this check part of Testing for any webview-JS change.
+- **The webview runtime: every panel pays for every patch, on one thread.** The
+  Claude panels of *all* editor windows are same-origin iframes, so Chromium runs
+  them in **one renderer process on one main thread**. Measured 2026-09-24 with
+  16 panels open: that thread sat at 98% busy and every window froze together,
+  and 67% of it was the patches - a 150 ms and a 300 ms `setInterval` per panel,
+  plus four whole-document `MutationObserver`s waking each other and the app's
+  footer fitter (any mutation inside the footer makes it re-fit from stage 0,
+  with `getComputedStyle` over every descendant). An idle lab panel went from
+  6.7 mutation records and 307 `getComputedStyle` calls a second to **0 and 0**,
+  the same as the pristine bundle. The rules that keep it there:
+  - **State is a push, never a poll.** `__ccSession.on('busy', fn)` /
+    `onStore(fn)` - it re-binds when the conversation changes. A deadline is a
+    one-shot `setTimeout` for that deadline, not a check every N ms.
+  - **One DOM observer.** Subscribe with `__ccWatch.on(fn, {chars, scope})`; it
+    drops mutations inside `[data-cc]`, so a patch never wakes itself or the
+    others. Mark every node a patch creates with `__ccDom.own(el)`.
+  - **Write only on a real change.** `classList.add` of a class already there
+    and `textContent =` of the same text are still mutations. Use `__ccDom`
+    (`setText`, `setClass`, `toggle`, `setAttr`, `setStyle`).
+  - **Honour the footer contract.** Inside the composer footer, a tooltip or
+    anything that changes without changing width goes under
+    `__ccDom.overlay(el)`, and a counter that ticks in a fixed width under
+    `__ccDom.fixedWidth(el)` - the fitter ignores exactly those.
+  - **A clock on screen gets `__ccClock.every(fn)`**, which ticks only while
+    something is subscribed and the panel is visible; stop it when nothing
+    needs it.
+  `node tools/check-webview-runtime.mjs` (also in the selftest) fails on any
+  `setInterval` or `new MutationObserver` in webview code outside
+  `lib/js/ccWatch.js`. Host code (`host/`) runs in the extension host and is
+  exempt.
 - **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
   sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
   viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
@@ -331,16 +367,19 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   set true once on the SDK's `system`/`init` frame and false only in the store's
   own `endTurn()` on the `result` frame, so it does **not** flap between tool
   calls and one rising-then-falling pair is one run. Signals carry
-  `.subscribe()`, so the edge is a push - do not add a poll loop for it (the
-  queue and auto-followup poll because they need a *settled reply*, which is a
-  different question). Two traps: `.subscribe()` fires immediately with the
+  `.subscribe()`, so the edge is a push - do not add a poll loop for it; take it
+  from `__ccSession.on('busy', ...)` (the queue and auto-followup both do; the
+  *settled reply* auto-followup waits for is a one-shot timer armed on the
+  fall). Two traps: `.subscribe()` fires immediately with the
   **current** value, so the first callback must only prime the edge detector or
-  opening a panel mid-run reads as a finish; and **Stop is indistinguishable
+  opening a panel mid-run reads as a finish (`__ccSession` passes `initial` for
+  exactly this); and **Stop is indistinguishable
   from a finish** on this signal, so decorate the store's `interrupt()` - which
   runs synchronously with the click, before the signal flips - the way
   `prompt-queue`, `auto-followup` and `panel-settings` all do. The store object
-  is replaced when the conversation changes, so re-wire from a render that takes
-  `session` as a prop rather than once at load. And "is more work lined up behind
+  is replaced when the conversation changes; `__ccSession` follows the app's
+  `sessions.activeSession` signal and moves every subscription across, so
+  subscribe through it rather than to one store once at load. And "is more work lined up behind
   this run?" has an answer already published: the queue exports `window.__qAuto`
   with `count()` (parked items already excluded), `paused()` and `add()` - read
   that rather than reaching into the queue's own state, the way `auto-followup`
