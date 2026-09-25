@@ -23,7 +23,7 @@ export async function ensurePanel(port, log, tries = 40) {
     if (!r.ok) throw new Error(`could not run "${OPEN}": ${r.reason}`);
 
     const panel = await waitForPanel(port, tries);
-    if (!panel) throw new Error('the panel did not render (see <lab>/ud/logs/**/exthost)');
+    if (!panel) throw new Error('the panel did not render (see <lab>/portable/user-data/logs/**/exthost)');
     return panel;
 }
 

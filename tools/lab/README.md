@@ -35,6 +35,13 @@ curl -L -o vscode.zip https://update.code.visualstudio.com/latest/win32-x64-arch
 node tools/lab/lab.mjs up --code <that>/Code.exe
 ```
 
+**It runs portable, so it never takes over `vscode://`.** A non-portable VS Code
+registers itself as the handler for `vscode://` links on every start, and a zip
+build is a different exe - so each lab run used to point the real editor's links,
+sign-in callbacks included, at the lab. The lab sets `VSCODE_PORTABLE`, which a
+zip build honours (installed builds ignore it), and keeps its profile in
+`<lab>/portable/user-data` so both kinds read the same one.
+
 **Unzip it on a short path.** The build keeps its app under a commit-named
 subfolder, so the workbench is another ~90 characters below wherever you put it,
 and past MAX_PATH the window comes up **blank** with only
@@ -171,7 +178,7 @@ extension" rather than like what it is.
 - **Workspace trust.** The extension declares
   `untrustedWorkspaces.supported: false`, and a fresh profile trusts nothing, so
   it is never loaded: no line in `exthost.log`, no `Claude Code:` entries in the
-  palette, no panel, no reason given. `<lab>/ud/User/settings.json` turns trust
+  palette, no panel, no reason given. `<lab>/portable/user-data/User/settings.json` turns trust
   off.
 - **The CDP port comes from `argv.json`, in the home directory.**
   `--remote-debugging-port` on the command line is ignored, and the file the
@@ -282,6 +289,6 @@ does - `document` is the panel's document. Wrap anything longer in
 
 ## When something still goes wrong
 
-The lab's own logs are under `<lab>/ud/logs/`. The extension host log is the one
+The lab's own logs are under `<lab>/portable/user-data/logs/`. The extension host log is the one
 that says whether the extension loaded at all; `main.log` is where a broken
 `argv.json` is reported.

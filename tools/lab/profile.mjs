@@ -1,6 +1,6 @@
 /* The two profiles the lab needs, and why each line of them is there.
 
-   `<lab>/ud` is the editor profile. A fresh one does not trust the folder it
+   `<lab>/portable/user-data` is the editor profile. A fresh one does not trust the folder it
    opens, and the extension declares `untrustedWorkspaces.supported: false` - so
    it is never loaded: nothing in `exthost.log`, no `Claude Code:` entries in the
    palette, no panel, and no message anywhere saying why. That one setting is
@@ -48,7 +48,7 @@ const CLI_SETTINGS = { remoteControlAtStartup: false };
 const ARGV_DIRS = ['.vscode', '.cursor', '.vscode-insiders'];
 
 export async function write(lay, port) {
-    await mkdir(join(lay.ud, 'User'), { recursive: true });
+    await mkdir(join(lay.ud, 'User'), { recursive: true });   /* also creates lay.portable */
     await mkdir(join(lay.home, '.claude'), { recursive: true });
     await mkdir(lay.proj, { recursive: true });
 
@@ -58,6 +58,8 @@ export async function write(lay, port) {
         await mkdir(join(lay.home, d), { recursive: true });
         await writeFile(join(lay.home, d, 'argv.json'), argv);
     }
+    /* A portable editor reads argv.json from its portable folder instead. */
+    await writeFile(join(lay.portable, 'argv.json'), argv);
     await writeFile(join(lay.home, '.claude', 'settings.json'), JSON.stringify(CLI_SETTINGS, null, 2));
     await writeFile(join(lay.proj, 'readme.txt'), 'Scratch folder for the patch lab.\n');
     await copyAuth(lay);

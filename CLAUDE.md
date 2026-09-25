@@ -125,6 +125,26 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `setInterval` or `new MutationObserver` in webview code outside
   `lib/js/ccWatch.js`. Host code (`host/`) runs in the extension host and is
   exempt.
+- **Why it is one thread, and how to get one per window.** Two facts put every
+  panel of every window in one renderer. VS Code gives all webviews of one
+  extension and viewType the same origin (a UUID kept in application storage,
+  `ExtensionKeyedWebviewOriginStore`), so every Claude panel is the same site. And
+  Chromium places a same-site out-of-process iframe into an existing process of
+  that site "in any browsing context group" ("Aggressive Reuse" in
+  `docs/process_model_and_site_isolation.md`); the only brake is a process already
+  over 512 MB when the new iframe is created, which never happens right after a
+  reload. The switch that stops it is Chromium's `DisableProcessReuse` ("OOPIFs
+  will not try to reuse compatible processes from unrelated tabs"): with
+  `--enable-features=DisableProcessReuse` each window gets its own renderer, while
+  panels in one window still share theirs. Measured in the lab (VS Code 1.139): a
+  2 s block in a window-1 panel stalled a window-2 panel for 2,004 ms without it
+  and 14 ms with it. `argv.json` cannot carry it (VS Code allowlists its keys,
+  `main.ts`; the request, microsoft/vscode#134612, was closed as not planned), but
+  VS Code merges a command-line `--enable-features` into its own, so it goes on
+  the shortcut that starts the editor. Background updates never rewrite an
+  existing shortcut (`ShouldUpdateShortcut` in `build/win32/code.iss`); a manual
+  installer run does. It only applies to the first start: every later window
+  joins the running process.
 - **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
   sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
   viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
