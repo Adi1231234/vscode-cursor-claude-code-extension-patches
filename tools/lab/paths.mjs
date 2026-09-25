@@ -25,7 +25,12 @@ export function layout(version, port) {
         version,
         dir,
         home: join(dir, 'home'),
-        ud: join(dir, 'ud'),
+        /* The editor profile sits where a portable editor looks for it. The lab
+           sets VSCODE_PORTABLE (editor.mjs), and an editor that honours it reads
+           `<portable>/user-data` and ignores --user-data-dir; one that does not
+           (an installed build) takes --user-data-dir, which is the same folder. */
+        portable: join(dir, 'portable'),
+        ud: join(dir, 'portable', 'user-data'),
         udInstall: join(dir, 'ud-install'),
         proj: join(dir, 'proj'),
         pristine: join(dir, 'pristine'),

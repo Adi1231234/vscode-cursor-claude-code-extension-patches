@@ -89,7 +89,13 @@ export function runCli(args) {
    Chromium. If that cannot be done, it still starts - on your desktop, with a
    word about it - because a lab in the way beats no lab at all. */
 export async function launch(lay, port) {
-    const env = { USERPROFILE: lay.home, HOME: lay.home, CC_LAB_PORT: String(port) };
+    /* VSCODE_PORTABLE: a non-portable VS Code registers itself as the handler
+       for vscode:// links on every start (electronUrlListener.ts), so a lab
+       running a zip build took over the real editor's links, sign-in callbacks
+       included. Portable mode is the documented way out. Installed builds
+       ignore the variable (product.json carries a `target`) and register the
+       exe that is already registered. */
+    const env = { USERPROFILE: lay.home, HOME: lay.home, CC_LAB_PORT: String(port), VSCODE_PORTABLE: lay.portable };
     const args = [
         '--disable-features=CalculateNativeWinOcclusion',
         '--extensions-dir', lay.extensions,
