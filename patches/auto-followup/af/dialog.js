@@ -1,5 +1,5 @@
   /* ---------- Manage responders: the shell ----------
-     Two panes, the same shape background-tasks uses for its log dialog: the list
+     Two panes, list-detail: the list
      on one side, the selected one's fields and prompt beside it. Editing happens
      here rather than in an editor tab because the files sit in ~/.claude, outside
      whatever project is open - a tab from another folder in the tab bar is a cost

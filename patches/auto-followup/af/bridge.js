@@ -2,7 +2,7 @@
      Everything that touches a file or spawns a process happens in the extension
      host; this side only asks. The route is the store's own connection, because
      reassigning window.acquireVsCodeApi silently blanks the whole panel - the same
-     rule ccStore.js states and background-tasks follows.
+     rule ccStore.js states.
 
      Replies are matched on rid rather than "the next result wins". Two panels
      share one host, and a slow run in one window must not be delivered as the

@@ -98,5 +98,5 @@ export async function missingAnchor(check, lay) {
     const js = readFileSync(join(lay.extensions, dir, 'extension.js'), 'utf8');
     check('nothing of the broken anchor was written', !js.includes('NO_SUCH_ANCHOR'));
     check('no half-written guard was left', !js.includes('/* CWDDRIVECASE */'));
-    check('the other patches still landed', js.includes('/* BGTASKS */') && js.includes('/* QUEUE */'));
+    check('the other patches still landed', js.includes('/* AUTOFOLLOWUPHOST */') && js.includes('/* QUEUE */'));
 }
