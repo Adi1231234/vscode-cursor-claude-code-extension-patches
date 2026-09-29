@@ -1,33 +1,33 @@
 # copy-message
 
 > Layout: `patch.ps1` + `copy-message.css` + `copy/*.js` fragments, concatenated
-> in the explicit `$order` in `patch.ps1` (`config-clipboard` opens the IIFE /
+> in the explicit `$parts` in `patch.ps1` (`config` opens the IIFE /
 > `<script>`, `place-observe` closes it).
 
-Adds a copy-to-clipboard icon to **every** chat message - the user's and
-Claude's - so any single message can be lifted out without selecting it by hand.
+Adds a copy-to-clipboard icon to every message **you** sent, so a prompt can be
+lifted out and reused without selecting it by hand.
+
+It used to decorate Claude's replies too. Since 2.1.278 the app draws its own
+**Copy response** button at the end of every assistant reply, so that half was
+removed; the app still has no copy for the user's own message (its *Message
+actions* menu offers fork and rewind only), which is why this half stays.
 
 ## What it does
 
-Only **actual messages** are decorated. An assistant reply is split into one
-`message_<hash>` block per content item, so a tool call, a tool result and a
-collapsed "Thinking" row are each a separate block - decorating every one of
-them buried the transcript in icons. A block qualifies when it is a user bubble,
-or when it renders markdown (`root_<hash>`) that is *not* nested inside a
-thinking block or a tool wrapper. The ancestor check matters: an expanded
-thinking block renders markdown of its own, so a plain lookup would match it.
+A block qualifies when it holds a user bubble (`userMessage_<hash>`) with text
+in it. Two placements, chosen per message by the script:
 
-Two placements, chosen per message by the script:
-
-- **User messages** - the icon joins the app's own *Message actions* container
+- **Normally** - the icon joins the app's own *Message actions* container
   (the round rewind/fork button at the corner of the bubble) and wears the
   app's `actionButton_<hash>` class, so it is the same 20px round button and
   fades in with the same hover reveal. Nothing about its look is re-specified.
-- **Everything else** - normal flow, its own 18px line at the end of the
-  message, at the start edge, 30% opacity, fully opaque on hover / focus.
+- **Where the app draws no such container** - it leaves it out of a read-only
+  transcript and of a held message (`!readOnly && !held` in the user-message
+  component) - normal flow, its own 18px line at the end of the message, at the
+  start edge, 30% opacity, fully opaque on hover / focus.
 
-Clicking copies that message's text - for a user message, the bubble's text
-only - and flashes a green check for 1.2s before reverting to the copy glyph.
+Clicking copies the bubble's text only, and flashes a green check for 1.2s
+before reverting to the copy glyph.
 
 ## Why it is built this way
 
@@ -66,10 +66,10 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
 - **That "is there text yet" test reads `textContent`, never `innerText`.**
   `innerText` is defined in terms of *rendered* text, so reading it flushes
   pending style and layout synchronously. The question is asked about every
-  message that has no button yet - every thinking block and every tool call -
-  each time one of them changes, and on the first pass about all of them at
-  once, so the forced flushes grow with the conversation and on a long one
-  cost more than the rest of the patch together. `textContent`
+  message that has no button yet each time one of them changes, and on the
+  first pass about all of them at once, so the forced flushes grow with the
+  conversation (measured when replies were still decorated: on a long one they
+  cost more than the rest of the patch together). `textContent`
   answers the same question off the tree and forces nothing. The *copy* still
   reads `innerText`, where the rendering is the point: it is what puts the
   blank lines between blocks on the clipboard.
@@ -78,7 +78,8 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
 - **`clipboard.writeText` with an `execCommand` fallback.** The webview grants
   the async clipboard API, but it rejects when the document is not focused.
 - **The flow-placed icon must contribute ZERO height.** This is the subtlest
-  constraint in the patch. The app decides whether to keep the transcript
+  constraint in the patch. It was found while replies were still decorated,
+  but it holds for any node of ours in the message list. The app decides whether to keep the transcript
   pinned with `stuck = scrollHeight - scrollTop - clientHeight < 50` and then,
   in a layout effect, sets `scrollTop = scrollHeight`. Our button is attached
   one frame *later*, from the observer pass - so any height it adds lands
@@ -140,7 +141,4 @@ only - and flashes a green check for 1.2s before reverting to the copy glyph.
   JS. Each is anchored on a key that is unique across the whole bundle, since
   the obvious ones are not: `$Ctx.MsgHash` from `messagesContainer_<hash>`;
   `$Ctx.MsgActionBtnClass` from `subtleVisible_<hash>` (four modules define an
-  `actionButton_<hash>`, only this one defines `subtleVisible`);
-  `$Ctx.MdRootClass` from `codeBlockWrapper_<hash>` (`root` alone is far too
-  common); `$Ctx.ThinkingClass` from `thinkingSummary_<hash>`; plus
-  `$Ctx.ToolUseClass` / `$Ctx.ToolResultClass`.
+  `actionButton_<hash>`, only this one defines `subtleVisible`).

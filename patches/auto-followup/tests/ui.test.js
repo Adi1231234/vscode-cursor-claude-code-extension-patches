@@ -330,7 +330,7 @@ try{
   T.openDialog();
 }
 
-// Two patches, one slot. background-tasks' indicator anchors with the same rule
+// Two patches, one slot. Every injected footer button once anchored with the rule
 // this button used - "be the element immediately before .__qAdd" - and only one
 // element can be, so each timer displaced the other about three times a second.
 //
@@ -349,14 +349,14 @@ try{
   const order = (f) => f.children.map(n => String(n.className || '').split(/\s+/)[0]).join(' ');
   const savedInput = globalThis.__ccInput;
 
-  // prompt-queue and background-tasks register these when they are installed
+  // prompt-queue registers these when it is installed
   globalThis.window.__ccRow.rank('__qLog', 20);
-  globalThis.window.__ccRow.rank('__bgInd', 30);
+  globalThis.window.__ccRow.rank('__qSaved', 30);
   globalThis.window.__ccRow.rank('__qAdd', 40);
 
-  let f = realForm(['__bgInd', '__qAdd', 'sendButton_X']);
+  let f = realForm(['__qSaved', '__qAdd', 'sendButton_X']);
   T.ensureButton();
-  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
+  ok(order(f) === '__afBtn __qSaved __qAdd sendButton_X',
      'anchor: the shared order puts it first in the row - got ' + order(f));
 
   const settled = order(f);
@@ -366,29 +366,29 @@ try{
   f = realForm(['__qAdd', 'sendButton_X']);
   T.ensureButton();
   ok(order(f) === '__afBtn __qAdd sendButton_X',
-     'anchor: with no indicator it sits before the add button - got ' + order(f));
+     'anchor: with nothing else it sits before the add button - got ' + order(f));
   T.ensureButton();
   ok(order(f) === '__afBtn __qAdd sendButton_X', 'anchor: and stays there - got ' + order(f));
 
-  // the indicator appearing later must not shift this button either
-  f.insertBefore(Object.assign(document.createElement('button'), { className: '__bgInd' }),
+  // another button appearing later must not shift this one either
+  f.insertBefore(Object.assign(document.createElement('button'), { className: '__qSaved' }),
                  f.children.find(n => n.className === '__qAdd'));
   T.ensureButton(); T.ensureButton();
-  ok(order(f) === '__afBtn __bgInd __qAdd sendButton_X',
-     'anchor: an indicator appearing later takes its own rank - got ' + order(f));
+  ok(order(f) === '__afBtn __qSaved __qAdd sendButton_X',
+     'anchor: a button appearing later takes its own rank - got ' + order(f));
 
   // The whole point: once the row is in rank order, further passes write nothing.
   // The old rule wrote on every pass forever whenever a second patch was present.
-  f = realForm(['__bgInd', '__qLog', '__qAdd', 'sendButton_X']);
+  f = realForm(['__qSaved', '__qLog', '__qAdd', 'sendButton_X']);
   T.ensureButton();
-  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X',
+  ok(order(f) === '__afBtn __qLog __qSaved __qAdd sendButton_X',
      'anchor: three injected buttons land in rank order - got ' + order(f));
   const real = f.insertBefore.bind(f);
   let writes = 0;
   f.insertBefore = (n, r) => { writes++; return real(n, r); };
   for (let i = 0; i < 20; i++) T.ensureButton();
   ok(writes === 0, 'anchor: twenty further passes write nothing at all - got ' + writes + ' writes');
-  ok(order(f) === '__afBtn __qLog __bgInd __qAdd sendButton_X', 'anchor: and the order holds');
+  ok(order(f) === '__afBtn __qLog __qSaved __qAdd sendButton_X', 'anchor: and the order holds');
 
   globalThis.__ccInput = savedInput;
 }

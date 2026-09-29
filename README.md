@@ -70,7 +70,7 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on every message](patches/copy-message) · 🔓 Bypass permission mode · ⚙️ [Background tasks + live logs](patches/background-tasks) · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup).
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on your own messages](patches/copy-message) · 🔓 Bypass permission mode · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup).
 
 🔁 **Auto follow-up** — a second model reads what Claude just wrote and types
 your next message. You write one file that says how to answer for you
@@ -84,12 +84,6 @@ same conversation: what `Developer: Reload Window` does to every panel and the
 whole workbench at once, aimed at the single one that is wedged. *Verified in a
 live editor:* the clicked panel got a new document and a new channel, its
 neighbours kept theirs, and the transcript came back intact.
-
-⚙️ **Background tasks** — an animated indicator in the composer footer whenever a
-subagent, a backgrounded command or a workflow is running. Click it for a two-pane
-dialog: running tasks on top, a separator, finished ones below, and the selected
-task's log streaming live beside them (a subagent's tool calls and prose straight
-off the SDK stream, everything else tailed from disk by the extension host).
 
 ## 🐞 Bug fixes
 
@@ -127,6 +121,17 @@ remaining misses mean what they say. `git log` still has them.
   rewritten: `activateSessionFromServer` now checks the local list, asks the
   server, tests an `isSuperseded` callback and looks again, which is the retry
   the patch used to inject.
+- 📋 **Copy icon on Claude's replies** (half of [copy-message](patches/copy-message)) - *gone
+  between 2.1.258 and 2.1.278.* Every assistant reply now ends in the app's own
+  **Copy response** button. The app still has no copy for your *own* message, so
+  that half stays.
+- ⚙️ **Background tasks** - *gone between 2.1.258 and 2.1.278.* The app draws an
+  **Agent map**: the tree of running agents, the background tasks (shells,
+  workflows, monitors) under it, a detail pane per agent with its live tool
+  calls, **Stop agent** and **Open transcript**. It is fed by the same SDK task
+  frames the patch rendered, which the store now handles all five of.
+  [Subagent text on the stream](patches/subagent-stream-flags) stays: upstream
+  still does not turn those two flags on, and its Agent map is what reads them.
 
 ## 🔬 How the intermittent bugs were caught
 

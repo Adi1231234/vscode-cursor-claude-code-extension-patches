@@ -26,35 +26,20 @@
         acts.insertBefore(b, t.nextSibling);
       }
     } else if (m.lastElementChild !== b) {
-      /* In normal flow the button must stay the LAST child. React knows nothing
-         about it, so while a reply streams in it appends new paragraphs after
-         our button, stranding the icon in the middle - visually at the top of
-         the answer. Re-append whenever it is no longer last; on an already
-         attached node that is a move, and a move of an owned node never comes
-         back to us through the shared observer. */
+      /* No actions container: the app leaves it out of a read-only transcript
+         and of a held message. In normal flow the button must stay the LAST
+         child - React knows nothing about it and appends what it renders after
+         it. Re-append whenever it is no longer last; on an already attached
+         node that is a move, and a move of an owned node never comes back to us
+         through the shared observer. */
       m.appendChild(b);
     }
   }
 
-  /* Real reply prose: rendered markdown that is not nested inside a thinking
-     block or a tool call. An expanded thinking block renders markdown too, which
-     is why the ancestor check is needed rather than a plain lookup. */
-  function hasReplyText(m) {
-    var md = m.querySelectorAll(MD);
-    for (var i = 0; i < md.length; i++) {
-      if (!md[i].closest(NOTTEXT)) return true;
-    }
-    return false;
-  }
-
-  /* Only actual messages get an icon. An assistant message is split into one
-     message_<hash> block per content item, so a bare tool call, a tool result
-     and a collapsed "Thinking" row are each their own block - none of them is
-     something you would want to copy, and decorating them buried the chat in
-     icons. */
+  /* Only the user's own messages, and only once they hold text - an empty one
+     is asked again when it changes. */
   function wanted(m) {
-    if (!hasText(m)) return false;  /* nothing to copy yet - asked again when it changes */
-    return !!m.querySelector(USERMSG) || hasReplyText(m);
+    return hasText(m);
   }
 
   function ensureOne(m) {

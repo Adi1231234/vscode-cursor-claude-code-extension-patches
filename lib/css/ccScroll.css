@@ -6,7 +6,7 @@
    Monaco draws two inches away.
 
    The first line is the one that makes the rest work, and it is the reason the
-   copy of these rules that background-tasks carried was inert. Something above
+   copy the retired background-tasks patch carried was inert. Something above
    every element in this webview sets `scrollbar-color` - measured on a live
    panel, a list computes to `rgba(168,169,170,.52) rgb(18,19,20)` without asking
    for it - and Chromium ignores every ::-webkit-scrollbar rule on an element

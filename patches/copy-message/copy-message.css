@@ -1,15 +1,17 @@
 /* COPYMSG */
-/* Copy-to-clipboard icon for chat messages. Two placements, both driven by
+/* Copy-to-clipboard icon for the user's own messages (Claude's replies carry
+   the app's own "Copy response" button). Two placements, both driven by
    copy/place-observe.js:
-     - user messages: inside the app's own "Message actions" container, wearing
+     - normally: inside the app's own "Message actions" container, wearing
        the app's actionButton class - so everything visual is inherited and
        nothing is duplicated here;
-     - everything else: normal flow, its own line at the end of the message.
+     - where the app draws no such container (a read-only transcript, a held
+       message): normal flow, its own line at the end of the message.
 
    Deliberately hash-free: the only names are our own classes plus generic
    attribute matches, so no minified class is baked into the stylesheet. */
 
-/* ---------- normal-flow placement (assistant messages) ----------
+/* ---------- normal-flow placement (no actions container) ----------
    Flow rather than absolute positioning: the rtl patch flips the panel to
    direction:rtl, which would fling an inset-inline-end-pinned button to the far
    side of the viewport (the message wrapper is full-width).

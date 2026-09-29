@@ -21,8 +21,12 @@ It is display-only: the flags feed the SDK progress sink, not the parent model's
 context and not the transcript. Turning `forwardSubagentText` on also stops the CLI
 from forcing the subagent's thinking display to `"omitted"`.
 
-Useful on its own (the data starts flowing immediately), and required by
-`background-tasks` for its subagent log pane to show anything but tool calls.
+The app's own **Agent map** (2.1.278+) is what shows it: an agent's detail pane
+merges the live messages tagged with that agent's `parent_tool_use_id`, so without
+`forwardSubagentText` it shows tool calls only, and `task_progress.summary` is
+read into the store's `subagentTasks`, which stays empty without
+`agentProgressSummaries`. Upstream still does not set either flag (checked on
+2.1.284).
 
 Anchors on the neighbouring key pair `agentProgressSummaries:void 0,promptSuggestions:void 0`,
 because either key on its own also appears in the SDK client's `initialize()`
