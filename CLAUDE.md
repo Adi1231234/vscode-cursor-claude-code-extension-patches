@@ -71,6 +71,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
+   - `Set-MatchText $text $match $new` - replace exactly the span a regex match covered with plain text, for a replacement assembled from captures of more than one match, where `[regex]::Replace` would read a captured `$` name as a substitution (`footer-fit`).
    - `Add-WebviewMessageHook $js <hookPath>` - put a returning guard at the top of **every** chat surface's `onDidReceiveMessage` in `extension.js`, so a patch can answer messages of its own before the app's protocol switch logs them as unknown. The hook's `__WV__` / `__MSG__` / `__COMMS__` placeholders are filled for you; returns the new text, or `$null` when the shape is gone (then `Write-Miss` and write nothing). Several patches hook the same listener - what is already there is carried through, so their order does not matter (`panel-settings`, `panel-restart-button`, `auto-followup`).
 
 ## Non-negotiable conventions
@@ -225,6 +226,19 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   entirely at stage 2. It is not a media query and will not show up in a search
   for one. `patches/remote-control-pill-icon/` just lifts that pill's stage-1
   declarations out of the condition.
+- **...and `patches/footer-fit/` extends that ladder, so a footer button you
+  inject must declare a fold order.** Upstream's ladder stops at stage 2, where
+  *its* buttons fit; ours are another 118px, and with no stage of their own they
+  squeezed the mode selector to 0px and pushed the send button out of the frame.
+  The rungs past 2 are ours (the app still sees a stage capped at 2): the row's
+  own narrow form, then our buttons folded one per rung into a "⋯" menu, then a
+  wrapped row. Put `data-cc-fold="<n>"` on any button you add to that row, with a
+  number from the table in that README - without it the button never folds and
+  the row runs out again. Two traps it measured: the app counts an ellipsized
+  label as not fitting (a long file name folded everything until rungs past
+  compact were made to need a real cut), and its fitter counts a `display:none`
+  child as a member of the row (2px of gap each) unless it is also
+  `position:absolute`.
 - **The `rtl` patch flips the whole panel to `direction: rtl`.** Any UI you inject
   inherits that. Watch out for `position: absolute` + `inset-inline-end` on a
   full-width container: the element lands at the *far side of the viewport*, not

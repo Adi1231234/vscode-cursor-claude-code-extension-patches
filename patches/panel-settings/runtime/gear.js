@@ -28,6 +28,9 @@ function __ccSettingsGear(h, session, css) {
         className: css.footerButton + " " + css.footerButtonPrimary + " cc-settings-gear",
         title: "Settings",
         "aria-label": "Settings",
+        /* Third into the overflow menu when the row runs out of room - see
+           patches/footer-fit/README.md for the order. */
+        "data-cc-fold": "3",
         onClick: function (event) {
             event.preventDefault();
             __ccSettingsDialog(session);

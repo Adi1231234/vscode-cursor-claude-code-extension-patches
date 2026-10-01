@@ -99,6 +99,15 @@ function Expand-JsTokens {
     $Js
 }
 
+# Replace exactly the text a regex match covered, with plain text. For a
+# replacement assembled from captures of more than one match: [regex]::Replace
+# would read any `$` in it as a substitution, and since the 2.1.245 mangler a
+# captured name holds one more often than not.
+function Set-MatchText {
+    param([string]$Text, $Match, [string]$New)
+    $Text.Substring(0, $Match.Index) + $New + $Text.Substring($Match.Index + $Match.Length)
+}
+
 # Read a .js resource and expand its __TOKEN__ placeholders. The one way patches
 # pull in JS: no JS ever lives inside a PowerShell string literal.
 function Get-InjectedJs {

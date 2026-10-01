@@ -39,7 +39,9 @@
 .__afWhy{font-size:11px;opacity:.45;font-style:italic;padding:0 6px 8px}
 
 /* ---- picker ---- */
-.__afMenu{position:fixed;z-index:2147483000;min-width:256px;box-sizing:border-box;padding:4px;display:flex;flex-direction:column;gap:1px;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:var(--corner-radius-medium,6px);box-shadow:0 6px 20px rgba(0,0,0,.45)}
+/* 256px, but never wider than the panel less place()'s 8px each side: a fixed
+   256 ran 34px past the edge of a 230px panel. Its rows wrap, so they fit. */
+.__afMenu{position:fixed;z-index:2147483000;min-width:min(256px,100% - 16px);max-width:calc(100% - 16px);box-sizing:border-box;padding:4px;display:flex;flex-direction:column;gap:1px;color:var(--app-menu-foreground,var(--vscode-menu-foreground,#ccc));background:var(--app-menu-background,var(--vscode-menu-background,#252526));border:1px solid var(--app-menu-border,var(--vscode-menu-border,rgba(128,128,128,.35)));border-radius:var(--corner-radius-medium,6px);box-shadow:0 6px 20px rgba(0,0,0,.45)}
 .__afMenuHead{font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.45;padding:5px 9px 4px}
 .__afItem{display:flex;align-items:flex-start;gap:9px;padding:6px 9px;border-radius:4px;font-size:12px;cursor:pointer}
 .__afItem:hover{background:rgba(128,128,128,.2)}
