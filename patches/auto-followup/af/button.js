@@ -93,6 +93,8 @@
       window.__ccDom.own(b);      /* its repaints never come back through the shared observer */
       b.type = "button";
       b.setAttribute("aria-label", "Auto follow-up");
+      /* Fourth into the overflow menu - see patches/footer-fit/README.md. */
+      b.setAttribute("data-cc-fold", "4");
       on(b, "click", toggleMenu);
       form.__afBtn = b;
     }

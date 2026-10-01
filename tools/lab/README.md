@@ -120,6 +120,14 @@ wrong width. The override lives on the window's page target,
 so it survives a real `Developer: Reload Window`: 300px before `repatch`, 300px
 after.
 
+**On the archive build (`--code`) it does not outlive the session that set it.**
+Measured on 2026-10-01 with the zip build in `%TEMP%\cc-lab\code`: `width 300`
+reported 790 untouched, and an override set from a one-shot script was gone by
+the next command - the page dropped it when that CDP session detached. A process
+that holds one session open and takes widths over a local port kept it, across
+`repatch` reloads too, and that is how `patches/footer-fit` was swept. Until
+`width` does the same, check `panelWidth` after it rather than trusting it.
+
 A window can hold **more than one** Claude panel (one in a tab, one in the side
 bar), and the editor keeps a backgrounded one alive at `visibility: hidden`. A
 hidden webview is not laid out, so it answers CDP with the size and the DOM it

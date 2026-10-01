@@ -38,7 +38,10 @@
   function toggleMenu(ev) {
     if (menuNode) { closeMenu(); return; }
     requestList();                       /* always open against what is on disk now */
-    openMenu(ev.currentTarget);
+    /* Folded into the footer's overflow menu, the button has no box to hang
+       from - the overflow button stands in for it (patches/footer-fit). */
+    var fold = window.__ccFold;
+    openMenu(fold ? fold.standIn(ev.currentTarget) : ev.currentTarget);
   }
 
   /* Done, and nobody recorded which one it was. Then the rows are the only place

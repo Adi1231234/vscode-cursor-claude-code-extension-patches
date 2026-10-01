@@ -41,6 +41,8 @@ function Find-ClaudeExtension {
         ToolUseClass       = 'toolUse_uq5aLg'
         ToolResultClass    = 'toolResult_uq5aLg'
         PillClass          = 'pill_jamplw'
+        # No fallback: footer-fit writes rules against it, and refuses without it.
+        FooterHash         = $null
     }
 
     if (Test-Path $ctx.Js) {
@@ -69,6 +71,9 @@ function Find-ClaudeExtension {
         # define a `pill` key, so that one is useless on its own; `pillLink` is
         # unique to this module and carries the same hash.
         if ($wc -match 'pillLink:"pillLink_([a-zA-Z0-9]+)"') { $ctx.PillClass = "pill_$($matches[1])" }
+        # The input footer's module (footerButton, footerButtonPrimary, ...).
+        # inputFooterV2 is unique to it; every key in it carries the same hash.
+        if ($wc -match 'inputFooterV2:"inputFooterV2_([a-zA-Z0-9_-]+)"') { $ctx.FooterHash = $matches[1] }
     }
 
     return $ctx

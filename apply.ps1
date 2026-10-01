@@ -45,6 +45,7 @@ $order = @(
     'reload-restore'
     'remote-control-pill-icon'
     'panel-settings'
+    'footer-fit'
     'history-dialog-clip'
     'panel-restart-button'
     'auto-followup'

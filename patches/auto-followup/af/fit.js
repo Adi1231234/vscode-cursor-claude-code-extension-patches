@@ -36,10 +36,8 @@
     return z;
   }
 
-  function fitOverlay(node) {
-    var ov = node || dlg;
-    if (!ov) return;
-    var ref = ov.parentNode && ov.parentNode.nodeType === 1 ? ov.parentNode : document.body;
+  /* The screen, in the units a node under ref is laid out in. */
+  function screenIn(ref) {
     var scale = zoomAbove(ref);
     if (!isFinite(scale) || scale <= 0) scale = 1;
     if (scale === 1) {
@@ -50,11 +48,18 @@
         if (isFinite(ratio) && ratio > 0) scale = ratio;
       }
     }
-    var screenH = document.documentElement.clientHeight || window.innerHeight || 0;
-    var screenW = document.documentElement.clientWidth || window.innerWidth || 0;
-    if (!screenH) return;
-    ov.style.height = (screenH / scale) + "px";
-    ov.style.width = (screenW / scale) + "px";
+    var h = document.documentElement.clientHeight || window.innerHeight || 0;
+    var w = document.documentElement.clientWidth || window.innerWidth || 0;
+    return { w: w / scale, h: h / scale };
+  }
+
+  function fitOverlay(node) {
+    var ov = node || dlg;
+    if (!ov) return;
+    var s = screenIn(ov.parentNode && ov.parentNode.nodeType === 1 ? ov.parentNode : document.body);
+    if (!s.h) return;
+    ov.style.height = s.h + "px";
+    ov.style.width = s.w + "px";
   }
 
   /* Named, for the reason the live view has its own: fitOverlay takes the
@@ -77,9 +82,17 @@
 
      So bounds is the frame the popup belongs to, and a list aligns to the start
      of its field rather than centring on it, which is where a select opens
-     everywhere else. */
+     everywhere else.
+
+     The panel as a frame is the screen in the body's units, for the same zoom
+     reason as the overlay above: innerWidth is the unzoomed viewport and the
+     anchor's rect is not. At zoom 1.34 in a 300px panel the bound came out 300
+     against a 224px body, and the responder menu ran 9px past the edge. */
   function rectOf(node) {
-    if (!node) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    if (!node) {
+      var s = screenIn(document.body);
+      return { left: 0, top: 0, right: s.w, bottom: s.h };
+    }
     var r = node.getBoundingClientRect();
     return { left: r.left, top: r.top,
              right: r.right === undefined ? r.left + (r.width || 0) : r.right,

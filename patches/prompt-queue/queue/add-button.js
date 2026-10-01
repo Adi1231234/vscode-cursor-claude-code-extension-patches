@@ -13,6 +13,8 @@
      seconds, alternating between two orders about every 150 ms. ccRow holds the
      ranks and does the placing; this file states only where this button belongs. */
   if (window.__ccRow) { window.__ccRow.rank("__qLog", 20); window.__ccRow.rank("__qSaved", 30); window.__ccRow.rank("__qAdd", 40); }
+  /* Each also declares when it folds into the overflow menu as the row runs out
+     of room (data-cc-fold) - the order is in patches/footer-fit/README.md. */
 
   function onAddClick(ev) {
     ev.preventDefault();
@@ -35,6 +37,7 @@
     if (!b) {
       b = btn("__qAdd");                                       /* no native title - styled tooltip instead */
       b.setAttribute("aria-label", "Add to queue (Alt+Enter)");
+      b.setAttribute("data-cc-fold", "5");                     /* the last to fold */
       b.innerHTML = ADD_ICON + TIP_HTML;
       window.__ccDom.overlay(b.querySelector(".__qTip"));
       b.addEventListener("click", onAddClick);
@@ -57,6 +60,7 @@
     if (!sv) {
       sv = btn("__qSaved");                                    /* no native title - styled tooltip instead */
       sv.setAttribute("aria-label", "Saved queues");
+      sv.setAttribute("data-cc-fold", "2");                    /* the queue panel's header has it too */
       sv.innerHTML = IC_BOOK + '<span class="__qTip" aria-hidden="true">Saved queues</span>';
       window.__ccDom.overlay(sv.querySelector(".__qTip"));
       sv.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openSavedModal(false); });
@@ -68,6 +72,7 @@
     var lg = form.querySelector(".__qLog");
     if (!lg) {
       lg = btn("__qLog", "Queue logs (Ctrl+Alt+L)");   /* distinct class - must NOT match the .__qAdd query */
+      lg.setAttribute("data-cc-fold", "1");            /* a debugging aid: the first to fold */
       lg.innerHTML = LOG_ICON;
       lg.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); });
     }
