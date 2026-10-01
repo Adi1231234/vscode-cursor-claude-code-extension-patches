@@ -45,10 +45,11 @@
   }
 
   /* Send one specific item RIGHT NOW - jump the queue order, ignore its
-     schedule and the paused hold; the rest of the queue is left untouched.
-     Still can't send while Claude is mid-turn (isBusy) - it no-ops then. */
+     schedule, the paused hold AND a running turn; the rest is left untouched.
+     Mid-turn is the app's own case: session.send has no busy gate, it holds
+     the message and hands it to the CLI, exactly what Enter does then. */
   async function sendNow(it) {
-    if (flushing || editing || isBusy()) return;
+    if (flushing || editing) return;
     var idx = Q.indexOf(it);
     if (idx < 0) return;
     var e = inp();

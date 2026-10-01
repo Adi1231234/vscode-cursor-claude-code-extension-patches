@@ -185,33 +185,41 @@ no slot).
 
 ## Row actions menu (`row-menu.js`)
 
-A row carries a lot of controls, so the per-row **send** and **delete**
-buttons were folded into one kebab (three dots) sitting beside the reorder
-arrows at the leading edge. It opens a small popup with three items:
+A row carries a lot of controls, so the ones a row only needs now and then
+live in one kebab (three dots) beside the reorder arrows at the leading edge.
+It opens a small popup:
 
-- **Send now** - jump the queue order, the schedule and the paused hold
-  (`sendNow`). When it cannot run - the item is skipped, Claude is mid-turn,
-  or another send is in flight - **the reason takes the label’s place** in
-  amber and the item goes inactive, rather than hiding in a tooltip. The old
-  inline button was only blocked for a skipped item (by CSS,
-  `pointer-events:none`); in the other two it looked clickable and then
-  silently did nothing.
+- **Send now** - jump the queue order, the schedule, the paused hold **and a
+  running turn** (`sendNow`). Sending while Claude works is the app's own
+  case, not something to wait out: `session.send` has no busy gate (none in
+  2.1.227, 2.1.258 or 2.1.280), it hands the message to the CLI mid-turn, and
+  from 2.1.278 it also shows it in the transcript as held (`heldPrompts`)
+  until the CLI picks it up - exactly what the composer's own Enter does
+  then. "One per turn" is the *queue's* pacing, for items it sends on its own;
+  it used to block this explicit gesture too, with "Claude is busy right now".
 
-  `sendBlocked(it)` is re-run **on the click, not only while the menu is
-  built**: the turn state can flip during the seconds the menu sits open, and
-  `sendNow` would then hit its own `isBusy()` guard and `return` - a live item
-  doing nothing at all with no feedback. On a refusal the menu stays open so
-  the reason can be read. The reasons are kept short and `.__qMenu` has a
-  `min-width` that fits the longest of them, so the swap moves nothing.
+  When it cannot run - the item is skipped, or another send of ours is in
+  flight - **the reason takes the label’s place** in amber and the item goes
+  inactive, rather than hiding in a tooltip. `sendBlocked(it)` is re-run **on
+  the click, not only while the menu is built**, since either can change
+  while the menu sits open. On a refusal the menu stays open so the reason
+  can be read. The reasons are kept short and `.__qMenu` has a `min-width`
+  that fits the longest of them, so the swap moves nothing.
+- **Schedule…** - opens the schedule modal. Offered **only while the item has
+  no schedule** (`!isScheduled(it)`, which also covers a missed or rearm
+  item: both keep their `mode`). Once a schedule is set the clock cell is
+  drawn in the row instead, so a schedule is always visible and one click
+  away, and the menu stops offering a second way to it.
 - **Duplicate** - `duplicateItem` clones the item *with everything around it*
   (schedule `mode`/`at`/`start`/`dur`, the `missed`/`rearm` restart flags, the
   skipped state, attachments) and inserts it directly below the original. An
   at-time copy keeps the same wall-clock moment; a timer copy keeps the same
   remaining countdown, so the copy reads identically to its source.
-- **Delete** - `removeItem`.
-
-The **clock cell is deliberately not in this menu**: a schedule stays visible
-and one click away in the row itself, exactly as before.
+**Delete is not in the menu**: it is a trash button at the row's trailing end
+(`removeItem`), in the slot an unscheduled row's clock used to take. A set
+clock sits just before it, so the end of every row is the same control. It is
+an `iconBtn` shrunk to the clock's quiet 18px glyph; `queue.css` explains the
+doubled class.
 
 Two things the popup has to get right:
 
@@ -227,7 +235,8 @@ item above can flush between opening the menu and clicking an entry.
 
 ## Scheduling (`schedule-*.js`)
 
-Every row has a clock button opening a modal with four choices. The thing to
+The schedule modal (row menu -> **Schedule…**, or the row's clock once one is
+set) offers four choices. The thing to
 understand first is **which of them keep their place in the queue**, because
 that is what the list is printing.
 
