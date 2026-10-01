@@ -1,9 +1,10 @@
-  /* ---------- Per-row actions menu (send now / duplicate / delete) ----------
-     One kebab button next to the reorder arrows replaces the old inline send
-     and delete buttons. The popup is body-mounted and position:fixed because
+  /* ---------- Per-row actions menu (send now / schedule / duplicate) ----------
+     One kebab button next to the reorder arrows holds the actions a row only
+     needs now and then. The popup is body-mounted and position:fixed because
      the queue body scrolls (overflow-y:auto) and would clip an in-flow menu.
-     The clock cell is deliberately NOT part of this menu - a schedule stays
-     visible and clickable in the row itself. */
+     "Schedule" is offered only while the item has no schedule: once it has
+     one, the clock cell is in the row itself, visible and one click away.
+     Delete is not here either - it holds the end of the row (render-rows.js). */
   var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"></circle><circle cx="12" cy="12" r="1.9"></circle><circle cx="12" cy="19" r="1.9"></circle></svg>';
   var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>';
   var IC_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2.5"></rect><path d="M5 15H4.2A2.2 2.2 0 0 1 2 12.8V4.2A2.2 2.2 0 0 1 4.2 2h8.6A2.2 2.2 0 0 1 15 4.2V5"></path></svg>';
@@ -16,10 +17,10 @@
 
   /* Why "Send now" cannot run right now - "" when it can. Kept short: it is
      shown in place of the item's label, and the menu is sized to fit it so the
-     swap moves nothing. */
+     swap moves nothing. A running turn is not a reason: sendNow goes in
+     mid-turn the way the composer's own Enter does (see flush-init.js). */
   function sendBlocked(it) {
     if (it.off) return "Skipped - enable it first";
-    if (isBusy()) return "Claude is busy right now";
     if (flushing) return "Another send in progress";
     return "";
   }
@@ -75,8 +76,8 @@
     menu.setAttribute("role", "menu");
     menu.tabIndex = -1;
     menu.appendChild(menuItem(IC_SEND, "Send now", "", function () { return sendBlocked(it); }, function () { sendNow(it); }));
+    if (!isScheduled(it)) menu.appendChild(menuItem(IC_CLOCK, "Schedule…", "", null, function () { openScheduleModal(it); }));
     menu.appendChild(menuItem(IC_COPY, "Duplicate", "", null, function () { duplicateItem(it); }));
-    menu.appendChild(menuItem(IC_TRASH, "Delete", "__qMenuDanger", null, function () { removeItem(it); }));
 
     function close() {
       /* Only hand focus back if it is still ours - a rebuild (render) drops the

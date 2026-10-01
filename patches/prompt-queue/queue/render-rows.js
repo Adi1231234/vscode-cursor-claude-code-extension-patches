@@ -59,7 +59,10 @@
     if (ord) row.appendChild(num);
     row.appendChild(text);
     if (it.files && it.files.length) row.appendChild(buildThumbs(it.files));
-    row.appendChild(buildClock(it));
+    /* A schedule shows in the row; without one the clock is a row-menu entry,
+       and the end of the row is Delete's in either case. */
+    if (isScheduled(it)) row.appendChild(buildClock(it));
+    row.appendChild(iconBtn(IC_TRASH, "Delete message", "__qRowDel __qMenuDanger", function () { removeItem(it); }));
     return row;
   }
 
