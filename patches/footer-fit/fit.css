@@ -52,6 +52,10 @@
 [data-cc-fit~="fold-3"] [data-cc-fold="3"],
 [data-cc-fit~="fold-4"] [data-cc-fold="4"],
 [data-cc-fit~="fold-5"] [data-cc-fold="5"],
+[data-cc-fit~="fold-6"] > .__CACHE__,
+[data-cc-fit~="fold-7"] > .__AGENTS__,
+[data-cc-fit~="fold-8"] > .__PILL__,
+[data-cc-fit~="fold-9"] > .__SLASH__,
 .cc-more {
     display: none;
     position: absolute;
@@ -62,6 +66,13 @@
 [data-cc-fit~="fold-1"] .cc-more {
     display: block;
     position: relative;
+}
+
+/* menu.js caps the menu at the page's width in a panel narrower than the
+   menu's 180px minimum; the app's menuPopup is content-box, so its 4px padding
+   and 1px border went on top of that and it ran 10px past a 166px page. */
+.cc-more > [data-footer-overlay] {
+    box-sizing: border-box;
 }
 
 /* Every icon in the app's own menus sits in a 20px box, which is what lines

@@ -43,6 +43,8 @@ function Find-ClaudeExtension {
         PillClass          = 'pill_jamplw'
         # No fallback: footer-fit writes rules against it, and refuses without it.
         FooterHash         = $null
+        AgentsPillClass    = $null
+        CacheHostClass     = $null
     }
 
     if (Test-Path $ctx.Js) {
@@ -74,6 +76,11 @@ function Find-ClaudeExtension {
         # The input footer's module (footerButton, footerButtonPrimary, ...).
         # inputFooterV2 is unique to it; every key in it carries the same hash.
         if ($wc -match 'inputFooterV2:"inputFooterV2_([a-zA-Z0-9_-]+)"') { $ctx.FooterHash = $matches[1] }
+        # Two more status items in that row: the agents pill (its key is unique)
+        # and the prompt-cache clock, whose module is {indicator, host, cold} -
+        # `host` alone is defined by several modules, the trio by this one.
+        if ($wc -match 'agentsPill:"(agentsPill_[a-zA-Z0-9_-]+)"') { $ctx.AgentsPillClass = $matches[1] }
+        if ($wc -match 'indicator:"indicator_([a-zA-Z0-9_-]+)",host:"(host_\1)",cold:') { $ctx.CacheHostClass = $matches[2] }
     }
 
     return $ctx
