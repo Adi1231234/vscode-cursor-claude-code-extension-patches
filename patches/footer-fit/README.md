@@ -53,9 +53,15 @@ model pill behave exactly as before; the rungs above it reach the row as
   with the app's own at 34px), read off the app's CSS-module map at runtime.
   Picking a row clicks the real button, so every control keeps its own handler;
   auto follow-up's own menu hangs from the "⋯" while its button is folded.
-- **wrap** - the last resort, when even the app's own buttons do not fit. The row
-  breaks between its two halves: `+`, `/` and the pills on the first line, the
-  mode, "⋯" and send on the second, aligned to the end.
+- **fold-6 .. fold-9** - then the app's own items go into the same menu: the
+  prompt-cache clock, the agents pill, the Remote Control pill and the "/"
+  button. Without these the first version wrapped far too early: measured at a
+  260px panel with all three status items showing, the clock and the two pills
+  took a line of their own (the user's report). Now the row stays on one line,
+  `+` mode "⋯" send, down to a 160px panel (220px at zoom 1.34). The cache clock
+  has nothing to click, so its sentence shows as a disabled row.
+- **wrap** - the last resort, below that. The row breaks between its two halves:
+  `+` on the first line, the mode, "⋯" and send on the second, aligned to the end.
 
 The ladder runs inside the app's layout effect, which measures right after each
 render, so a rung is styled before it is measured: no flicker, and a given width
@@ -63,15 +69,24 @@ always lands on the same rungs whether the panel was widened or narrowed to it.
 
 ### Fold order
 
-Each button declares its own order with `data-cc-fold`; lowest folds first. A new
-footer button picks a free number here and `fit.css` needs a line for it if it
-goes past 5.
+Each button of ours declares its own order with `data-cc-fold`; lowest folds
+first. The app's items cannot carry an attribute, so `runtime/fold.js` names them
+by CSS-module class (detected in `lib/Extension.ps1`) in its `APP` table. A new
+footer button of ours picks a free number below 6 (renumber if none is left), and
+`fit.css` needs a line for every order.
 
 - 1 - queue logs (`__qLog`, a debugging aid, off by default)
 - 2 - saved queues (`__qSaved`; the queue panel's header has it too)
 - 3 - settings gear (`panel-settings`)
 - 4 - auto follow-up (`__afBtn`)
 - 5 - add to queue (`__qAdd`; Alt+Enter does the same)
+- 6 - the app's prompt-cache clock
+- 7 - the app's agents pill
+- 8 - the app's Remote Control pill
+- 9 - the app's "/" button (typing "/" does the same)
+
+`+` and the mode selector never fold: each opens its popup from its own box, and a
+folded box has none.
 
 The first fold always takes two buttons with it in practice: the "⋯" costs the
 slot the first one freed.
@@ -111,5 +126,8 @@ nothing outside the frame and no glyph squeezed at any width, the same rungs in
 both directions, and no row mutation while typing or idle. Repeated at zoom 1.34
 with Remote Control and the agents pill showing, and with a file selection chip.
 The menu, Escape, an outside press, the settings and saved-queues dialogs and
-auto follow-up's menu were each driven from the "⋯". Unit tests:
+auto follow-up's menu were each driven from the "⋯". The app items were added
+after, and checked the same way at zoom 1 and 1.34 in both directions: the "/" row
+opens the command menu, the agents row opens the agent map, and the menu stays
+inside a 166px page. Unit tests:
 `node patches/footer-fit/tests/fold.test.js`.

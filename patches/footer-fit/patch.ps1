@@ -60,14 +60,23 @@ function Invoke-Patch {
     $mLadder = [regex]::Match($wc, $rxLadder)
     $wc = Set-MatchText $wc $mLadder (& $site 'ladder' @{ '__STAGE__' = $mLadder.Groups[1].Value })
 
+    # The app's status items that fold last. One whose module was not found gets
+    # a class nothing carries: it then never folds, and the row wraps for it as
+    # before - where an empty name would be the selector "." and throw.
+    $app = @{
+        '__CACHE__'  = $(if ($Ctx.CacheHostClass) { $Ctx.CacheHostClass } else { 'cc-none' })
+        '__AGENTS__' = $(if ($Ctx.AgentsPillClass) { $Ctx.AgentsPillClass } else { 'cc-none' })
+        '__PILL__'   = $(if ($Ctx.PillClass) { $Ctx.PillClass } else { 'cc-none' })
+        '__SLASH__'  = "menuButton_$($Ctx.FooterHash)"
+    }
     $runtime = (@('cut.js', 'fold.js', 'menu-items.js', 'menu.js', 'more.js') | ForEach-Object { Read-Text (Join-Path $PSScriptRoot "runtime/$_") }) -join "`n"
-    Write-Text $Ctx.WebJs ("/* FOOTERFIT */`n" + $runtime + "`n" + $wc)
+    Write-Text $Ctx.WebJs ("/* FOOTERFIT */`n" + (Expand-JsTokens $runtime $app) + "`n" + $wc)
     Write-Ok "footer fit ladder + overflow menu (stage: $($g[2].Value).stage, menu css: $($mMenu.Groups[1].Value))"
 
-    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'fit.css') '/* FOOTERFITCSS */' 'footer fit CSS' @{
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'fit.css') '/* FOOTERFITCSS */' 'footer fit CSS' ($app + @{
         '__BTN__'     = "footerButton_$($Ctx.FooterHash)"
         '__PRIMARY__' = "footerButtonPrimary_$($Ctx.FooterHash)"
         '__SPACER__'  = "spacer_$($Ctx.FooterHash)"
         '__CHIP__'    = "selectionChip_$($Ctx.FooterHash)"
-    }
+    })
 }

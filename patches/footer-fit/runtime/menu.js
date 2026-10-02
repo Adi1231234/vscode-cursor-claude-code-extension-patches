@@ -75,7 +75,8 @@ var __ccFoldMenu = (function () {
         document.addEventListener("mousedown", onPress, true);
         document.addEventListener("keydown", onKey, true);
         window.addEventListener("resize", onResize);
-        if (byKeyboard) pop.firstChild.focus();
+        var first = pop.querySelector("button:not(:disabled)");
+        if (byKeyboard && first) first.focus();
     }
 
     return { toggle: toggle };

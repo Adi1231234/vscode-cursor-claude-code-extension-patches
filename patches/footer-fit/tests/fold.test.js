@@ -23,6 +23,7 @@ class HTMLElement {
   querySelector() { return null; }
   querySelectorAll() { return this.all || []; }
   getClientRects() { return this.shown === false ? [] : [{}]; }
+  matches(sel) { return !!this.cls && sel === "." + this.cls; }
 }
 
 function load(files, extra) {
@@ -37,9 +38,12 @@ function load(files, extra) {
 const rt = "patches/footer-fit/runtime/";
 const L = load([rt + "cut.js", rt + "fold.js"]);
 const F = L.__ccFold;
-let orders = [], isCut = true;
-L.document.querySelectorAll = (sel) => sel === "[data-fit-stage]" ? [{}]
-  : orders.map((n) => new HTMLElement({ attrs: { "data-cc-fold": String(n) } }));
+/* Our buttons carry data-cc-fold; the app's items are named by class (the
+   placeholders patch.ps1 fills, left as they are here). */
+let orders = [], app = [], isCut = true;
+L.document.querySelectorAll = () => [{ children:
+  orders.map((n) => new HTMLElement({ attrs: { "data-cc-fold": String(n) } }))
+    .concat(app.map((c) => new HTMLElement({ cls: c }))) }];
 L.__ccFoldCut = () => isCut;
 
 ok(F.stage(0) === 0 && F.stage(2) === 2 && F.stage(9) === 2, "the app never sees a stage past 2");
@@ -53,10 +57,16 @@ orders = [2, 3, 4, 5];
 ok(F.next(3) === 5, "the next rung skips a fold order nobody has (no log button) - got " + F.next(3));
 ok(F.rungs(5) === "compact fold-1 fold-2", "a rung folds every order up to it - got " + F.rungs(5));
 ok(F.next(5) === 6 && F.next(6) === 7 && F.next(7) === 8, "one order per rung after that");
-ok(F.next(8) === 9 && F.rungs(9) === "compact fold-1 fold-2 fold-3 fold-4 fold-5 wrap", "then the row wraps");
-ok(F.next(9) === 9, "wrap is the top: nothing left to try");
-orders = [];
-ok(F.next(3) === 9, "with nothing to fold, straight to wrap");
+ok(F.next(8) === 13 && /^compact fold-1 .* fold-9 wrap$/.test(F.rungs(13)),
+  "with none of the app's items showing, then the row wraps - got " + F.next(8));
+ok(F.next(13) === 13, "wrap is the top: nothing left to try");
+app = ["__CACHE__", "__PILL__", "__SLASH__"];
+ok(F.next(8) === 9, "the app's items fold after ours: the cache clock first - got " + F.next(8));
+ok(F.next(9) === 11, "an absent agents pill is skipped - got " + F.next(9));
+ok(F.next(11) === 12 && F.rungs(12).indexOf("fold-9") > 0, "the \"/\" button folds last");
+ok(F.next(12) === 13, "and only then does the row wrap");
+orders = []; app = [];
+ok(F.next(3) === 13, "with nothing to fold, straight to wrap");
 
 /* ---- the cut measure ---- */
 const C = load([rt + "cut.js"]);
