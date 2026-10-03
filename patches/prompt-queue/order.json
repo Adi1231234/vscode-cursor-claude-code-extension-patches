@@ -20,6 +20,7 @@
   "patches/prompt-queue/queue/schedule-clock.js",
   "patches/prompt-queue/queue/add-button.js",
   "patches/prompt-queue/queue/schedule-hold.js",
+  "patches/prompt-queue/queue/schedule-paused.js",
   "patches/prompt-queue/queue/schedule-modal.js",
   "patches/prompt-queue/queue/render-panel.js",
   "patches/prompt-queue/queue/row-menu.js",

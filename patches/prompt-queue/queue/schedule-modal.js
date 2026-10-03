@@ -18,6 +18,8 @@
     var body = el("div", "__qModalBody");
     var sum = el("div", "__qSummary");
     var note = el("div", "__qNote");
+    var pnote = el("div", "__qNote __qPausedNote");
+    var keep = false;   /* "Keep paused" commits without lifting the hold */
     var err = el("div", "__qModalErr");
 
     function curAt() { return sel === "timer" ? Date.now() + timerMins * 60000 : sel === "time" ? new Date(timeVal).getTime() : 0; }
@@ -27,20 +29,28 @@
       else sum.textContent = (sel === "time" && isNaN(at)) ? "Pick a date and time." : fmtSummary(sel, at);
       note.textContent = isNaN(at) ? "" : holdNote(it, at, sel === "after" || hold);
       note.style.display = note.textContent ? "" : "none";
+      pnote.textContent = pausedNote(sel);
+      pnote.style.display = pnote.textContent ? "" : "none";
     }
     function close() { sh.close(); }
-    function commit() {
+    function done() {
+      var resume = !keep && pausedBlocks(sel);
+      close();
+      if (resume) resumeQueue();
+    }
+    function commit(keepHold) {
+      keep = !!keepHold;
       err.textContent = "";
-      if (sel === "queue") { setSchedule(it, "queue"); return close(); }
+      if (sel === "queue") { setSchedule(it, "queue"); return done(); }
       if (sel === "timer" || sel === "after") {
         if (!(timerMins >= 1)) { err.textContent = "Enter at least 1 minute."; return; }
-        if (sel === "after") { setSchedule(it, "after", null, timerMins * 60000, true); return close(); }
-        setSchedule(it, "timer", Date.now() + timerMins * 60000, timerMins * 60000, hold); return close();
+        if (sel === "after") { setSchedule(it, "after", null, timerMins * 60000, true); return done(); }
+        setSchedule(it, "timer", Date.now() + timerMins * 60000, timerMins * 60000, hold); return done();
       }
       var at = new Date(timeVal).getTime();
       if (isNaN(at)) { err.textContent = "Pick a valid date and time."; return; }
       if (at <= Date.now() + 1000) { err.textContent = "Choose a time in the future."; return; }
-      setSchedule(it, "time", at, 0, hold); return close();
+      setSchedule(it, "time", at, 0, hold); return done();
     }
     function onKey(e) {
       if (e.key === "Enter" && e.target.type !== "datetime-local") { e.preventDefault(); commit(); }
@@ -86,7 +96,8 @@
         body.appendChild(buildHoldRow(hold, function (v) { hold = v; renderBody(); }));
       }
       [].slice.call(seg.children).forEach(function (c) { c.classList.toggle("__qSegOn", c.getAttribute("data-k") === sel); });
-      ok.textContent = sel === "queue" ? "Done" : "Schedule";
+      ok.textContent = sel === "queue" ? "Done" : pausedBlocks(sel) ? "Schedule and resume" : "Schedule";
+      kp.style.display = pausedBlocks(sel) ? "" : "none";
       updateSummary();
     }
 
@@ -104,10 +115,12 @@
     var cancel = btn("__qBtnGhost"); cancel.textContent = "Cancel";
     cancel.addEventListener("click", close);
     var ok = btn("__qBtnPrimary"); ok.textContent = "Schedule";
-    ok.addEventListener("click", commit);
-    sh.foot.appendChild(cancel); sh.foot.appendChild(ok);
+    ok.addEventListener("click", function () { commit(false); });
+    var kp = buildKeepPaused(function () { commit(true); });
+    sh.foot.appendChild(cancel); sh.foot.appendChild(kp); sh.foot.appendChild(ok);
 
-    sh.box.appendChild(seg); sh.box.appendChild(body); sh.box.appendChild(sum); sh.box.appendChild(note); sh.box.appendChild(err);
+    sh.box.appendChild(seg); sh.box.appendChild(body); sh.box.appendChild(sum); sh.box.appendChild(note);
+    sh.box.appendChild(pnote); sh.box.appendChild(err);
     sh.mount();
     renderBody();
     try { (body.querySelector("input") || ok).focus(); } catch (e) {}

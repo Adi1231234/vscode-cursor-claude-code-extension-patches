@@ -34,6 +34,7 @@
     var waiting = it.mode === "after" && !it.at;   /* not yet its turn */
     var active = !!it.at && !it.missed && !it.rearm;
     var cls = it.missed ? " __qMissed" : it.rearm ? " __qRearm" : waiting ? " __qWaiting" : active ? " __qClockSet" : "";
+    if (active && paused) cls += " __qClockHeld";   /* counting down to nothing: schedule-paused.js */
     var wrap = el("span", "__qClock" + cls);
     /* dial = icon + ring only, so the countdown ring is a clean circle around
        the icon (not an ellipse stretched over the whole cell). */
@@ -57,7 +58,7 @@
       var w = el("span", "__qWhen");
       w.setAttribute("data-at", it.at);
       w.setAttribute("title", clockTitle(it));
-      w.textContent = fmtCountdown(it.at - Date.now());
+      w.textContent = whenText(it.at - Date.now());
       wrap.appendChild(w);
     } else if (it.missed || it.rearm || waiting) {
       var s = el("span", "__qState");
