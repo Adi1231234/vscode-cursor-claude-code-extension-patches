@@ -268,6 +268,29 @@ queue until this sends"** (`schedule-hold.js`, the app's own switch reproduced
 from its measurements). Turning it on for an at-time is the case that had no
 expression before: *run the migration at 02:00, then these three follow-ups.*
 
+### A timer set into a paused queue (`schedule-paused.js`)
+
+The pause holds scheduled items too, and the queue is often paused without
+anyone having asked for it - an `Alt+Enter` while idle parks it, and so does
+Stop. In practice that meant a timer set in that state counted down to zero
+and sent nothing, with nothing having said it would. Two places now say so:
+
+- **The dialog, when the choice is made.** While the queue is paused, a
+  schedule (anything but "Queue") shows *"The queue is paused, so this will
+  not send at its time until you resume it"*, the primary button becomes
+  **Schedule and resume**, and a **Keep paused** button commits without lifting
+  the hold. A running queue keeps the dialog it had.
+- **The queue, for as long as it is true.** A pause can also arrive after the
+  timer was set, so while the queue is paused and a countdown is still running,
+  the header shows **TIMER RUNNING** (or *N TIMERS RUNNING*) and the row's
+  countdown reads `29:41 · queue paused`, both in `--app-warning-accent`. The
+  wording names the queue, not the timer: an earlier "timer on hold" next to a
+  live countdown read as if the timer itself had stopped. At zero the header
+  badge goes (the once-a-second tick empties it, `:empty` hides it, no
+  re-render) and the row says `due · queue paused`.
+
+The pause itself still means what it means; nothing here sends through it.
+
 ### Why this exists
 
 A scheduled item used to do both at once: it kept its position number **and**

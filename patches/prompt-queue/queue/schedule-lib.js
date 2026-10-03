@@ -137,13 +137,6 @@
       if (a && a <= t && !r.__qDue) { r.__qDue = true; due = true; }
     }
     if (due) pass();   /* already a task of its own - no second timer hop */
-    /* Past its moment and still here: say so rather than sit on 00:00. Now
-       that a pause holds scheduled items too, "due" with nothing happening is
-       a state the user has to be able to read - and name its reason. */
-    var ws = panel.querySelectorAll(".__qWhen"), left;
-    for (i = 0; i < ws.length; i++) {
-      left = +ws[i].getAttribute("data-at") - t;
-      window.__ccDom.setText(ws[i], left > 0 ? fmtCountdown(left) : (paused ? "due · paused" : "due"));
-    }
+    tickWhen(t);       /* the labels, and the header's running-timer count (schedule-paused.js) */
   }
 

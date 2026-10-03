@@ -23,9 +23,9 @@
       ? "Resume - queued and scheduled messages start again"
       : "Pause everything, scheduled messages included");
     toggle.addEventListener("click", function () {
-      paused = !paused;
+      if (paused) return resumeQueue();
+      paused = true;
       render();
-      if (!paused && !isBusy() && Q.length) flush();
     });
     var label = el("span", "__qHeadLabel"), nf = floatItems().length;
     label.textContent = (paused ? "paused \u00B7 " : "") + (Q.length - nf) + " queued" +
@@ -35,6 +35,7 @@
     min.addEventListener("click", function () { collapsed = !collapsed; render(); });
     head.appendChild(toggle);
     head.appendChild(label);
+    head.appendChild(buildHeldBadge());   /* paused with a timer running: say it here too */
     head.appendChild(buildSavedHeadButton());   /* save this queue / open the saved ones */
     head.appendChild(min);
     return head;
