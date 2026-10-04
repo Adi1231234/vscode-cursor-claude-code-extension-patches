@@ -26,6 +26,15 @@ in place. Read this before changing anything so the structure stays clean.
     (`__ccWatch`, the one shared DOM observer), `ccSession.js` (`__ccSession`,
     the session store's signals as pushes, across conversation switches) and
     `ccClock.js` (`__ccClock`, the one clock, only while visible and needed).
+    And `ccReply.js` (`__ccReply`): which rows are Claude's own replies, read off
+    the store's `messages.value` - a local command's output and the Remote
+    Control notice are drawn exactly like one - and whether a run was stopped,
+    wherever the stop came from (the phone's Stop never passes `interrupt()`).
+    `isSynthesizedByLoop` is only "model `<synthetic>`", which API errors carry
+    too, so command output is the synthetic row that answers a command row; and
+    a mark is a set of rows (uuid, or the row itself when it has none - a reply
+    stopped mid-thought leaves one), never a position, because the store trims
+    its list.
   - `css/` - the shared stylesheets, `Get-LibCssPath`: `ccScroll.css` (the
     scrollbar) and `ccModal.css` (the dialog chrome that goes with
     `lib/js/ccModal.js`). Whichever patch runs first appends them; the guard in

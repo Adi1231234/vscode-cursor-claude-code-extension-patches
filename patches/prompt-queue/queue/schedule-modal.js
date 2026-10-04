@@ -36,7 +36,7 @@
     function done() {
       var resume = !keep && pausedBlocks(sel);
       close();
-      if (resume) resumeQueue();
+      if (resume) setPaused(false);
     }
     function commit(keepHold) {
       keep = !!keepHold;

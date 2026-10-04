@@ -97,6 +97,26 @@ while **idle** (the app's handler is not gated on busy), which is not a stop -
 so `isBusy()` must hold; and an empty queue has nothing to park, so `paused` is
 never set behind the user's back when the queue isn't in use.
 
+**A stop from outside the panel parks it too** (`watchStopsElsewhere`). Stop
+pressed in the Claude app over Remote Control goes straight to the CLI and never
+runs this panel's `interrupt()`, so the hook above cannot see it. Measured
+2026-10-04 with the connection's own `interruptClaude()` (the call both stops end
+in): the turn ended and the queue sent its next item at once - stopping from the
+phone did not stop. Every stop does leave a `[Request interrupted by user]` row
+in the store before `busy` falls (`lib/js/ccReply.js`), so the run's start is
+marked and a stop found since then parks the queue the same way. A tool refused
+with no reason given leaves the same row (the app sends that refusal with
+`interrupt` set, and the turn ends there), so it parks the queue as well; a
+refusal with a reason does not end the turn and does not park. The busy callback
+is a microtask and the flushing pass a timer, so the park lands first. Three
+details keep it from parking when nobody stopped anything: the mark is the set
+of rows there were, by uuid or by the row itself when it has none, not a
+position (the store trims its list past 600 rows, and a position then points
+into the run's own rows); the first value after a switch
+of conversation is no edge, so a mark from the old conversation is never read
+against the new one; and Play pressed while the stopped run winds down re-marks,
+so only a stop after the Play can park again.
+
 Note this is the same `paused` as the play/pause button, and it now holds
 **everything**, scheduled messages included (see `firstSendableIndex`). A due
 scheduled item used to fire straight through it, on the grounds that a

@@ -22,11 +22,7 @@
     var toggle = btn("__qToggle" + (paused ? " __qPlay" : ""), paused
       ? "Resume - queued and scheduled messages start again"
       : "Pause everything, scheduled messages included");
-    toggle.addEventListener("click", function () {
-      if (paused) return resumeQueue();
-      paused = true;
-      render();
-    });
+    toggle.addEventListener("click", function () { setPaused(!paused); });
     var label = el("span", "__qHeadLabel"), nf = floatItems().length;
     label.textContent = (paused ? "paused \u00B7 " : "") + (Q.length - nf) + " queued" +
       (nf ? " \u00B7 " + nf + " scheduled" : "");

@@ -38,10 +38,20 @@
     } catch (e) { return ""; }
   }
 
+  /* A local command's output (/queue, /context) and the "Remote Control is
+     active" notice are drawn as message rows exactly like a reply, so they
+     read here as something Claude said - and a new one is a turn to answer.
+     Measured 2026-10-04: after any /queue from the phone the newest such row
+     was "queue: ... Running". The store says what each row is
+     (lib/js/ccReply.js); a row it cannot place keeps the old reading. */
+  function notClaude(m) {
+    return !!(window.__ccReply && window.__ccReply.isClaudeRow(m) === false);
+  }
+
   function lastAssistant() {
     var ms = messageNodes();
     for (var i = ms.length - 1; i >= 0; i--) {
-      if (isUser(ms[i])) continue;
+      if (isUser(ms[i]) || notClaude(ms[i])) continue;
       var t = textOf(ms[i]);
       if (t) return t;
     }
@@ -54,6 +64,7 @@
   function transcript() {
     var out = [], ms = messageNodes();
     for (var i = 0; i < ms.length; i++) {
+      if (notClaude(ms[i])) continue;      /* a command's output is not a turn of either */
       var t = textOf(ms[i]);
       if (t) out.push((isUser(ms[i]) ? "HUMAN: " : "CLAUDE: ") + t);
     }

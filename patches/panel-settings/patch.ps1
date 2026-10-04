@@ -46,7 +46,7 @@ function Invoke-Patch {
     # The dialog chrome is the shared one (prompt-queue's three dialogs use the
     # same file); it guards itself, so whichever of the two lands first wins and
     # the other is a no-op.
-    $parts = @(Get-LibJsPath 'ccModal.js') +
+    $parts = @((Get-LibJsPath 'ccModal.js'), (Get-LibJsPath 'ccReply.js')) +
              (@('store.js', 'icon.js', 'trace.js', 'label.js', 'hostlink.js', 'queue-gate.js',
                 'watch.js', 'row.js', 'dialog.js', 'gear.js') |
                 ForEach-Object { Join-Path $PSScriptRoot "runtime/$_" })

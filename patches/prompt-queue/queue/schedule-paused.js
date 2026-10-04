@@ -4,12 +4,9 @@
      Stop. A timer set in that state reaches its moment and nothing happens,
      with nothing having said it would. So the schedule dialog says it at the
      one moment the choice is being made, and offers to resume in the same
-     click - the pause itself keeps meaning what it means. */
-  function resumeQueue() {
-    paused = false;
-    render();
-    if (!isBusy() && Q.length) flush();
-  }
+     click - the pause itself keeps meaning what it means. Resuming is the
+     play button's own setPaused(false) (model.js), the one way a hold is
+     released, from the panel or the phone. */
 
   /* Only a schedule is held by the pause in a way worth saying: "Queue" has
      no time to miss. */

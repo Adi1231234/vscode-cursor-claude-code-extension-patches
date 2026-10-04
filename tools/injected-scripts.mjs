@@ -34,6 +34,10 @@ export const SCRIPTS = {
        backslash because of it. */
     escapesOnly: true
   },
+  "phone-queue": {
+    /* One fragment that opens and closes its own <script>. */
+    files: ["patches/phone-queue/webview/link.js"]
+  },
   "auto-followup": {
     dir: "patches/auto-followup/af/",
     /* Read, not repeated. This list lived in five places; once.js was added to
