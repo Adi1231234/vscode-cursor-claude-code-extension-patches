@@ -18,10 +18,17 @@
   /* Why "Send now" cannot run right now - "" when it can. Kept short: it is
      shown in place of the item's label, and the menu is sized to fit it so the
      swap moves nothing. A running turn is not a reason: sendNow goes in
-     mid-turn the way the composer's own Enter does (see flush-init.js). */
+     mid-turn the way the composer's own Enter does (see flush-init.js).
+     Every reason sendNow has to do nothing is here, so a caller that asked
+     first is never told "sending" for a send that did not happen - the
+     phone's "Send now" was (prompt-queue/queue/remote-api.js). */
   function sendBlocked(it) {
     if (it.off) return "Skipped - enable it first";
     if (flushing) return "Another send in progress";
+    if (editing) return "An item is being edited";
+    var e = inp(), s = getSession();
+    if (!e) return "No message box";
+    if (!(s && typeof s.send === "function") && (e.textContent || "").trim()) return "A draft is in the box";
     return "";
   }
 

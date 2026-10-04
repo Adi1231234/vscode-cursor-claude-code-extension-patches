@@ -15,6 +15,10 @@ const root = path.resolve(here, "..", "..", "..");
 const jobs = [
   ["order.test.js", [path.join(here, "order.test.js")]],
   ["saved.test.js", [path.join(here, "saved.test.js")]],
+  ["remote.test.js", [path.join(here, "remote.test.js")]],
+  ["remote-item.test.js", [path.join(here, "remote-item.test.js")]],
+  ["reply.test.js", [path.join(here, "reply.test.js")]],
+  ["stops.test.js", [path.join(here, "stops.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "prompt-queue"]],
   ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]],
   ["check-runtime", [path.join(root, "tools", "check-webview-runtime.mjs")]]

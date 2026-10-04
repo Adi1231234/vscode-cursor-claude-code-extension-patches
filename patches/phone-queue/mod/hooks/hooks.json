@@ -1,0 +1,4 @@
+{
+  "description": "phone-queue hooks module: the /queue command",
+  "modules": ["./register.js"]
+}

@@ -65,6 +65,16 @@
     render();
   }
 
+  /* The hold on the whole queue, from the panel's play button or from the
+     phone (remote-api.js). Releasing it while idle sends straight away rather
+     than waiting for the next pass to notice. */
+  function setPaused(p) {
+    paused = !!p;
+    if (!paused) restartRunMark();     /* stop-pause.js: a Play outranks the stop before it */
+    render();
+    if (!paused && !isBusy() && Q.length) flush();
+  }
+
   /* Which item sends next. Two scans, in the order the panel draws them:
 
      1) the SCHEDULED group (floating items, see schedule-order.js): out of the

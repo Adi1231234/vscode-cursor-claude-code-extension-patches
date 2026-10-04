@@ -111,6 +111,19 @@ wiring each, and the subscription is deferred off the render pass with a
 `setTimeout(0)`, because subscribing creates an effect and a render is no place
 for one.
 
+**Only a run in which Claude wrote something is a finish.** A local command
+(`/queue` from the phone, `/context`) is a run of its own on `busy`, and so is a
+Stop pressed in the Claude app, which never passes through `interrupt()` here.
+Measured 2026-10-04: every `/queue` made a "run ended" edge, i.e. a "Claude
+finished" toast with notifications on. The store's message list says whether
+Claude replied since the run began and whether it was stopped
+(`lib/js/ccReply.js`); either one keeps the toast quiet, and the log says which.
+An API error, a usage limit or "No response requested." is a synthetic row
+too, but it answers a real prompt, so it counts as a reply: a queue that runs
+into a usage limit still raises the toast. And `interrupt()` also runs for a
+plain Escape while nothing runs; only a call made while `busy` marks the next
+edge as a stop, or that Escape swallowed the next real finish.
+
 ## The host half
 
 The panel sends one message - `{type:"__ccnotify", op:"done", title, body}` -

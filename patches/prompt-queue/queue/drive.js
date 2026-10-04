@@ -108,6 +108,7 @@
   function wireQueue() {
     var S = window.__ccSession;
     if (S) {
+      watchStopsElsewhere();       /* stop-pause.js: before the pass that would flush */
       S.on("busy", schedulePass);
       S.on("sessionId", schedulePass);
       S.onStore(schedulePass);

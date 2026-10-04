@@ -6,6 +6,7 @@
   "lib/js/ccWatch.js",
   "lib/js/ccSession.js",
   "lib/js/ccClock.js",
+  "lib/js/ccReply.js",
   "patches/prompt-queue/queue/log.js",
   "lib/js/ccModal.js",
   "patches/prompt-queue/queue/modal-shell.js",
@@ -34,6 +35,8 @@
   "patches/prompt-queue/queue/resize-input.js",
   "patches/prompt-queue/queue/stop-pause.js",
   "patches/prompt-queue/queue/flush-init.js",
+  "patches/prompt-queue/queue/remote-item.js",
+  "patches/prompt-queue/queue/remote-api.js",
   "patches/prompt-queue/queue/drive.js",
   "patches/prompt-queue/queue/init.js"
 ]

@@ -1,0 +1,6 @@
+{
+  "name": "queue",
+  "version": "1.0.0",
+  "description": "/queue: see and control the editor panel's prompt queue from the Claude app (Remote Control)",
+  "author": { "name": "Adi Aharoni" }
+}

@@ -49,14 +49,10 @@
      Mid-turn is the app's own case: session.send has no busy gate, it holds
      the message and hands it to the CLI, exactly what Enter does then. */
   async function sendNow(it) {
-    if (flushing || editing) return;
     var idx = Q.indexOf(it);
-    if (idx < 0) return;
-    var e = inp();
-    if (!e) return;
-    var s = getSession();
+    if (idx < 0 || sendBlocked(it)) return;   /* row-menu.js: every reason, root protection included */
+    var e = inp(), s = getSession();
     var canSend = !!(s && typeof s.send === "function");
-    if (!canSend && (e.textContent || "").trim().length > 0) return;   /* root protection (see flush) */
     flushing = true;
     Q.splice(idx, 1);
     render();

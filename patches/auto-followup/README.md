@@ -259,6 +259,17 @@ store, and both were wrong here first:
   here assumed `s.messages.value`. That is `undefined`, so `lastAssistant()`
   returned `""` on every pass and **the loop would never have fired once** -
   silently, with a green test suite, because the stub modelled the assumption.
+- **Not every message row is Claude's.** A local command's output (`/queue`,
+  `/context`) and the "Remote Control is active" notice are drawn exactly like a
+  reply, so the newest of them read as a fresh turn to answer - measured
+  2026-10-04, after any `/queue` from the phone the newest row was
+  `queue: ... Running`. On 2.1.287 the store does carry `messages.value`, and each
+  row says what it is (a reply has a `model`, command output is
+  `isSynthesizedByLoop`, the notice `isSynthetic`); `lib/js/ccReply.js` maps a DOM
+  row to it by `data-bookmark-uuid`, and those rows are skipped. Only a
+  synthetic row that answers a command row is skipped: an API error or a usage
+  limit carries the same flag but follows a real prompt, and is answered as it
+  always was. Where the store cannot be read the old reading stands.
 - **The session id** comes through `window.__qAuto.sid()`, which is
   `persist.js`'s resolved and cached value. Its own note says where it really
   lives, confirmed with an in-webview probe: the webview URL carries

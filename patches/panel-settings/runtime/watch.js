@@ -32,11 +32,20 @@ function __ccSettingsWatch(session) {
 
     var wasBusy = null;
     var userStopped = false;
+    /* Where the conversation stood when the run began (lib/js/ccReply.js). A
+       local command - /queue from the phone, /context - is a run of its own on
+       this signal, and so is a Stop pressed in the Claude app, which never
+       passes through interrupt() here. Measured 2026-10-04: every /queue made
+       a "run ended" edge. What tells them from a real finish is whether Claude
+       wrote anything since the mark. */
+    var runMark = null;
 
+    /* interrupt() also runs for a plain Escape while nothing runs; that stops
+       nothing, and taken as a stop it swallowed the next real finish. */
     var previousInterrupt = session.interrupt;
     if (typeof previousInterrupt === "function") {
         session.interrupt = function () {
-            userStopped = true;
+            if (session.busy.value) userStopped = true;
             return previousInterrupt.apply(this, arguments);
         };
     }
@@ -45,6 +54,16 @@ function __ccSettingsWatch(session) {
         if (userStopped) {
             userStopped = false;
             __ccSettingsNote("quiet", "the user pressed Stop");
+            return;
+        }
+        var run = runMark !== null && window.__ccReply ? window.__ccReply.since(runMark, session) : null;
+        runMark = null;
+        if (run && run.stopped) {
+            __ccSettingsNote("quiet", "the run was stopped (from another client)");
+            return;
+        }
+        if (run && !run.replied) {
+            __ccSettingsNote("quiet", "nothing from Claude this run - a command, not a reply");
             return;
         }
         if (!__ccSettingsGet("notifyOnFinish")) {
@@ -66,6 +85,7 @@ function __ccSettingsWatch(session) {
                     __ccSettingsNote("armed", "busy=" + !!busy);
                     return;
                 }
+                if (!wasBusy && busy && window.__ccReply) runMark = window.__ccReply.mark(session);
                 if (wasBusy && !busy) {
                     __ccSettingsNote("edge", "run ended");
                     finished();
