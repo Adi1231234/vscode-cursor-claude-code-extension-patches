@@ -49,6 +49,17 @@ with that, both measured off the live DOM:
   could not follow the bubble; it is made the same flex column, stretched, which
   lays its children out as before.
 
+- **One column.** A reply row keeps a 30px timeline gutter on its left (the
+  dot and the line, `.timelineMessage{padding-left:30px}`), a prompt row has
+  none, so their times started 30px apart. The prompt's time takes the same
+  30px, and every time in the transcript starts at one x - the x where a tool
+  row's name ("Read", "Grep") starts. Measured: one distinct x over 207 stamps.
+  Placing them all at the row's own edge instead would run every reply's time
+  through the timeline line.
+- **Close to its own row.** The time reaches half-way into the row's 8px bottom
+  padding (`--app-spacing-small`), so it reads as the end of its row and not as
+  the start of the next.
+
 No JS: plain CSS over the app's own `data-message-stamp` and
 `data-transcript-message` attributes.
 

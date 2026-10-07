@@ -1,26 +1,36 @@
 /* MESSAGETIMECSS */
-/* The app's message time under its row, on the left - not above it.
+/* The app's message time under its row, on the left, every row in one column.
    The stamp line is the first child of the row: absolute at the top right of
    a reply row (.inPadding), in flow above a prompt. It becomes the last item of
    the row's flex column instead, left-aligned in either text direction, with
    the reply's own action buttons (shown on hover) after it rather than between
-   the text and its time. A prompt row is a block in the app; it is made the same
-   flex column so its time can follow the bubble. */
+   the text and its time. It reaches half-way into the row's 8px bottom padding
+   (--app-spacing-small) so it reads as part of its row, not of the next. */
 [data-transcript-message] > [data-message-stamp] {
   position: static;
   order: 1;
   align-self: stretch;
   justify-content: flex-start;
   direction: ltr;
-  padding: 2px 0 0;
+  padding: 0;
+  margin-bottom: calc(-1 * var(--app-spacing-small));
 }
 
 [data-transcript-message] > [class*="assistantActions_"] {
   order: 2;
 }
 
+/* A prompt row is a block in the app, not a flex column like every other row,
+   so its time could not follow the bubble; laid out the same way, stretched,
+   its children sit as before. It has no timeline gutter either: its time takes
+   the reply rows' column, the app's own .timelineMessage padding-left (30px),
+   so every time in the transcript starts at one x. */
 [data-transcript-message][class*="userMessageContainer_"] {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+}
+
+[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+  padding-left: 30px;
 }
