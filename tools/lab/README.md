@@ -170,6 +170,18 @@ that is how the Windows `fs.watch` gap was found); a finished task moves into th
 history group and the indicator goes quiet; Stop actually stops the process; and
 a history row disappears when its log file is deleted.
 
+## Measuring a patch's cost: inside one lab, never across two
+
+Two labs on the same version and the same transcript are not the same panel:
+measured on 2026-10-07, a lab with a patch showed ~60% more script per streamed
+reply than a lab on master, and inside that first lab, applying the patch set
+with and without the two patches in question (a copy of `apply.ps1` with them
+left out of `$order`, run with `-ExtensionsDir`, then a real reload) moved
+nothing beyond run-to-run noise. The gap was the lab's own state. So toggle the
+patch inside one lab, run each variant more than once, and attribute time with a
+CPU profile (`Profiler.start` on the panel target) rather than by subtraction.
+`patches/message-time/README.md` has the numbers.
+
 ## What each step is guarding against
 
 All of these were found the hard way; each one looks like "the patch broke the
