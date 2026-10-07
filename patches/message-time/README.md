@@ -1,7 +1,8 @@
-# stamp-every-row
+# message-time
 
-The app's own message time on **every** row of a reply - each tool call and
-each thinking block - not only on your prompts and Claude's text.
+The app's own message time on **every** row - your prompts, Claude's text, and
+each tool call and thinking block - **under** the row, **on the left**, the way
+a chat app shows it, in the format the `timeFormat` setting gives.
 
 ## Root cause
 
@@ -31,6 +32,25 @@ The predicate is found through the time getter, which is anchored on its shape
 (`if(!<pred>(m)||m.content.some((b)=>b.isPartial)`), and both names are
 captured. The same predicate also feeds the day divider (first time in a day)
 and a bookmark's `writtenAt`; a tool row's time is as true there as a text row's.
+
+## Under the row, on the left
+
+The app puts the stamp line first in the row: absolute at the top right of a
+reply row (`.inPadding`), in flow above a prompt bubble. `message-time.css`
+makes it the last item of the row's flex column instead (`order: 1`), aligned
+to the left in either text direction (`direction: ltr`, so the rtl patch's
+right-to-left list does not push it right). Two things it has to say along
+with that, both measured off the live DOM:
+
+- A reply row ends with its action buttons (`assistantActions_`, revealed on
+  hover). Left in place they sit between the text and its time, a visible gap;
+  they go after the time (`order: 2`).
+- A prompt row is a block, not a flex column like every other row, so its time
+  could not follow the bubble; it is made the same flex column, stretched, which
+  lays its children out as before.
+
+No JS: plain CSS over the app's own `data-message-stamp` and
+`data-transcript-message` attributes.
 
 ## The format is a setting, not a patch
 

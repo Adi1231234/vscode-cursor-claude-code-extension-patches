@@ -1,0 +1,26 @@
+/* MESSAGETIMECSS */
+/* The app's message time under its row, on the left - not above it.
+   The stamp line is the first child of the row: absolute at the top right of
+   a reply row (.inPadding), in flow above a prompt. It becomes the last item of
+   the row's flex column instead, left-aligned in either text direction, with
+   the reply's own action buttons (shown on hover) after it rather than between
+   the text and its time. A prompt row is a block in the app; it is made the same
+   flex column so its time can follow the bubble. */
+[data-transcript-message] > [data-message-stamp] {
+  position: static;
+  order: 1;
+  align-self: stretch;
+  justify-content: flex-start;
+  direction: ltr;
+  padding: 2px 0 0;
+}
+
+[data-transcript-message] > [class*="assistantActions_"] {
+  order: 2;
+}
+
+[data-transcript-message][class*="userMessageContainer_"] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}

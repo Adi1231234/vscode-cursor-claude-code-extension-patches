@@ -51,7 +51,7 @@ $order = @(
     'auto-followup'
     'phone-queue'
     'input-usage'
-    'stamp-every-row'
+    'message-time'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to

@@ -1,23 +1,24 @@
-# Stamp every row - the app's own message time on every row of a reply: each
-# tool call and each thinking block, not only the text.
+# Message time - the app's own message time on every row, under it, on the
+# left (the way a chat app shows it), in the format the timeFormat setting
+# gives ("%H:%M:%S" for 24-hour with seconds; a setting, not a patch).
 #
-# The app already renders its stamp component on every assistant row; the
-# component returns nothing unless the row passes one predicate (a user prompt,
-# or an assistant row holding text). That predicate gains one early answer: an
-# assistant row holding any other block (tool_use, thinking) is stamped too.
-# The stamp, its format (the timeFormat setting), its hover and its look stay
-# the app's own.
-#
-# Since 2.1.292 a run of Read calls is folded into one synthetic row ("Read N
-# files") that is built with no createdAt, so it would still have no time. It
-# gets the time of the first read it folds. A bundle that folds nothing has
-# nothing to fix there.
+#   (1) webview/index.js: the app renders its stamp component on every assistant
+#       row and then asks one predicate whether the row is a message (a prompt,
+#       or a reply holding text). That predicate gains one early answer: a reply
+#       row holding any other block (tool_use, thinking) is stamped too.
+#   (2) webview/index.js: since 2.1.292 a run of Read calls is folded into one
+#       synthetic row ("Read N files") built with no createdAt; it gets the time
+#       of the first read it folds. A bundle that folds nothing has nothing to fix.
+#   (3) webview/index.css: the stamp moves from above the row to under it, left.
+# The stamp, its hover, its switch and its format stay the app's own.
 function Invoke-Patch {
     param($Ctx)
 
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'message-time.css') '/* MESSAGETIMECSS */' 'message-time CSS'
+
     if (-not (Test-Path $Ctx.WebJs)) { Write-Miss 'webview/index.js not found'; return }
     $wc = Read-Text $Ctx.WebJs
-    if ($wc.Contains('/* STAMPEVERYROW */')) { Write-Skip 'already patched'; return }
+    if ($wc.Contains('/* MESSAGETIME */')) { Write-Skip 'already patched'; return }
 
     # The time getter names the predicate: it refuses a row the predicate
     # refuses, then a row still streaming.
@@ -33,8 +34,7 @@ function Invoke-Patch {
     # "Successfully read" result, its source rows captured.
     $rxFold = 'Successfully read [\s\S]{0,400}?new [\w$]+\("assistant",[\w$]+,\{uuid:void 0,hiddenFromChat:([\w$]+)\[0\]\.hiddenFromChat(?=\})'
     $mFold = [regex]::Match($wc, $rxFold)
-    $folds = $wc.Contains('Successfully read ')
-    if ($folds -and -not $mFold.Success) { Write-Miss 'folded reads row anchor not found'; return }
+    if ($wc.Contains('Successfully read ') -and -not $mFold.Success) { Write-Miss 'folded reads row anchor not found'; return }
 
     # Back to front, so the first edit does not move the second's offset.
     $edits = @(@{ At = $mPred.Index + $mPred.Length
