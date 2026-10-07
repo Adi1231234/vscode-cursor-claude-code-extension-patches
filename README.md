@@ -70,7 +70,7 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on your own messages](patches/copy-message) · 🔓 Bypass permission mode · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup).
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on your own messages](patches/copy-message) · 🔓 Bypass permission mode · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup) · 📊 [Usage left, inside the composer](patches/input-usage) · 🕒 [Message times under every row, tool calls too](patches/message-time).
 
 🔁 **Auto follow-up** — a second model reads what Claude just wrote and types
 your next message. You write one file that says how to answer for you

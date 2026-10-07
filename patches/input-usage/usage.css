@@ -1,0 +1,26 @@
+/* INPUTUSAGECSS */
+/* The usage line at the bottom of the composer box. Its type is the app's own
+   message time stamp (.stamp_<hash>: secondary foreground, .85em, 16px line),
+   and its side padding the footer row's 5px, so it lines up under the buttons. */
+.cc-usage-line {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 0 5px var(--app-spacing-small);
+  color: var(--app-secondary-foreground);
+  font-size: 0.85em;
+  line-height: 16px;
+  cursor: default;
+}
+
+.cc-usage-line[hidden] {
+  display: none;
+}
+
+.cc-usage-line > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

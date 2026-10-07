@@ -442,6 +442,14 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   is taken somewhere else - `panel-settings` sends the message but the **host**
   applies the focus gate - say so in the line, or a reader chasing a silence
   reads `sent` and concludes the message was lost.
+- **A Claude Code mod cannot draw in this panel; anything you want to *see*
+  here is a patch.** Checked 2026-10-07 on CLI 2.1.292 and the newest extension
+  (2.1.292): the CLI answers `ui_render` / `ui_attach` for a `vscode` surface and
+  sends `ui_status` / `ui_toast`, but neither bundle of the extension ever sends
+  the first two or handles the last two (0 occurrences), so a mod's message
+  rewrites, its band above the prompt and its status line never appear. Its
+  hooks and slash commands do run (`patches/phone-queue` relies on that).
+  `patches/input-usage` is the worked example of doing it as a patch instead.
 
 ## Testing a change (without touching your real install)
 

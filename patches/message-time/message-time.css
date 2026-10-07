@@ -1,0 +1,72 @@
+/* MESSAGETIMECSS */
+/* The app's message time on a line of its own at the bottom left of every
+   row, every time in the transcript starting at one x: the inner left edge of
+   a prompt's bubble (its 0.8px border + 6px padding, 7px from the row's edge).
+
+   The stamp line is the first child of the row: absolute at the top right of
+   a reply row (.inPadding), in flow above a prompt. It becomes the last item of
+   the row's flex column instead, left-aligned in either text direction, with
+   the reply's own action buttons (shown on hover) after it rather than between
+   the text and its time. It reaches half-way into the row's 8px bottom padding
+   (--app-spacing-small) so it reads as part of its row, not of the next. */
+[data-transcript-message] > [data-message-stamp] {
+  position: static;
+  order: 1;
+  align-self: stretch;
+  justify-content: flex-start;
+  direction: ltr;
+  padding: 0;
+  margin-bottom: calc(-1 * var(--app-spacing-small));
+}
+
+[data-transcript-message] > [class*="assistantActions_"] {
+  order: 2;
+}
+
+/* A reply row's content starts after its 30px timeline gutter (the app's own
+   .timelineMessage padding-left); its time steps back into the gutter to the
+   common x. */
+[data-transcript-message][class*="timelineMessage_"] > [data-message-stamp] {
+  margin-left: calc(7px - 30px);
+}
+
+/* A reply's times show on hover only, the way the app reveals the reply's own
+   Copy button ([data-testid=assistant-message]:hover, no transition): the line
+   keeps its room, so a row does not move under the pointer. Keyboard focus
+   inside the row shows it too. Your own prompts keep theirs in view. */
+[data-testid="assistant-message"] > [data-message-stamp] {
+  opacity: 0;
+}
+
+[data-testid="assistant-message"]:hover > [data-message-stamp],
+[data-testid="assistant-message"]:focus-within > [data-message-stamp] {
+  opacity: 1;
+}
+
+/* A prompt's time goes inside its bubble, on a line of its own at the bottom,
+   against the bubble's left border - the bubble keeps its full width for the
+   text. The prompt row is a block in the app; laid out as a one-cell grid, the
+   bubble and the time share the cell and the time sits at its bottom. The
+   bubble grows by one 16px line (the stamp's own line-height) at the bottom,
+   and the time is lifted above the bubble's positioned box to be painted. */
+[data-transcript-message][class*="userMessageContainer_"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp],
+[data-transcript-message][class*="userMessageContainer_"] > [class*="userMessageContainer_"] {
+  grid-area: 1 / 1;
+}
+
+[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  padding-left: 7px;
+  margin-bottom: 3px;
+}
+
+[data-transcript-message][class*="userMessageContainer_"] [class*="userMessage_"] {
+  padding-bottom: calc(4px + 16px);
+}
