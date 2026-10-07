@@ -39,16 +39,22 @@ The app puts the stamp line first in the row: absolute at the top right of a
 reply row (`.inPadding`), in flow above a prompt bubble. `message-time.css`
 makes it the last item of the row's flex column instead (`order: 1`), aligned
 to the left in either text direction (`direction: ltr`, so the rtl patch's
-right-to-left list does not push it right). Two things it has to say along
-with that, both measured off the live DOM:
+right-to-left list does not push it right). What it settles along
+with that, each measured off the live DOM:
 
 - A reply row ends with its action buttons (`assistantActions_`, revealed on
   hover). Left in place they sit between the text and its time, a visible gap;
   they go after the time (`order: 2`).
-- A prompt row is a block, not a flex column like every other row, so its time
-  could not follow the bubble; it is made the same flex column, stretched, which
-  lays its children out as before.
-
+- **A prompt's time sits inside its bubble**, bottom left, on the bubble's last
+  line when it leaves room - chat-app style. Hung under the bubble it read as
+  detached from it (the bubble is a full-width bordered box). The prompt row
+  becomes a one-cell grid holding both the bubble and the time; `last baseline`
+  puts the time on the line of the bubble's last line of text, and it is lifted
+  above the bubble's positioned box to be painted at all. An invisible box as
+  wide as the time (plus its column offset) ends the text: it stays on the last
+  line when that line leaves room and wraps when it does not, so the time never
+  covers a word. Measured over 9 prompts: inside the bubble 9/9, overlapping
+  text 0/9, a full-width line wrapping the time onto a line of its own.
 - **One column.** A reply row keeps a 30px timeline gutter on its left (the
   dot and the line, `.timelineMessage{padding-left:30px}`), a prompt row has
   none, so their times started 30px apart. The prompt's time takes the same

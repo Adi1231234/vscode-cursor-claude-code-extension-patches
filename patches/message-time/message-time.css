@@ -20,17 +20,39 @@
   order: 2;
 }
 
-/* A prompt row is a block in the app, not a flex column like every other row,
-   so its time could not follow the bubble; laid out the same way, stretched,
-   its children sit as before. It has no timeline gutter either: its time takes
-   the reply rows' column, the app's own .timelineMessage padding-left (30px),
-   so every time in the transcript starts at one x. */
+/* A prompt's time goes inside its bubble, bottom left, on the bubble's last
+   line when there is room - the way a chat app shows the time of what you sent.
+   The prompt row is a block in the app; laid out as a one-cell grid, the bubble
+   and the time share the cell, and "last baseline" puts the time on the line of
+   the bubble's last line of text. The bubble sits in a positioned box, so the
+   time is lifted above it to be painted at all.
+   Its x is the reply rows' column - the app's own .timelineMessage
+   padding-left (30px) - so every time in the transcript starts at one x. */
 [data-transcript-message][class*="userMessageContainer_"] {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp],
+[data-transcript-message][class*="userMessageContainer_"] > [class*="userMessageContainer_"] {
+  grid-area: 1 / 1;
+  align-self: last baseline;
 }
 
 [data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 0;
   padding-left: 30px;
+}
+
+/* The room for it: an invisible box as wide as the column offset plus the time
+   (8 characters at .85em, measured 41px = 3.2em of the bubble's 13px) at the end
+   of the text. It sits on the last line when that line leaves room on the left,
+   and wraps onto a line of its own when it does not - so the time never covers
+   a word, however long the message. */
+[data-transcript-message] [class*="userMessage_"] [class*="expandableContainer_"] [class*="content_"]::after {
+  content: "";
+  display: inline-block;
+  width: calc(30px + 3.2em);
 }
