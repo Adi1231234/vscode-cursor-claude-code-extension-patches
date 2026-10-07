@@ -1,8 +1,9 @@
 # message-time
 
 The app's own message time on **every** row - your prompts, Claude's text, and
-each tool call and thinking block - **under** the row, **on the left**, the way
-a chat app shows it, in the format the `timeFormat` setting gives.
+each tool call and thinking block - on a line of its own at the **bottom left**
+of the row (inside the bubble for your prompts), every time in one column, in
+the format the `timeFormat` setting gives.
 
 ## Root cause
 
@@ -45,23 +46,18 @@ with that, each measured off the live DOM:
 - A reply row ends with its action buttons (`assistantActions_`, revealed on
   hover). Left in place they sit between the text and its time, a visible gap;
   they go after the time (`order: 2`).
-- **A prompt's time sits inside its bubble**, bottom left, on the bubble's last
-  line when it leaves room - chat-app style. Hung under the bubble it read as
-  detached from it (the bubble is a full-width bordered box). The prompt row
-  becomes a one-cell grid holding both the bubble and the time; `last baseline`
-  puts the time on the line of the bubble's last line of text, and it is lifted
-  above the bubble's positioned box to be painted at all. An invisible box as
-  wide as the time (plus its column offset) ends the text: it stays on the last
-  line when that line leaves room and wraps when it does not, so the time never
-  covers a word. Measured over 9 prompts: inside the bubble 9/9, overlapping
-  text 0/9, a full-width line wrapping the time onto a line of its own.
-- **One column.** A reply row keeps a 30px timeline gutter on its left (the
-  dot and the line, `.timelineMessage{padding-left:30px}`), a prompt row has
-  none, so their times started 30px apart. The prompt's time takes the same
-  30px, and every time in the transcript starts at one x - the x where a tool
-  row's name ("Read", "Grep") starts. Measured: one distinct x over 207 stamps.
-  Placing them all at the row's own edge instead would run every reply's time
-  through the timeline line.
+- **A prompt's time sits inside its bubble**, on a line of its own at the
+  bottom, against the bubble's left border. Hung under the full-width bubble it
+  read as detached from it; sharing the bubble's last text line needed an
+  invisible spacer at the end of the text, which took width from the message.
+  The prompt row becomes a one-cell grid holding the bubble and the time, the
+  time at the cell's bottom, lifted above the bubble's positioned box to be
+  painted; the bubble grows by the stamp's own 16px line.
+- **One column.** Every time starts at the bubble's inner left edge (its
+  0.8px border + 6px padding, 7px from the row). A reply row's content starts
+  after its 30px timeline gutter (`.timelineMessage{padding-left:30px}`), so
+  its time steps back into the gutter by the difference. Measured: one x over
+  207 stamps, and no time crosses the timeline's dots.
 - **Close to its own row.** The time reaches half-way into the row's 8px bottom
   padding (`--app-spacing-small`), so it reads as the end of its row and not as
   the start of the next.

@@ -1,5 +1,8 @@
 /* MESSAGETIMECSS */
-/* The app's message time under its row, on the left, every row in one column.
+/* The app's message time on a line of its own at the bottom left of every
+   row, every time in the transcript starting at one x: the inner left edge of
+   a prompt's bubble (its 0.8px border + 6px padding, 7px from the row's edge).
+
    The stamp line is the first child of the row: absolute at the top right of
    a reply row (.inPadding), in flow above a prompt. It becomes the last item of
    the row's flex column instead, left-aligned in either text direction, with
@@ -20,14 +23,19 @@
   order: 2;
 }
 
-/* A prompt's time goes inside its bubble, bottom left, on the bubble's last
-   line when there is room - the way a chat app shows the time of what you sent.
-   The prompt row is a block in the app; laid out as a one-cell grid, the bubble
-   and the time share the cell, and "last baseline" puts the time on the line of
-   the bubble's last line of text. The bubble sits in a positioned box, so the
-   time is lifted above it to be painted at all.
-   Its x is the reply rows' column - the app's own .timelineMessage
-   padding-left (30px) - so every time in the transcript starts at one x. */
+/* A reply row's content starts after its 30px timeline gutter (the app's own
+   .timelineMessage padding-left); its time steps back into the gutter to the
+   common x. */
+[data-transcript-message][class*="timelineMessage_"] > [data-message-stamp] {
+  margin-left: calc(7px - 30px);
+}
+
+/* A prompt's time goes inside its bubble, on a line of its own at the bottom,
+   against the bubble's left border - the bubble keeps its full width for the
+   text. The prompt row is a block in the app; laid out as a one-cell grid, the
+   bubble and the time share the cell and the time sits at its bottom. The
+   bubble grows by one 16px line (the stamp's own line-height) at the bottom,
+   and the time is lifted above the bubble's positioned box to be painted. */
 [data-transcript-message][class*="userMessageContainer_"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -36,23 +44,16 @@
 [data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp],
 [data-transcript-message][class*="userMessageContainer_"] > [class*="userMessageContainer_"] {
   grid-area: 1 / 1;
-  align-self: last baseline;
 }
 
 [data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
   position: relative;
   z-index: 1;
-  margin-bottom: 0;
-  padding-left: 30px;
+  align-self: end;
+  padding-left: 7px;
+  margin-bottom: 3px;
 }
 
-/* The room for it: an invisible box as wide as the column offset plus the time
-   (8 characters at .85em, measured 41px = 3.2em of the bubble's 13px) at the end
-   of the text. It sits on the last line when that line leaves room on the left,
-   and wraps onto a line of its own when it does not - so the time never covers
-   a word, however long the message. */
-[data-transcript-message] [class*="userMessage_"] [class*="expandableContainer_"] [class*="content_"]::after {
-  content: "";
-  display: inline-block;
-  width: calc(30px + 3.2em);
+[data-transcript-message][class*="userMessageContainer_"] [class*="userMessage_"] {
+  padding-bottom: calc(4px + 16px);
 }
