@@ -7,6 +7,11 @@
 # assistant row holding any other block (tool_use, thinking) is stamped too.
 # The stamp, its format (the timeFormat setting), its hover and its look stay
 # the app's own.
+#
+# Since 2.1.292 a run of Read calls is folded into one synthetic row ("Read N
+# files") that is built with no createdAt, so it would still have no time. It
+# gets the time of the first read it folds. A bundle that folds nothing has
+# nothing to fix there.
 function Invoke-Patch {
     param($Ctx)
 
@@ -24,8 +29,25 @@ function Invoke-Patch {
     $mPred = [regex]::Match($wc, $rxPred)
     if (-not $mPred.Success) { Write-Miss 'message-time predicate not found'; return }
 
-    $early = (Get-InjectedJs (Join-Path $PSScriptRoot 'every-row.js') @{ '__MSG__' = $mPred.Groups[1].Value }).Trim()
-    $at = $mPred.Index + $mPred.Length
-    Write-Text $Ctx.WebJs ($wc.Substring(0, $at) + $early + "`n" + $wc.Substring($at))
+    # The folded reads row: the constructor call right after its own
+    # "Successfully read" result, its source rows captured.
+    $rxFold = 'Successfully read [\s\S]{0,400}?new [\w$]+\("assistant",[\w$]+,\{uuid:void 0,hiddenFromChat:([\w$]+)\[0\]\.hiddenFromChat(?=\})'
+    $mFold = [regex]::Match($wc, $rxFold)
+    $folds = $wc.Contains('Successfully read ')
+    if ($folds -and -not $mFold.Success) { Write-Miss 'folded reads row anchor not found'; return }
+
+    # Back to front, so the first edit does not move the second's offset.
+    $edits = @(@{ At = $mPred.Index + $mPred.Length
+                  Text = (Get-InjectedJs (Join-Path $PSScriptRoot 'every-row.js') @{ '__MSG__' = $mPred.Groups[1].Value }).Trim() + "`n" })
+    if ($mFold.Success) {
+        $edits += @{ At = $mFold.Index + $mFold.Length
+                     Text = (Get-InjectedJs (Join-Path $PSScriptRoot 'merged-reads.js') @{ '__ROWS__' = $mFold.Groups[1].Value }).Trim() }
+    }
+    foreach ($e in ($edits | Sort-Object { $_.At } -Descending)) {
+        $wc = $wc.Substring(0, $e.At) + $e.Text + $wc.Substring($e.At)
+    }
+    Write-Text $Ctx.WebJs $wc
     Write-Ok "every reply row stamped (predicate: $($mTime.Groups[2].Value))"
+    if ($mFold.Success) { Write-Ok 'folded reads row carries its first read''s time' }
+    else { Write-Info 'this version folds no reads' }
 }
