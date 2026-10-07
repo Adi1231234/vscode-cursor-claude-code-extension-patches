@@ -64,6 +64,10 @@ Measured in the lab on 2.1.292 (2026-10-07):
 - **Typing 30 characters:** 0 records written by this patch.
 - **CPU:** a profile sampled every 50 us across 80 keystrokes caught none of
   this patch's functions running.
+- **A streamed reply:** 0.5-2 ms of its functions per reply in a CPU profile,
+  and toggling the patch inside one lab moved the panel's script time by less
+  than the run-to-run noise.
+- **Seven panels idle:** 0 mutation records in each over 15 s.
 
 ## Look
 

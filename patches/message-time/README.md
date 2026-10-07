@@ -70,6 +70,27 @@ with that, each measured off the live DOM:
 No JS: plain CSS over the app's own `data-message-stamp` and
 `data-transcript-message` attributes.
 
+## Performance
+
+No script and no observer of ours: a predicate answer and CSS. What it adds is
+the app's own stamp component on rows that already rendered it (it returned
+nothing before), memoized with its row, its date formatter cached by the app.
+Measured in the lab on 2.1.292, 2026-10-07:
+
+- **Opening a 19.5MB session** (351 rows, 329 stamps against 88): the stamp
+  functions never showed in a CPU profile sampled every 50us.
+- **A streamed 200-word reply, the same lab, patches toggled** (two runs each,
+  ms of panel script per reply): neither 432 / 467, usage line only 429 / 395,
+  message-time only 384 / 377, both 545 / 466 - one noise band. Inclusive time
+  under the stamp component: 1-5 ms, the app's own text stamps included.
+- **Hover**: the same panel with the hover rules and with them deleted (three
+  60-move sweeps each): style 4.1-4.5 ms vs 4.5-5.1 ms, layout 0.6-0.7 ms both.
+- **Idle**: 0 mutation records in each of 7 open panels over 15 s.
+
+A comparison across two separate labs first showed ~60% more script with the
+patches; toggling them inside one lab showed that gap belongs to the lab (its
+history and state), not to the patches. Compare inside one editor.
+
 ## The format is a setting, not a patch
 
 The app formats every stamp with Claude Code's `timeFormat` setting
