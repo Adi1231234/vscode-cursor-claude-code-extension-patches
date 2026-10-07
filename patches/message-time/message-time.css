@@ -30,6 +30,19 @@
   margin-left: calc(7px - 30px);
 }
 
+/* A reply's times show on hover only, the way the app reveals the reply's own
+   Copy button ([data-testid=assistant-message]:hover, no transition): the line
+   keeps its room, so a row does not move under the pointer. Keyboard focus
+   inside the row shows it too. Your own prompts keep theirs in view. */
+[data-testid="assistant-message"] > [data-message-stamp] {
+  opacity: 0;
+}
+
+[data-testid="assistant-message"]:hover > [data-message-stamp],
+[data-testid="assistant-message"]:focus-within > [data-message-stamp] {
+  opacity: 1;
+}
+
 /* A prompt's time goes inside its bubble, on a line of its own at the bottom,
    against the bubble's left border - the bubble keeps its full width for the
    text. The prompt row is a block in the app; laid out as a one-cell grid, the

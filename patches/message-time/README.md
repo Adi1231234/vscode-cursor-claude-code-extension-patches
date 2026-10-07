@@ -58,6 +58,11 @@ with that, each measured off the live DOM:
   after its 30px timeline gutter (`.timelineMessage{padding-left:30px}`), so
   its time steps back into the gutter by the difference. Measured: one x over
   207 stamps, and no time crosses the timeline's dots.
+- **Claude's times on hover only.** A reply row's time is transparent until
+  the row is hovered (or holds keyboard focus), copying how the app reveals the
+  reply's own Copy button (`[data-testid=assistant-message]:hover`, no
+  transition). It keeps its line, so no row moves under the pointer. Your own
+  prompts keep their time in view.
 - **Close to its own row.** The time reaches half-way into the row's 8px bottom
   padding (`--app-spacing-small`), so it reads as the end of its row and not as
   the start of the next.
