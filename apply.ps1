@@ -50,6 +50,7 @@ $order = @(
     'panel-restart-button'
     'auto-followup'
     'phone-queue'
+    'input-usage'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to

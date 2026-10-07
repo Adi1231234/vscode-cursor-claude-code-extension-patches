@@ -38,6 +38,11 @@ export const SCRIPTS = {
     /* One fragment that opens and closes its own <script>. */
     files: ["patches/phone-queue/webview/link.js"]
   },
+  "input-usage": {
+    dir: "patches/input-usage/usage/",
+    /* Read, not repeated, like auto-followup's. */
+    order: JSON.parse(read("patches/input-usage/usage/order.json"))
+  },
   "auto-followup": {
     dir: "patches/auto-followup/af/",
     /* Read, not repeated. This list lived in five places; once.js was added to
