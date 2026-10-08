@@ -20,6 +20,7 @@ const jobs = [
   ["reply.test.js", [path.join(here, "reply.test.js")]],
   ["stops.test.js", [path.join(here, "stops.test.js")]],
   ["limit.test.js", [path.join(here, "limit.test.js")]],
+  ["limit-resume.test.js", [path.join(here, "limit-resume.test.js")]],
   ["check-injected", [path.join(root, "tools", "check-injected.mjs"), "prompt-queue"]],
   ["check-ps1", [path.join(root, "tools", "check-ps1.mjs")]],
   ["check-runtime", [path.join(root, "tools", "check-webview-runtime.mjs")]]

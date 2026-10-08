@@ -128,14 +128,29 @@ Decorating an instance method is safe here (an own property over the prototype,
 `orig.apply(this, arguments)` returns the original promise untouched) - it is
 not the `acquireVsCodeApi` wrap the root CLAUDE.md forbids.
 
-## A usage limit parks the queue (`usage-limit.js`)
+## After a usage limit: continue at the reset, or park (`usage-limit.js`, `limit-resume.js`)
 
 A turn refused by a usage limit ends like any other turn: `busy` falls and the
 queue sent its next item, which was refused at once - and so on until the queue
 was empty, every item spent on *"You've hit your weekly limit · resets ..."*.
-Now the queue parks instead, exactly like a Stop, and the header says why: a
-**usage limit** badge (in `--app-warning-accent`, beside the paused label) whose
-tooltip names the limit and its reset time in the app's own words.
+Now a run that ends while the account is refused gets one of two answers:
+
+- **The session (five-hour) limit, with "Continue after the session limit" on**
+  in the settings dialog (`patches/panel-settings`, on by default): a
+  `continue` item goes at the front of the lane, timed for **a minute past the
+  reset** and **holding everything behind it**. That is the at-time gate the
+  queue already runs (see Scheduling below), so the queue's own due timer sends
+  it, the cut task picks up where it stopped, and the rest follow one per turn.
+  It happens with an empty queue too - a task typed by hand is cut just the
+  same. It is an ordinary row (move it, edit it, reschedule it, delete it),
+  marked with the responder's star and its own tooltip, and saved with the
+  queue (`r: 1`). There is one at most: a second refusal moves it.
+- **Any other limit** (weekly, a model's weekly), **or the setting off**: the
+  queue parks, exactly like a Stop. A weekly reset can be days away.
+
+Either way the header shows a **usage limit** badge (in `--app-warning-accent`)
+whose tooltip names the limit and its reset time in the app's own words, and
+says whether Claude continues by itself or waits for Play.
 
 What tells it is the CLI's own `rate_limit_event` frame. The CLI sends one
 whenever the account's limit state changes (and when the windows' usage moves),
@@ -149,20 +164,35 @@ decorating the store's own `processIncomingMessage` (`decorateSession` in
 - **Refused** is `status: "rejected"`, unless usage credits cover it
   (`overageStatus` `allowed` / `allowed_warning`) - the app's own reading.
 - **The state is the latest frame**, not a sticky flag: an `allowed` frame
-  clears it, and so does the reset time passing (no frame says that). The CLI
-  sends `allowed` after a refusal the moment a request goes through again.
-- **Parked on the run's end**, like a stop from elsewhere: the busy callback is
-  a microtask and the flushing pass a timer. An empty queue is never parked.
-- **Play overrides it**, as with any pause: the next item is sent anyway, and
-  if the limit still holds, that turn's end parks the queue again. The badge
-  goes away by itself at the reset time.
+  clears it, and so does the reset time passing (no frame says that). A
+  refusal whose own reset time has already gone holds for five minutes rather
+  than not at all, or the queue would drain into it.
+- **Decided on the run's end**, like a stop from elsewhere: the busy callback
+  is a microtask and the flushing pass a timer.
+- **A pause with nothing of the person's under it is lifted** when the continue
+  is added, or it would sit behind that pause; a pause over their own items
+  stays theirs, and the continue waits for Play with them.
+- **Somebody taking over drops the continue.** An `allowed` frame before it is
+  due means a run went through - credits, or a prompt of the person's own - so
+  "continue" would only repeat them.
+- **The setting is read when it matters**: turned off after a continue was
+  scheduled, the continue is dropped the moment it would have been sent and the
+  queue parks. The queue reads it through `window.__ccSettings.get`, which
+  panel-settings exports; without that patch there is no switch, so it is on.
+- **Play overrides a park**, as with any pause: the next item is sent anyway,
+  and if the limit still holds, that turn's end parks the queue again.
+- **A reload parks it**, like every restored queue: the continue is restored
+  and still timed, but waits for Play (see the restart policy below).
 
-Measured in the lab on 2.1.292 by feeding a `rejected` frame (the shape of a
-real transcript row's `quotaLimits`) right before a real turn's `result`: the
-turn's item ran, the two behind it stayed, the queue parked, Play sent one and
-parked again, an `allowed` frame took the badge away. Fed mid-turn instead, the
-CLI's next real frame (`allowed`, the five-hour usage having moved) cleared it
-before the turn ended, and nothing parked - which is right.
+Measured in the lab on 2.1.292 with real turns and a `rejected` frame (the
+shape of a real transcript row's `quotaLimits`) fed right before a turn's
+`result`, a five-hour reset 40 s away: the turn's item ran, `continue` took the
+front with a countdown and the two behind it held; at 99 s it was sent and the
+two followed one per turn. A prompt sent with nothing queued got its continue
+too (at 90 s, for a 30 s reset). With the switch off in the dialog the queue
+parked instead, and a weekly limit parks with the switch on. Fed mid-turn, the
+CLI's next real frame (`allowed`, the usage having moved) cleared it before the
+turn ended, and nothing happened - which is right.
 
 ## Persistence (`persist.js`)
 
@@ -433,11 +463,15 @@ loaded timer coming back inactive, loading appending and parking the queue only
 while idle, a corrupt or foreign store reading as empty, and the cap. Then
 `check-injected` and `check-ps1`.
 
-`limit.test.js` (14 checks) runs `session.js` + `usage-limit.js` against a
-plain store: a refused turn parks the queue and says which limit, a finished
-one does not, usage credits and an `allowed` frame and a passed reset time all
-lift it, an empty queue is never parked, and a second pass never wraps the
-store twice.
+`limit.test.js` (16 checks) and `limit-resume.test.js` (14) run the model,
+the schedule fragments, `session.js`, `usage-limit.js` and `limit-resume.js`
+against a plain store (`limit-harness.js`). The first pins the park: a weekly
+limit parks and says which, the session limit with the setting off parks too,
+credits and an `allowed` frame lift it, a stale reset still holds, an empty
+queue is never parked. The second pins the continue: at the front of the lane,
+a minute past the reset, holding the rest, one at most, lifting an empty pause
+but not a pause over the person's items, dropped when somebody takes over or
+the setting is turned off before it goes.
 
 **The fragment list is `order.json`, read by both `patch.ps1` and
 `tools/check-injected.mjs`.** They used to keep a copy each, and when the

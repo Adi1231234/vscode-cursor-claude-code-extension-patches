@@ -17,7 +17,7 @@
        scheduled item through), so it is intentionally not gated here. */
     if (flushing || editing || isBusy() || Date.now() < retryAt) return;
     var idx = firstSendableIndex();
-    if (idx < 0) return;
+    if (idx < 0 || vetoResume(Q[idx])) return;   /* limit-resume.js */
     var e = inp();
     if (!e) return;
     var s = getSession();

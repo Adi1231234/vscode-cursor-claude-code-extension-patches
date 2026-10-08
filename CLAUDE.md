@@ -437,9 +437,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `overageStatus` allowed), sent on every change of limit state and before the
   turn's `result` - and the store keeps none of it readable. Read the frame on
   its way in through the store's `processIncomingMessage`, the way
-  `patches/prompt-queue/queue/usage-limit.js` does to park the queue; anything
-  that sends on a turn's end (the queue, a responder) has to ask this first, or
-  it drains itself into the limit.
+  `patches/prompt-queue/queue/usage-limit.js` does; anything that sends on a
+  turn's end (the queue, a responder) has to ask this first, or it drains
+  itself into the limit. The queue then either parks, or - for the five-hour
+  limit, with the settings dialog's "Continue after the session limit" on -
+  sends `continue` a minute past the reset (`limit-resume.js`).
 - **A feature that is silent by design has to say why it was silent.** When
   nothing happens there is no way to tell from the outside whether it decided to
   stay quiet or never saw the event at all - one run in testing raised no toast

@@ -24,6 +24,11 @@ var __ccSettingsOptions = [
         dependsOn: "notifyOnFinish",
         label: "Wait for the whole queue",
         detail: "With prompts still queued, stay quiet until the last one has run, rather than after each."
+    },
+    {
+        name: "resumeAfterLimit",
+        label: "Continue after the session limit",
+        detail: "When the 5-hour limit stops Claude, it continues by itself a minute after the limit resets, and the queue goes on after it."
     }
 ];
 

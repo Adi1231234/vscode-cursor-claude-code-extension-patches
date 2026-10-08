@@ -1,3 +1,17 @@
+  /* Where a line came from when the person did not type it: a responder
+     wrote it (auto), or a session limit put it there to continue at the reset
+     (resume, limit-resume.js). The same quiet mark, its own tooltip. */
+  function originMark(it) {
+    var why = it.resume ? "Added when the session limit stopped Claude - sends once the limit resets"
+      : it.auto ? "Written by a responder, not by you" : "";
+    if (!why) return null;
+    var ai = el("span", "__qAi");
+    ai.textContent = "✦";
+    ai.title = why;
+    ai.setAttribute("aria-label", it.resume ? "added by the session limit" : "written by a responder");
+    return ai;
+  }
+
   /* ord is the item's 1-based position in the LANE, or 0 for a floating
      scheduled one. A floating item is out of the order, so it is drawn
      without the position field and without the reorder column - there is no
@@ -48,13 +62,8 @@
     });
     if (ord) row.appendChild(buildNav(it, ord, n));
     row.appendChild(buildRowMenu(it));
-    if (it.auto) {
-      var ai = el("span", "__qAi");
-      ai.textContent = "✦";
-      ai.title = "Written by a responder, not by you";
-      ai.setAttribute("aria-label", "written by a responder");
-      row.appendChild(ai);
-    }
+    var mark = originMark(it);
+    if (mark) row.appendChild(mark);
     row.appendChild(check);
     if (ord) row.appendChild(num);
     row.appendChild(text);

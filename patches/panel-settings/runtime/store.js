@@ -16,11 +16,14 @@ var __ccSettingsKey = "ccSettings";
 /* Both gates default ON, and both only do anything while notifyOnFinish is on -
    which is why the dialog disables their rows until then. A toast about a
    window you are already looking at is noise, and a queue of five prompts is
-   one piece of work, not five: the interesting moment is the end of it. */
+   one piece of work, not five: the interesting moment is the end of it.
+   resumeAfterLimit is read by the queue (prompt-queue/queue/limit-resume.js):
+   a task the five-hour limit stopped carries on when the limit resets. */
 var __ccSettingsDefaults = {
     notifyOnFinish: false,
     skipWhenFocused: true,
-    waitForQueue: true
+    waitForQueue: true,
+    resumeAfterLimit: true
 };
 
 function __ccSettingsRead() {
@@ -42,6 +45,11 @@ function __ccSettingsRead() {
 function __ccSettingsGet(name) {
     return __ccSettingsRead()[name];
 }
+
+/* The one way another patch reads a setting, the way this one reads the queue
+   through window.__qAuto. Assigning it touches no storage, so it is safe at
+   load; the read happens when the caller asks. */
+window.__ccSettings = window.__ccSettings || { get: __ccSettingsGet };
 
 /* Returns whether it stuck: a full quota is the one failure worth telling the
    user about, since the toggle would otherwise flip back on the next read. */
