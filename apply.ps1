@@ -43,6 +43,7 @@ $order = @(
     'worktree-history'
     'cwd-drive-case'
     'worktree-resume-origin'
+    'worktree-gone-history'
     'reload-restore'
     'remote-control-pill-icon'
     'panel-settings'

@@ -15,8 +15,10 @@ process.env.CLAUDE_CONFIG_DIR = path.join(tmp, 'config');
 const repo = path.join(tmp, 'repo');
 const wt = path.join(repo, '.claude', 'worktrees', 'feature');
 fs.mkdirSync(wt, { recursive: true });
+fs.writeFileSync(path.join(wt, '.git'), 'gitdir: x');   // a live worktree carries git's link file
 
 const host = (f) => path.resolve(__dirname, '..', 'host', f);
+eval(fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'lib', 'js', 'ccProjects.js'), 'utf8'));
 eval(fs.readFileSync(host('transcript.js'), 'utf8'));
 eval(fs.readFileSync(host('origin.js'), 'utf8'));
 const pick = globalThis.__ccResumeOrigin;
@@ -62,6 +64,17 @@ const ok = (c, m) => { c ? pass++ : (fail++, console.log('  FAIL: ' + m)); };
     // 5. the origin it recorded is gone: keep the panel's choice
     id = transcript(state(entered(path.join(tmp, 'deleted'))));
     ok(await pick(id, wt, logger) === wt, 'a missing origin must not be launched in');
+
+    // 5b. born in a worktree that has since been deleted: the repo it belonged to,
+    //     since a folder that is gone cannot be launched in
+    const goneWt = path.join(repo, '.claude', 'worktrees', 'deleted');
+    id = transcript(chatter(3), 'C--repo--claude-worktrees-deleted');
+    ok(await pick(id, goneWt, logger) === repo, 'a gone worktree must fall back to its repo');
+    ok(await pick('no-such-session', goneWt, logger) === repo, 'even with no transcript, a gone folder is not launched in');
+    const husk = path.join(repo, '.claude', 'worktrees', 'husk');   // removed under a process: empty folder left
+    fs.mkdirSync(husk, { recursive: true });
+    id = transcript(chatter(2), 'C--repo--claude-worktrees-husk');
+    ok(await pick(id, husk, logger) === repo, 'an empty leftover folder counts as gone');
 
     // 6. no transcript anywhere, and a cwd that is not a worktree at all
     ok(await pick('no-such-session', wt, logger) === wt, 'an unknown session must keep its cwd');

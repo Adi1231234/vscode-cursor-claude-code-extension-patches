@@ -10,21 +10,15 @@
 globalThis.__ccTranscript = globalThis.__ccTranscript || (function () {
     var fs = require("fs");
     var path = require("path");
-    var os = require("os");
     var CHUNK = 256 * 1024;
     var MARK = '"type":"worktree-state"';
-
-    function projectsDir() {
-        var base = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
-        return path.join(base, "projects");
-    }
 
     /* The folder a transcript sits in is keyed by the directory the session
        was in, and a session that entered a worktree took its file along - so
        it cannot be derived from the cwd the panel holds. Look for the id in
        every folder, which is what the CLI itself does for --resume <id>. */
     async function find(sessionId) {
-        var root = projectsDir();
+        var root = globalThis.__ccProjectsDir();
         var entries;
         try {
             entries = await fs.promises.readdir(root, { withFileTypes: true });

@@ -59,7 +59,7 @@ to the extension's output as `[worktree-resume-origin] ...`. The transcript is
 read backwards in 256KB chunks, so a 25MB file costs one or two reads.
 
 - Anchor: `case"launch_claude":await this.launchClaude(<m>.channelId,<m>.resume,<m>.cwd,`
-  (one match on every release checked, 2.1.241 to 2.1.292)
+  (one match on every release checked, 2.1.241 to 2.1.294)
 - Test: `node patches/worktree-resume-origin/tests/origin.test.js`
 - Live test, in a real editor: `node tools/lab/lab.mjs up --port 9583`, then
   `node patches/worktree-resume-origin/tests/live/live.mjs --port 9583`. It enters
@@ -75,13 +75,14 @@ read backwards in 256KB chunks, so a 25MB file costs one or two reads.
   record, logs `started inside ..., launching it there`, and keeps launching
   there.
 
-## What it does not cover
+## Deleted with the session still inside
 
 Deleting a worktree while a session is still inside it, without leaving it
-first, still hides that session: its transcript is in the worktree's projects
-folder, and the panel only looks in the folders of worktrees git still lists.
-Measured in the lab with two sessions in one worktree. `recover-sessions.ps1`
-below brings both back.
+first, used to hide that session too: its transcript stays in the worktree's
+projects folder, and the panel only looks in the folders of worktrees git still
+lists. `patches/worktree-gone-history` covers that. Its other half is here: a
+worktree folder that no longer exists is never launched in - the launch falls
+back to the repo it belonged to, whatever the transcript says.
 
 ## Recovering sessions stranded before this patch
 
