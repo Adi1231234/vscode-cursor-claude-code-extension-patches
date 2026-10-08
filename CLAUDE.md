@@ -354,6 +354,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   worktrees git still lists). Measured 2026-10-08 after two sessions vanished;
   `patches/worktree-resume-origin` launches such sessions from where they came
   from, and its `recover-sessions.ps1` brings stranded ones back.
+  `patches/worktree-gone-history` keeps a session findable when its worktree is
+  deleted with the session still inside; every session lookup goes through
+  `git worktree list`, and only the security check that trusts a worktree path
+  must keep git's answer as is.
 - **An OS notification has to leave the editor, and only the host can send it.**
   Upstream already has a `show_notification` request the webview calls in a
   dozen places - message, severity, buttons, even an `onlyIfNotVisible` gate -

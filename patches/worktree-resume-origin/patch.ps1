@@ -20,8 +20,9 @@ function Invoke-Patch {
     $call = (Get-InjectedJs (Join-Path $PSScriptRoot 'js/launch-call.js') @{ '__M__' = '${1}' }).Trim()
     $js = [regex]::Replace($js, $rx, $call)
 
-    $runtime = (@('host/transcript.js', 'host/origin.js') |
-        ForEach-Object { (Read-Text (Join-Path $PSScriptRoot $_)).Trim() }) -join "`n"
+    $parts = @((Get-LibJsPath 'ccProjects.js')) +
+             (@('host/transcript.js', 'host/origin.js') | ForEach-Object { Join-Path $PSScriptRoot $_ })
+    $runtime = ($parts | ForEach-Object { (Read-Text $_).Trim() }) -join "`n"
     Write-Text $Ctx.Js ("/* WORKTREERESUMEORIGIN */`n" + $runtime + "`n" + $js)
     Write-Ok 'resumed worktree sessions launch from the folder they entered the worktree from'
 }

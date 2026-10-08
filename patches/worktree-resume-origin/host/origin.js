@@ -30,6 +30,10 @@ globalThis.__ccResumeOrigin = globalThis.__ccResumeOrigin || (function () {
         }
     }
 
+    function isWorktree(p) {
+        return isDir(p) && fs.existsSync(require("path").join(p, ".git"));
+    }
+
     /* The choice is invisible from the panel - the session simply opens - so
        say which way it went and why, in the extension's own log. */
     function say(logger, text) {
@@ -43,21 +47,28 @@ globalThis.__ccResumeOrigin = globalThis.__ccResumeOrigin || (function () {
             if (typeof sessionId !== "string" || !sessionId || typeof cwd !== "string") return cwd;
             var m = WORKTREE.exec(cwd);
             if (!m) return cwd;
+            /* Whatever else is decided, a worktree that is gone is not launched
+               in, so that answer becomes the repo it belonged to. Gone includes
+               the empty folder Windows leaves behind when the worktree was
+               removed under a running process: it exists, but git's link file
+               is not in it, and a session started there works in nothing. */
+            var here = isWorktree(cwd) || !isDir(m[1]) ? cwd : m[1];
             var file = await globalThis.__ccTranscript.find(sessionId);
             if (!file) {
-                say(logger, sessionId + ": no transcript found, launching in " + cwd);
-                return cwd;
+                say(logger, sessionId + ": no transcript found, launching in " + here);
+                return here;
             }
             var rec = await globalThis.__ccTranscript.worktreeOrigin(file);
             if (!rec.seen) {
-                say(logger, sessionId + ": started inside " + cwd + ", launching it there");
-                return cwd;
+                say(logger, sessionId + ": started inside " + cwd + (here === cwd
+                    ? ", launching it there" : ", which is gone, launching it from " + here));
+                return here;
             }
             var s = rec.session;
             var origin = (s && (s.preEnterOriginalCwd || s.originalCwd)) || m[1];
             if (!isDir(origin)) {
-                say(logger, sessionId + ": recorded origin " + origin + " is gone, launching in " + cwd);
-                return cwd;
+                say(logger, sessionId + ": recorded origin " + origin + " is gone, launching in " + here);
+                return here;
             }
             say(logger, sessionId + ": entered " + cwd + " itself, launching it from " + origin +
                 " so the CLI restores the worktree and ExitWorktree can leave it");
