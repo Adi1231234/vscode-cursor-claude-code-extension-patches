@@ -43,20 +43,21 @@
   /* "12s", "exit 1", "failed", "running" - or nothing, when the store cannot
      say (then the badge shows its status glyph alone). */
   function badgeText(row, idx) {
-    if (/dotProgress_/.test(row.className)) return "running";
+    if (row.classList.contains(RUNNING)) return "running";
     var i = idx.at[row.getAttribute("data-bookmark-uuid")];
     if (i == null) return "";
     var call = blocks(idx.list[i]).filter(function (b) { return b.type === "tool_use"; })[0];
     var res = call && resultOf(idx.list, i, call.id);
     if (!res) return "";
-    if (res.block.is_error || /dotFailure_/.test(row.className)) {
+    if (res.block.is_error || row.classList.contains(FAILED)) {
       var e = /Exit code ([0-9]+)/.exec(resultText(res.block));
       return e ? "exit " + e[1] : "failed";
     }
     return fmt(res.msg.createdAt - idx.list[i].createdAt);
   }
 
-  function ensureBadge(row, idx) {
+  /* Writes only - the word was read before the pass wrote anything. */
+  function ensureBadge(row, text) {
     var b = row.querySelector(":scope > .__ccBadge");
     if (!b) {
       b = document.createElement("span");
@@ -64,5 +65,5 @@
       window.__ccDom.own(b);
       row.appendChild(b);
     }
-    window.__ccDom.setText(b, badgeText(row, idx));
+    window.__ccDom.setText(b, text);
   }

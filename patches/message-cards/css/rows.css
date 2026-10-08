@@ -7,18 +7,19 @@
    message-time stepped their stamp 23px back into that gutter, so it steps
    out again, 4 under the row's text. Same weight as message-time's rule, and
    later, so it wins without !important. */
-[data-transcript-message][class*="timelineMessage_"] > [data-message-stamp] {
+[data-transcript-message].__TIMELINE_MESSAGE__ > [data-message-stamp] {
   margin: var(--cc-gap-tight) 0 0;
 }
 
-/* Thinking: one quiet line, its time (on hover) right after the words. */
-[data-testid="assistant-message"]:has(> [class*="thinking_"]) {
+/* Thinking: one quiet line, its time (on hover) right after the words. The
+   row is the one the app labels "Claude, thinking". */
+[data-testid="assistant-message"][aria-label="Claude, thinking"] {
   flex-direction: row;
   align-items: center;
   gap: var(--cc-gap-inline);
   direction: ltr;
 }
-[data-testid="assistant-message"]:has(> [class*="thinking_"]) > [data-message-stamp] {
+[data-testid="assistant-message"][aria-label="Claude, thinking"] > [data-message-stamp] {
   align-self: center;
   flex: none;
   margin: 0;
@@ -28,7 +29,7 @@
    there in either direction), the app's Copy and Bookmark on the right of the
    same line instead of a line of their own. The row is already the
    positioning box, and the buttons' 16px strip matches the time's line. */
-[data-testid="assistant-message"] > [class*="assistantActions_"] {
+[data-testid="assistant-message"] > .__ASSISTANT_ACTIONS__ {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -39,18 +40,18 @@
    bottom left, moved to the new inner edge; the app's actions (rewind / fork,
    and copy-message's Copy) leave the top corner for the right end of that
    same line, centred on it (20px buttons on a 16px line). */
-[data-transcript-message][class*="userMessageContainer_"] [class*="userMessage_"] {
+.__USER_MESSAGE_CONTAINER__[data-transcript-message] .__USER_MESSAGE__ {
   padding: var(--cc-gap-block) var(--cc-gap-block) calc(var(--cc-gap-block) + 16px + var(--cc-gap-tight));
   border-color: transparent;
   border-radius: var(--corner-radius-large, 8px);
   background: var(--app-menu-background);
   color: var(--app-list-active-foreground, var(--app-primary-foreground));
 }
-[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+.__USER_MESSAGE_CONTAINER__[data-transcript-message] > [data-message-stamp] {
   padding-left: calc(1px + var(--cc-gap-block));
   margin-bottom: calc(1px + var(--cc-gap-block));
 }
-[data-transcript-message][class*="userMessageContainer_"] [class*="userMessageContainer_"] > [class*="container_"] {
+.__USER_MESSAGE_CONTAINER__[data-transcript-message] .__USER_MESSAGE_CONTAINER__ > .__CONTAINER__ {
   top: auto;
   right: calc(1px + var(--cc-gap-block));
   bottom: calc(1px + var(--cc-gap-block) - 2px);

@@ -1,12 +1,15 @@
 /* MSGCARDS */
 /* Every action in its own place, as one card (patches/message-cards/README.md).
    Restyles only what the app draws: its rows, the stamp message-time already
-   moved under each row, its own buttons. Hash-free - class substrings and the
-   app's own data attributes - so no minified name is written down here. */
+   moved under each row, its own buttons. Every class placeholder is one of the
+   app's own classes, named exactly (patch.ps1 fills it in), and a row's kind
+   is read off the row itself - a status class only a command row carries, the
+   label a thinking row carries - never with a :has() on the row (README: "Why
+   exact classes"). */
 
 /* One spacing scale, a 4px base whose first four steps are the app's own
    --app-spacing-*, each gap named by what it separates. */
-[class*="messagesContainer_"] {
+.__MESSAGES_CONTAINER__ {
   --cc-gap-tight: var(--app-spacing-small, 4px);
   --cc-gap-inline: var(--app-spacing-medium, 8px);
   --cc-gap-block: var(--app-spacing-large, 12px);
@@ -18,39 +21,41 @@
 
 /* No rail and no dots. A row's status is told by its card's badge, as an
    icon and a word (WCAG 1.4.1), so the 30px gutter they lived in goes too. */
-[data-testid="assistant-message"][class*="timelineMessage_"] {
+[data-testid="assistant-message"].__TIMELINE_MESSAGE__ {
   padding: 0;
 }
-[data-testid="assistant-message"][class*="timelineMessage_"]::before,
-[data-testid="assistant-message"][class*="timelineMessage_"]::after {
+[data-testid="assistant-message"].__TIMELINE_MESSAGE__::before,
+[data-testid="assistant-message"].__TIMELINE_MESSAGE__::after {
   content: none;
 }
 
 /* The rhythm inside a turn: Claude's blocks 16 apart, a card 12 after a card
    (a card holds 12 inside, and inside never exceeds outside), 8 after the
    thinking line that led to it. Your message is a sticky header with its own
-   12px bottom padding, so the first block after it adds 4. */
+   12px bottom padding, so the first block after it adds 4. A command row is
+   the one that carries a status class (the app sets one exactly when the row
+   holds a tool call); a thinking row is labelled "Claude, thinking". */
 [data-transcript-message] + [data-testid="assistant-message"] {
   margin-top: var(--cc-gap-reply);
 }
-[class*="userMessageContainer_"][data-transcript-message] + [data-testid="assistant-message"] {
+.__USER_MESSAGE_CONTAINER__[data-transcript-message] + [data-testid="assistant-message"] {
   margin-top: var(--cc-gap-tight);
 }
-[data-testid="assistant-message"]:has(> [class*="toolUse_"]) + [data-testid="assistant-message"]:has(> [class*="toolUse_"]) {
+[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) + [data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
   margin-top: var(--cc-gap-block);
 }
-[data-testid="assistant-message"]:has(> [class*="thinking_"]) + [data-testid="assistant-message"]:has(> [class*="toolUse_"]) {
+[data-testid="assistant-message"][aria-label="Claude, thinking"] + [data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
   margin-top: var(--cc-gap-inline);
 }
 
 /* Request to request: 32, the sticky header's own 14px top padding included. */
-[class*="turn_"] + [class*="turn_"] {
+.__TURN__ + .__TURN__ {
   margin-top: calc(var(--cc-gap-turn) - 14px);
 }
 
 /* A command: one card, 12 inside on every side. Commands read left to right,
    whatever the panel's direction. */
-[data-testid="assistant-message"]:has(> [class*="toolUse_"]) {
+[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
   direction: ltr;
   text-align: left;
   padding: var(--cc-gap-block);
@@ -61,16 +66,16 @@
 /* Its header: icon, the tool's name, Claude's description, and room kept on
    the right for the badge (badge.js fills it), so the title never re-wraps
    when the badge arrives. */
-[data-testid="assistant-message"] [class*="toolSummary_"] {
+[data-testid="assistant-message"] .__TOOL_SUMMARY__ {
   padding-right: calc(var(--cc-badge-w) + var(--cc-gap-inline));
   line-height: 20px;
 }
-[data-testid="assistant-message"] [class*="toolNameText_"] {
+[data-testid="assistant-message"] .__TOOL_NAME_TEXT__ {
   margin-right: var(--cc-gap-inline);
   font-weight: 600;
   color: var(--app-list-active-foreground, var(--app-primary-foreground));
 }
-[data-testid="assistant-message"] [class*="toolNameText_"]::before {
+[data-testid="assistant-message"] .__TOOL_NAME_TEXT__::before {
   content: "";
   display: inline-block;
   width: 14px;
@@ -84,11 +89,11 @@
 
 /* A plain description (a command's) hangs beside the name, 8 from it, and
    wraps under itself rather than under the name; still two lines at most. */
-[data-testid="assistant-message"] [class*="toolSummary_"] > span:has(> [class*="toolNameTextSecondaryPlaintext_"]) {
+[data-testid="assistant-message"] .__TOOL_SUMMARY__ > span:has(> .__TOOL_NAME_TEXT_SECONDARY_PLAINTEXT__) {
   display: flex;
   align-items: baseline;
 }
-[data-testid="assistant-message"] [class*="toolNameTextSecondaryPlaintext_"] {
+[data-testid="assistant-message"] .__TOOL_NAME_TEXT_SECONDARY_PLAINTEXT__ {
   flex: 1;
   min-width: 0;
   display: -webkit-box;
@@ -100,7 +105,7 @@
 /* The card's last row is the stamp message-time put under it: the time on
    the right, 4 under the terminal block. "Show all" (more.js) shares the row
    on the left. */
-[data-testid="assistant-message"]:has(> [class*="toolUse_"]) > [data-message-stamp] {
+[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) > [data-message-stamp] {
   justify-content: flex-end;
   margin: var(--cc-gap-tight) 0 0;
 }
@@ -108,14 +113,13 @@
 /* A card with no terminal block ends in the app's own one-line summary of
    what it found ("8 lines of output"): that line takes the last row's left
    end, where "Show all" sits on other cards, instead of a row of its own
-   over an empty one. Absolute in the card's padding box, so no height moves. */
-[data-testid="assistant-message"] [class*="root_"]:has(> [class*="toolSummary_"] + [class*="secondaryLine_"]:last-child) {
+   over an empty one. Absolute in the card's padding box, so no height moves;
+   the 4 the summary keeps below it make the header-to-line gap 8. */
+[data-testid="assistant-message"] .__ROOT__:has(> .__TOOL_SUMMARY__ + .__SECONDARY_LINE__:last-child) {
   position: static;   /* so the line is placed in the card, not in the tool's own box */
+  padding-bottom: var(--cc-gap-tight);
 }
-[data-testid="assistant-message"]:has(> [class*="toolUse_"] [class*="toolSummary_"] + [class*="secondaryLine_"]:last-child) > [data-message-stamp] {
-  margin-top: var(--cc-gap-inline);
-}
-[data-testid="assistant-message"] [class*="toolSummary_"] + [class*="secondaryLine_"]:last-child {
+[data-testid="assistant-message"] .__TOOL_SUMMARY__ + .__SECONDARY_LINE__:last-child {
   position: absolute;
   left: var(--cc-gap-block);
   bottom: var(--cc-gap-block);

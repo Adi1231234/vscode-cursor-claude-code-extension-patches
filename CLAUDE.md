@@ -133,6 +133,21 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   - **A clock on screen gets `__ccClock.every(fn)`**, which ticks only while
     something is subscribed and the panel is visible; stop it when nothing
     needs it.
+  - **Read every layout value, then write.** A write between two reads of
+    `scrollHeight` / `getBoundingClientRect` makes the second read lay the
+    panel out again. The first `message-cards` did it once per command row and
+    held a panel for 1.2-2.0 s whenever a long conversation opened (188 forced
+    style passes in one task); collect a pass's reads first, then write.
+  - **CSS the browser can index: exact classes, no `:has()` on a row.** Blink
+    tries a rule only on the elements carrying the class, id or tag its last
+    part names; `[class*="x_"]` names none, so it runs on every element of the
+    panel on every style pass (48 of them were 40% of all selector matching).
+    Name the app's class exactly - detect the module hash in `lib/Extension.ps1`
+    and fill it in as a token (`patches/message-cards`) - and tell a transcript
+    row's kind from the row itself (its status class, its `aria-label`), never
+    with a `:has()` on it: 7 of those made a full style pass ~4x. Same lesson
+    as copy-message's `div:has(...)`; `patches/message-cards/README.md` has the
+    numbers.
   `node tools/check-webview-runtime.mjs` (also in the selftest) fails on any
   `setInterval` or `new MutationObserver` in webview code outside
   `lib/js/ccWatch.js`. Host code (`host/`) runs in the extension host and is

@@ -3,27 +3,27 @@
    them, the command muted (after a "$" for a shell), its output 8 under it,
    whole wrapped lines clamped to 2 + 4. Only the app's grid body is restyled;
    an Edit's diff editor or a Write's file keeps the app's own look. */
-[data-testid="assistant-message"] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+[data-testid="assistant-message"] .__TOOL_BODY__:has(> .__TOOL_BODY_GRID__) {
   margin: var(--cc-gap-inline) 0 0;
   padding: var(--cc-gap-inline) var(--cc-gap-block);
   border: 0;
   border-radius: var(--corner-radius-medium, 6px);
   background: var(--app-tool-background);
 }
-[data-testid="assistant-message"] [class*="toolBodyGrid_"] { display: block; }
-[data-testid="assistant-message"] [class*="toolBodyRow_"] {
+[data-testid="assistant-message"] .__TOOL_BODY_GRID__ { display: block; }
+[data-testid="assistant-message"] .__TOOL_BODY_ROW__ {
   display: block;
   padding: 0;
   border: 0;
 }
-[data-testid="assistant-message"] [class*="toolBodyRow_"] + [class*="toolBodyRow_"] {
+[data-testid="assistant-message"] .__TOOL_BODY_ROW__ + .__TOOL_BODY_ROW__ {
   margin-top: var(--cc-gap-inline);
 }
-[data-testid="assistant-message"] [class*="toolBodyRowLabel_"] { display: none; }
+[data-testid="assistant-message"] .__TOOL_BODY_ROW_LABEL__ { display: none; }
 
 /* Whole lines, wrapped, in the code font; the app's 60px fade-out clip
    becomes a clamp of whole lines. */
-[data-testid="assistant-message"] [class*="toolBodyRow_"] [class*="toolBodyRowContent_"] {
+[data-testid="assistant-message"] .__TOOL_BODY_ROW__ .__TOOL_BODY_ROW_CONTENT__ {
   padding: 0;
   max-height: calc(4 * var(--cc-code-line));
   overflow: hidden;
@@ -31,11 +31,11 @@
   mask-image: none;
   font: 12px / var(--cc-code-line) var(--app-monospace-font-family);
 }
-[data-testid="assistant-message"] [class*="inputRow_"] [class*="toolBodyRowContent_"] {
+[data-testid="assistant-message"] .__INPUT_ROW__ .__TOOL_BODY_ROW_CONTENT__ {
   max-height: calc(2 * var(--cc-code-line));
   color: var(--app-secondary-foreground);
 }
-[data-testid="assistant-message"] [class*="toolBodyRowContent_"] :is(pre, [class*="toolResult_"]) {
+[data-testid="assistant-message"] .__TOOL_BODY_ROW_CONTENT__ :is(pre, .__TOOL_RESULT__) {
   margin: 0;
   background: none;
   font: inherit;
@@ -43,30 +43,30 @@
   overflow-wrap: anywhere;
   overflow: visible;
 }
-[aria-label^="Claude, Bash"] [class*="inputRow_"] pre::before,
-[aria-label^="Claude, PowerShell"] [class*="inputRow_"] pre::before {
+[aria-label^="Claude, Bash"] .__INPUT_ROW__ pre::before,
+[aria-label^="Claude, PowerShell"] .__INPUT_ROW__ pre::before {
   content: "$ ";
   color: var(--app-disabled-foreground);
 }
 
 /* Where a clamp really hides something (more.js measures it), the last line
    fades out, the way the app's own clip did. */
-[data-testid="assistant-message"] [class*="toolBodyRowContent_"][data-cc-clip] {
+[data-testid="assistant-message"] .__TOOL_BODY_ROW_CONTENT__[data-cc-clip] {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cc-code-line)), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cc-code-line)), transparent);
 }
-[data-cc-open] [class*="toolBodyRow_"] [class*="toolBodyRowContent_"] {
+[data-cc-open] .__TOOL_BODY_ROW__ .__TOOL_BODY_ROW_CONTENT__ {
   max-height: none;
   -webkit-mask-image: none;
   mask-image: none;
 }
-[data-cc-open] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+[data-cc-open] .__TOOL_BODY__:has(> .__TOOL_BODY_GRID__) {
   max-height: 360px;
   overflow: auto;
 }
 
 /* A failed command: its block tinted with the error colour. */
-[class*="dotFailure_"] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+.__DOT_FAILURE__ .__TOOL_BODY__:has(> .__TOOL_BODY_GRID__) {
   background: color-mix(in srgb, var(--app-error-foreground) 8%, var(--app-tool-background));
 }
 
@@ -90,7 +90,7 @@
   font-variant-numeric: tabular-nums;
   overflow-anchor: none;
 }
-[class*="dotFailure_"] > .__ccBadge {
+.__DOT_FAILURE__ > .__ccBadge {
   color: var(--app-error-foreground);
   background: color-mix(in srgb, var(--app-error-foreground) 14%, transparent);
 }
