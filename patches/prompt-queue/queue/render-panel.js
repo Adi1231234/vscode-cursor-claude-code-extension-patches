@@ -32,6 +32,7 @@
     head.appendChild(toggle);
     head.appendChild(label);
     head.appendChild(buildHeldBadge());   /* paused with a timer running: say it here too */
+    head.appendChild(buildLimitBadge());  /* paused by a usage limit: say which, and until when */
     head.appendChild(buildSavedHeadButton());   /* save this queue / open the saved ones */
     head.appendChild(min);
     return head;

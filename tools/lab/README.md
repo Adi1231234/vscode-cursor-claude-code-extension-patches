@@ -170,6 +170,35 @@ that is how the Windows `fs.watch` gap was found); a finished task moves into th
 history group and the indicator goes quiet; Stop actually stops the process; and
 a history row disappears when its log file is deleted.
 
+## A real usage limit, without being limited
+
+`limit-proxy.mjs` sits between the lab's CLI and the API. It passes everything
+through, and on command it answers `/v1/messages` with the 429 a usage limit
+produces, unified rate-limit headers included. What you then test is the CLI's
+own handling of a refusal, not a frame typed into the panel.
+
+```
+node tools/lab/limit-proxy.mjs 8977 <log>          # leave it running
+# after `up` (which rewrites the file), add to <lab>/portable/user-data/User/settings.json:
+#   "claudeCode.environmentVariables": [{ "name": "ANTHROPIC_BASE_URL", "value": "http://127.0.0.1:8977" }]
+node tools/lab/lab.mjs repatch                     # a real reload restarts the CLI with it
+curl "http://127.0.0.1:8977/__mode?m=after&n=1&type=five_hour&reset=<epoch s>"
+```
+
+`after&n=1` lets one call through and refuses the next, which cuts a task that
+needed a tool in the middle. `stay=1` keeps refusing past the reset, the way a
+server running late would. Two traps:
+- The epoch has to be UTC. PowerShell 5.1's `Get-Date -UFormat %s` gives local
+  time, which put a "45 s" reset three hours out. Use
+  `[DateTimeOffset]::UtcNow.ToUnixTimeSeconds()`.
+- `up` writes the settings file again, so the variable goes in after it.
+
+What it showed on 2.1.292 (`patches/prompt-queue/README.md` has the rest):
+- One refused request comes back as a `rejected` `rate_limit_event`, then the
+  synthetic "You've hit your session limit" row, then a `result` with
+  `api_error_status: 429`, and the CLI does not retry.
+- The frame is sent only when the state changes.
+
 ## Measuring a patch's cost: inside one lab, never across two
 
 Two labs on the same version and the same transcript are not the same panel:

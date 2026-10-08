@@ -23,6 +23,7 @@
     passQueued = false;
     syncSession();
     hookStopPause();
+    hookRateLimit();             /* usage-limit.js */
     ensureAddButton();
     if (Q.length && (!panel || !panel.isConnected)) paint();
     armAfterItems();
@@ -109,6 +110,7 @@
     var S = window.__ccSession;
     if (S) {
       watchStopsElsewhere();       /* stop-pause.js: before the pass that would flush */
+      watchUsageLimit();           /* usage-limit.js: the same, for a turn a limit ended */
       S.on("busy", schedulePass);
       S.on("sessionId", schedulePass);
       S.onStore(schedulePass);

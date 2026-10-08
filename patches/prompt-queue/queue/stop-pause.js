@@ -25,15 +25,7 @@
      pass - the add button and the flush - on this pass and every one after it. */
   function hookStopPause() {
     try {
-      var s = getSession();
-      if (!s || s.__qStopHook || typeof s.interrupt !== "function") return;
-      var orig = s.interrupt;
-      s.interrupt = function () {
-        try { pauseOnStop(); } catch (e) {}
-        return orig.apply(this, arguments);   /* the app's call is never altered */
-      };
-      s.__qStopHook = 1;
-      ccLog("queue", "stop hook installed");
+      if (decorateSession("interrupt", "__qStopHook", pauseOnStop)) ccLog("queue", "stop hook installed");
     } catch (e) {
       ccLog("queue", "stop hook FAILED", e && e.message);
     }

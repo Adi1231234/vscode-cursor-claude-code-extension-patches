@@ -34,6 +34,8 @@
   "patches/prompt-queue/queue/render-rows.js",
   "patches/prompt-queue/queue/resize-input.js",
   "patches/prompt-queue/queue/stop-pause.js",
+  "patches/prompt-queue/queue/usage-limit.js",
+  "patches/prompt-queue/queue/limit-resume.js",
   "patches/prompt-queue/queue/flush-init.js",
   "patches/prompt-queue/queue/remote-item.js",
   "patches/prompt-queue/queue/remote-api.js",

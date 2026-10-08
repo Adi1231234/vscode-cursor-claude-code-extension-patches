@@ -28,8 +28,10 @@ in place. Read this before changing anything so the structure stays clean.
     `ccClock.js` (`__ccClock`, the one clock, only while visible and needed).
     And `ccReply.js` (`__ccReply`): which rows are Claude's own replies, read off
     the store's `messages.value` - a local command's output and the Remote
-    Control notice are drawn exactly like one - and whether a run was stopped,
-    wherever the stop came from (the phone's Stop never passes `interrupt()`).
+    Control notice are drawn exactly like one - whether a model answered at all
+    (`answered`: an API error or a usage limit replies without one), and
+    whether a run was stopped, wherever the stop came from (the phone's Stop
+    never passes `interrupt()`).
     `isSynthesizedByLoop` is only "model `<synthetic>`", which API errors carry
     too, so command output is the synthetic row that answers a command row; and
     a mark is a set of rows (uuid, or the row itself when it has none - a reply
@@ -430,6 +432,25 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   that rather than reaching into the queue's own state, the way `auto-followup`
   and `panel-settings` both do. Treat a **paused** queue as nothing pending: it
   will not send anything, so the run that just ended was the last one.
+- **A turn refused by a usage limit ends exactly like a finished one.** `busy`
+  falls, and the only row it leaves is `<synthetic>` text ("You've hit your
+  weekly limit · resets ..."). What says *this run* was refused is its own
+  `result` frame (`is_error` with `api_error_status: 429`); which limit and
+  until when is the `rate_limit_event` frame (`status: "rejected"`, not covered
+  by `overageStatus` allowed). Measured with a real 429 from a local proxy: the
+  frame comes only when the state **changes** - a second refusal at the same
+  reset brings none - so act on the result, not on the state. The store keeps
+  neither readable; read both on their way in through the store's
+  `processIncomingMessage`, the way `patches/prompt-queue/queue/usage-limit.js`
+  does. Anything that sends on a turn's end (the queue, a responder) has to ask
+  this first, or it drains itself into the limit. And never read an `allowed`
+  frame as "a run went through": a side call (a cheap model, a title) can come
+  back allowed while the main call is refused - ask the run
+  (`__ccReply.since(...).answered`). `tools/lab/limit-proxy.mjs` reproduces all
+  of this with a real 429. The queue then puts a `continue` first in line
+  (`limit-resume.js`): sent by itself a minute past the reset for the
+  five-hour limit (the settings dialog's "Continue after the session limit",
+  on by default), waiting for Play for any other limit.
 - **A feature that is silent by design has to say why it was silent.** When
   nothing happens there is no way to tell from the outside whether it decided to
   stay quiet or never saw the event at all - one run in testing raised no toast
