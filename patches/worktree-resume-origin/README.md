@@ -61,10 +61,27 @@ read backwards in 256KB chunks, so a 25MB file costs one or two reads.
 - Anchor: `case"launch_claude":await this.launchClaude(<m>.channelId,<m>.resume,<m>.cwd,`
   (one match on every release checked, 2.1.241 to 2.1.292)
 - Test: `node patches/worktree-resume-origin/tests/origin.test.js`
-- Checked in the lab: a session entered a worktree, the window was reloaded, the
-  log showed the launch moved to the project folder, `ExitWorktree keep` brought
-  the transcript home and the next `cd` was reset to the project folder. After
-  deleting the worktree and reloading, the session was still restored.
+- Live test, in a real editor: `node tools/lab/lab.mjs up --port 9583`, then
+  `node patches/worktree-resume-origin/tests/live/live.mjs --port 9583`. It enters
+  a worktree, reloads with the session inside, leaves, deletes the worktree and
+  reloads again, checking each step. `--lab <checkout>/tools/lab/lab.mjs` runs
+  the same steps on a lab built without this patch, where they are meant to fail.
+- Measured with that live test on 2.1.292, same steps on two labs: without this
+  patch 5 of 7 checks fail exactly as the lost sessions did (relaunched inside
+  the worktree, transcript left there, the second `pwd` back in the worktree,
+  `not moving the permission anchor` in the log, gone from history after the
+  delete); with it all 7 pass, and all 8 with `--exit remove`. A session that
+  was *started* in a worktree (the panel's new-session-in-this-worktree) has no
+  record, logs `started inside ..., launching it there`, and keeps launching
+  there.
+
+## What it does not cover
+
+Deleting a worktree while a session is still inside it, without leaving it
+first, still hides that session: its transcript is in the worktree's projects
+folder, and the panel only looks in the folders of worktrees git still lists.
+Measured in the lab with two sessions in one worktree. `recover-sessions.ps1`
+below brings both back.
 
 ## Recovering sessions stranded before this patch
 
@@ -80,5 +97,10 @@ first. Originals are copied to `%TEMP%` unless you pass `-NoBackup`.
 ./patches/worktree-resume-origin/recover-sessions.ps1 -SessionId <uuid>     # move one
 ```
 
-On the machine this was found on it listed ten, going back weeks, across three
-repositories.
+It leaves alone what the panel would not list anyway: sessions started by a
+program (`entrypoint` `sdk-*`) and anything in a worktree the CLI makes and
+removes on its own (`agent-a<hex>`, `wf-`, `bridge-` for Remote Control, `job-`,
+`bg-`). A session that was started inside the worktree has no move records, so
+the cwd of its messages says where it was. On the machine this was found on it
+listed eight panel sessions going back three weeks, across three repositories,
+and left nineteen Remote Control and agent sessions alone.

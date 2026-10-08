@@ -38,6 +38,18 @@ function Get-LastRecordValue {
     return $null
 }
 
+# One field of the newest (or, with -First, the oldest) message that carries it.
+function Get-MessageField {
+    param([string[]]$Lines, [string]$Field, [switch]$First)
+    $range = if ($First) { 0..($Lines.Length - 1) } else { ($Lines.Length - 1)..0 }
+    foreach ($i in $range) {
+        if (-not $Lines[$i].Contains("`"$Field`":`"")) { continue }
+        try { $v = ($Lines[$i] | ConvertFrom-Json).$Field } catch { continue }
+        if ($v) { return [string]$v }
+    }
+    return $null
+}
+
 # A folder a session can be resumed in: it exists, and if it is a worktree,
 # git's link file is still in it (a removed worktree can leave its folder behind).
 $worktreeTail = '[\\/]\.claude[\\/]worktrees[\\/][^\\/]+[\\/]?$'
@@ -53,16 +65,33 @@ if (-not (Test-Path $ProjectsRoot)) { Write-Miss 'projects directory not found';
 $backup = Join-Path ([System.IO.Path]::GetTempPath()) ("claude-stranded-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 $found = 0
 $moved = 0
+$programmatic = 0
+
+# Worktrees the CLI makes and removes on its own - subagents, workflows, Remote
+# Control's bridge, background jobs - named by the patterns its own cleanup
+# recognises (agent-a<hex>, wf_/wf-, bridge-, job-, bg-), as the folder key spells them.
+$cliManaged = '--claude-worktrees-(agent-a[0-9a-f]+|wf-.+|bridge-.+|job-.+|bg-.+)$'
 
 foreach ($dir in Get-ChildItem -Path $ProjectsRoot -Directory) {
     if ($dir.Name -notmatch '--claude-worktrees-[^\\]+$') { continue }
+    if ($dir.Name -match $cliManaged) {
+        $programmatic += @(Get-ChildItem -Path $dir.FullName -Filter *.jsonl -File).Count
+        continue
+    }
     foreach ($file in Get-ChildItem -Path $dir.FullName -Filter *.jsonl -File) {
         $id = $file.BaseName
         if ($SessionId.Count -and $SessionId -notcontains $id) { continue }
         $lines = (Read-Text $file.FullName) -split "`n"
+        # Sessions started by a program (sdk-cli, sdk-ts...) - Remote Control's
+        # bridge runs each one in a bridge-* worktree of its own and removes it
+        # when done - are hidden from the panel's history anyway: leave them.
+        if ((Get-MessageField $lines 'entrypoint' -First) -like 'sdk-*') { $programmatic++; continue }
         # Where the session is now: the CLI re-writes this record on every flush.
+        # A session that was started inside the worktree never moved, so it has
+        # neither record - its messages' own cwd says where it is.
         $here = Get-LastRecordValue $lines 'relocated' @('relocatedCwd')
         if (-not $here) { $here = Get-LastRecordValue $lines 'worktree-state' @('worktreePath') }
+        if (-not $here) { $here = Get-MessageField $lines 'cwd' }
         if (-not $here -or (Test-LiveDir $here)) { continue }
 
         $origin = @((Get-LastRecordValue $lines 'worktree-state' @('preEnterOriginalCwd')),
@@ -97,6 +126,7 @@ foreach ($dir in Get-ChildItem -Path $ProjectsRoot -Directory) {
     }
 }
 
+if ($programmatic) { Write-Info "$programmatic session(s) started by a program or in a CLI-managed worktree left alone" }
 if ($found -eq 0) { Write-Skip 'nothing stranded'; return }
 if ($moved -eq 0) { Write-Info "$found stranded, nothing moved"; return }
 if (-not $NoBackup) { Write-Info "originals copied to $backup" }
