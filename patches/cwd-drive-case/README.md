@@ -57,8 +57,28 @@ process - the SDK query and the "Open Claude in Terminal" path - in
 `__ccDriveCase`, which upper-cases a leading drive letter and passes anything
 else (UNC, POSIX, non-strings) through untouched.
 
-- Anchor: `cwd:<arg>||this.cwd,`
+- Anchor, SDK query (required): `{cwd:<var>,resume:<id>,canUseTool:`
+- Anchor, terminal: `cwd:<arg>||this.cwd,`
 - Guard: `/* CWDDRIVECASE */`
+
+## It was half-dark from 2.1.241 to 2.1.292
+
+The patch used to anchor on `cwd:<arg>||this.cwd,` alone. The SDK query stopped
+inlining that expression at least as far back as 2.1.241 (checked on 2.1.241,
+2.1.258, 2.1.278, 2.1.280, 2.1.287 and 2.1.292): it now resolves
+`N=Y||this.cwd` first and passes `{cwd:N,resume:J,canUseTool:...}`. The old
+anchor still matched the terminal path, so the patch kept reporting `[ok]` and
+writing its guard, while every panel session went on launching at `c:\`.
+
+What that cost, measured on 2026-10-08: `EnterWorktree` by name refuses in every
+panel session (`git resolves its working tree to C:/...`), so sessions fall back
+to entering the worktree by path. A session that entered by path is not its
+owner, so `ExitWorktree remove` refuses too, and sessions delete their worktree
+by hand. See `patches/worktree-resume-origin/` for where that ends.
+
+The SDK site is now required: if it is missing, nothing is written. Re-running
+`apply.ps1` is enough to reach an install patched before this fix, since every
+run starts again from the pristine copy it kept (`lib/Pristine.ps1`).
 
 ## Repairing transcripts written before the patch
 

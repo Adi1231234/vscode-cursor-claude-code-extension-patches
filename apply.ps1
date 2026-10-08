@@ -42,6 +42,7 @@ $order = @(
     'electron-run-as-node'
     'worktree-history'
     'cwd-drive-case'
+    'worktree-resume-origin'
     'reload-restore'
     'remote-control-pill-icon'
     'panel-settings'
