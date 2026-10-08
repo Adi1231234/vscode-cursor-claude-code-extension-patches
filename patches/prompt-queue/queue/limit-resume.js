@@ -61,13 +61,18 @@
     ccLog("queue", "the turn ended on the " + limitText() + " - queue parked", "n=" + Q.length);
   }
 
+  /* Only a run whose own result was the 429 (usage-limit.js): a local
+     command ending while the limit still holds was not refused, and must
+     neither move the continue nor park anything. */
   function watchUsageLimit() {
     var S = window.__ccSession;
     if (watchUsageLimit.on || !S) return;
     watchUsageLimit.on = 1;
     S.on("busy", function (busy, store, initial) {
-      if (busy || initial || !limitInForce(Date.now())) return;
-      if (limit.type === "five_hour" && resumeAllowed()) scheduleResume();
+      if (busy || initial) { runRefused = false; return; }
+      if (!runRefused) return;
+      runRefused = false;
+      if (limitForRefusal(Date.now()).type === "five_hour" && resumeAllowed()) scheduleResume();
       else parkOnLimit();
     });
   }
@@ -82,11 +87,23 @@
     ccLog("queue", "the limit lifted before the continue was due - dropped it", "n=" + Q.length);
   }
 
+  /* Asked by flush just before it sends: may this item go? While a continue
+     waits and the limit still holds, nothing goes - the lane is already
+     behind the continue, but a floating scheduled item is not, and would only
+     be refused. From the reset on it may go (it is committed to its moment,
+     not to the order; measured: it went at the reset, ahead of the continue's
+     minute, and was answered). A continue the person parked holds nothing. */
+  function holdForResume(it) {
+    if (!it) return false;
+    if (it.resume) return vetoResume(it);
+    var r = resumeItem();
+    return !!r && !isParked(r) && !isDue(r) && limitInForce(Date.now());
+  }
+
   /* Turned off in Settings after it was scheduled: the continue goes, and the
-     queue parks as it would have without the setting. Asked by flush just
-     before it sends. */
+     queue parks as it would have without the setting. */
   function vetoResume(it) {
-    if (!it || !it.resume || resumeAllowed()) return false;
+    if (resumeAllowed()) return false;
     Q.splice(Q.indexOf(it), 1);
     if (Q.some(function (x) { return !isParked(x); })) paused = true;
     render();

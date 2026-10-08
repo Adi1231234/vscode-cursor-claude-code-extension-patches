@@ -152,26 +152,46 @@ Either way the header shows a **usage limit** badge (in `--app-warning-accent`)
 whose tooltip names the limit and its reset time in the app's own words, and
 says whether Claude continues by itself or waits for Play.
 
-What tells it is the CLI's own `rate_limit_event` frame. The CLI sends one
-whenever the account's limit state changes (and when the windows' usage moves),
-a 429 included, before the turn's `result`. The store uses it for its banner
-and meter but keeps none of it where a patch can read it, and the row a refused
-turn leaves in the transcript is only `<synthetic>` text, so matching that text
-is the one thing not to do. The queue reads the frame on its way in, by
-decorating the store's own `processIncomingMessage` (`decorateSession` in
-`session.js`, the same once-per-store decoration the Stop hook uses).
+Two things the CLI sends tell it, both read on their way into the store by
+decorating its own `processIncomingMessage` (`decorateSession` in `session.js`,
+the same once-per-store decoration the Stop hook uses). The store uses them for
+its banner and meter but keeps none of it where a patch can read it, and the
+row a refused turn leaves in the transcript is only `<synthetic>` text, so
+matching that text is the one thing not to do.
+
+- **Was this run refused?** The run's own `result`: `is_error` with
+  `api_error_status: 429`. This is what the queue acts on.
+- **Which limit, until when?** The `rate_limit_event` frame (`status`,
+  `rateLimitType`, `resetsAt`).
+
+Measured with a real 429 - a local proxy in front of the API, answering with
+the headers a usage limit carries - on 2.1.292: the CLI sends the rejected
+frame, then the synthetic "You've hit your session limit" row, then that
+result, then `busy` falls; one refused request, no retry. The frame alone is
+not enough, for two reasons both seen there: the CLI sends it only when the
+state **changes**, so a `continue` refused again at the same reset brought the
+row and the 429 result and **no frame**; and a local command (`/context`, or
+`/queue` from the phone) is a run that ends while the state still says refused,
+with no 429. Acting on the state would have drained the queue in the first case
+and moved or parked things in the second.
 
 - **Refused** is `status: "rejected"`, unless usage credits cover it
   (`overageStatus` `allowed` / `allowed_warning`) - the app's own reading.
 - **The state is the latest frame**, not a sticky flag: an `allowed` frame
   clears it, and so does the reset time passing (no frame says that). A
-  refusal whose own reset time has already gone holds for five minutes rather
-  than not at all, or the queue would drain into it.
+  refused run the state does not cover - no frame, or a reset already gone (a
+  server running late) - holds for five minutes, keeping the last type named:
+  the session limit then gets a new `continue` five minutes on, and the queue
+  never drains into it.
 - **Decided on the run's end**, like a stop from elsewhere: the busy callback
   is a microtask and the flushing pass a timer.
 - **A pause with nothing of the person's under it is lifted** when the continue
   is added, or it would sit behind that pause; a pause over their own items
   stays theirs, and the continue waits for Play with them.
+- **Nothing goes into the refusal while the continue waits.** The lane is
+  behind the continue anyway; a floating scheduled item is not, so flush holds
+  it while the limit still holds (`holdForResume`). From the reset on it may go
+  - it is committed to its moment, not to the order.
 - **Somebody taking over drops the continue.** An `allowed` frame before it is
   due means a run went through - credits, or a prompt of the person's own - so
   "continue" would only repeat them.
@@ -181,18 +201,28 @@ decorating the store's own `processIncomingMessage` (`decorateSession` in
   panel-settings exports; without that patch there is no switch, so it is on.
 - **Play overrides a park**, as with any pause: the next item is sent anyway,
   and if the limit still holds, that turn's end parks the queue again.
-- **A reload parks it**, like every restored queue: the continue is restored
-  and still timed, but waits for Play (see the restart policy below).
+- **A reload, or a switch of conversation in the panel, parks it**, like every
+  restored queue: the continue comes back with its time and its mark, but
+  waits for Play (see the restart policy below).
 
-Measured in the lab on 2.1.292 with real turns and a `rejected` frame (the
-shape of a real transcript row's `quotaLimits`) fed right before a turn's
-`result`, a five-hour reset 40 s away: the turn's item ran, `continue` took the
-front with a countdown and the two behind it held; at 99 s it was sent and the
-two followed one per turn. A prompt sent with nothing queued got its continue
-too (at 90 s, for a 30 s reset). With the switch off in the dialog the queue
-parked instead, and a weekly limit parks with the switch on. Fed mid-turn, the
-CLI's next real frame (`allowed`, the usage having moved) cleared it before the
-turn ended, and nothing happened - which is right.
+Checked in the lab on 2.1.292 against real 429s from that proxy:
+
+- cut in the middle of a task (the tool call went through, the next request
+  was refused): `continue` took the front with a countdown and the two queued
+  items held; at the reset plus a minute it was sent, Claude finished the cut
+  task, and the two followed one per turn;
+- a `/context` run during the wait left the continue exactly where it was;
+- the server still refusing past its reset: the continue was refused again
+  with no new frame, a new one was set five minutes on, nothing else was sent,
+  and once the server served it went through and the queue drained;
+- a prompt of the person's own going through early dropped the continue, and
+  the queue went on after it;
+- a real window reload with the continue waiting brought it back paused; Play
+  waited for its time, and Stop during its run parked the rest;
+- the switch turned off in the dialog while it waited: dropped at its moment,
+  the queue parked;
+- a weekly 429 parked the queue; Play while still refused sent one and parked
+  again; once served, Play drained it.
 
 ## Persistence (`persist.js`)
 
@@ -463,15 +493,20 @@ loaded timer coming back inactive, loading appending and parking the queue only
 while idle, a corrupt or foreign store reading as empty, and the cap. Then
 `check-injected` and `check-ps1`.
 
-`limit.test.js` (16 checks) and `limit-resume.test.js` (14) run the model,
+`limit.test.js` (16 checks) and `limit-resume.test.js` (19) run the model,
 the schedule fragments, `session.js`, `usage-limit.js` and `limit-resume.js`
-against a plain store (`limit-harness.js`). The first pins the park: a weekly
-limit parks and says which, the session limit with the setting off parks too,
-credits and an `allowed` frame lift it, a stale reset still holds, an empty
-queue is never parked. The second pins the continue: at the front of the lane,
-a minute past the reset, holding the rest, one at most, lifting an empty pause
-but not a pause over the person's items, dropped when somebody takes over or
-the setting is turned off before it goes.
+against a plain store (`limit-harness.js`), fed what the CLI sent for the real
+429 (the frame, then a result with `api_error_status: 429`). The first pins the
+park: a weekly limit parks and says which, the session limit with the setting
+off parks too, a run that was not refused parks nothing whatever the state
+says, a 429 with no frame still parks, a refusal repeated with no new frame
+parks again, an empty queue is never parked. The second pins the continue: at
+the front of the lane, a minute past the reset, holding the rest, untouched by
+a local command, one at most, re-set five minutes on when refused past the
+reset with no frame (a shifted `Date.now`), holding a due floating item while
+the limit holds, lifting an empty pause but not a pause over the person's
+items, dropped when somebody takes over or the setting is turned off before it
+goes. Putting back the old rule (act on the state) fails four of them.
 
 **The fragment list is `order.json`, read by both `patch.ps1` and
 `tools/check-injected.mjs`.** They used to keep a copy each, and when the

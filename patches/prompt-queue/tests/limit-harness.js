@@ -6,7 +6,11 @@
  * is stubbed is only their outside world: the store (a plain object with the
  * app's processIncomingMessage), busy edges as __ccSession hands them out
  * (initial set on the first value), render(), the log, and the settings
- * dialog's store. */
+ * dialog's store.
+ *
+ * A refused run is fed what the CLI sends for a real 429 (measured through a
+ * local proxy on 2.1.292): the rejected frame, then a result with is_error and
+ * api_error_status 429. */
 const fs = require('fs'), path = require('path');
 const QDIR = path.join(__dirname, '..', 'queue');
 const NL = String.fromCharCode(10);
@@ -18,6 +22,9 @@ const frame = (info) => ({ type: 'rate_limit_event', rate_limit_info: info });
 const rejected = (type, extra) => frame(Object.assign({ status: 'rejected', rateLimitType: type,
   resetsAt: Math.floor(Date.now() / 1000) + 2 * HOUR }, extra || {}));
 const tick = () => new Promise((r) => setTimeout(r, 0));
+const result429 = { type: 'result', subtype: 'success', is_error: true, api_error_status: 429 };
+const resultOk = { type: 'result', subtype: 'success', is_error: false, api_error_status: null };
+const refusal = (type, extra) => [rejected(type, extra), result429];
 
 function queueWith(items, settings) {
   let paused = false, idc = 100, editing = false, panel = null;
@@ -36,12 +43,16 @@ function queueWith(items, settings) {
     Q, logs, seen,
     frame: (m) => store.processIncomingMessage(m),
     busy: (v, initial) => busyFns.forEach((f) => f(v, store, !!initial)),
-    run: (m) => { busyFns.forEach((f) => f(true, store, false)); if (m) store.processIncomingMessage(m); busyFns.forEach((f) => f(false, store, false)); },
+    run: (...frames) => {
+      busyFns.forEach((f) => f(true, store, false));
+      frames.forEach((m) => store.processIncomingMessage(m));
+      busyFns.forEach((f) => f(false, store, false));
+    },
     rehook: () => hookRateLimit(),
     paused: () => paused, pause: (v) => { paused = v; },
     badge: () => buildLimitBadge(),
     next: () => { const i = firstSendableIndex(); return i < 0 ? null : Q[i]; },
-    veto: (it) => vetoResume(it),
+    veto: (it) => holdForResume(it),
     lane: () => laneItems()
   };
 }
@@ -53,4 +64,4 @@ const done = () => {
   process.exit(fail ? 1 : 0);
 };
 
-module.exports = { queueWith, frame, rejected, tick, ok, done, HOUR };
+module.exports = { queueWith, frame, rejected, refusal, result429, resultOk, tick, ok, done, HOUR };

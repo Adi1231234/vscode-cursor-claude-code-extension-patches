@@ -432,14 +432,16 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   will not send anything, so the run that just ended was the last one.
 - **A turn refused by a usage limit ends exactly like a finished one.** `busy`
   falls, and the only row it leaves is `<synthetic>` text ("You've hit your
-  weekly limit · resets ..."). What says the account is refused is the CLI's
-  `rate_limit_event` frame (`status: "rejected"`, not covered by
-  `overageStatus` allowed), sent on every change of limit state and before the
-  turn's `result` - and the store keeps none of it readable. Read the frame on
-  its way in through the store's `processIncomingMessage`, the way
-  `patches/prompt-queue/queue/usage-limit.js` does; anything that sends on a
-  turn's end (the queue, a responder) has to ask this first, or it drains
-  itself into the limit. The queue then either parks, or - for the five-hour
+  weekly limit · resets ..."). What says *this run* was refused is its own
+  `result` frame (`is_error` with `api_error_status: 429`); which limit and
+  until when is the `rate_limit_event` frame (`status: "rejected"`, not covered
+  by `overageStatus` allowed). Measured with a real 429 from a local proxy: the
+  frame comes only when the state **changes** - a second refusal at the same
+  reset brings none - so act on the result, not on the state. The store keeps
+  neither readable; read both on their way in through the store's
+  `processIncomingMessage`, the way `patches/prompt-queue/queue/usage-limit.js`
+  does. Anything that sends on a turn's end (the queue, a responder) has to ask
+  this first, or it drains itself into the limit. The queue then either parks, or - for the five-hour
   limit, with the settings dialog's "Continue after the session limit" on -
   sends `continue` a minute past the reset (`limit-resume.js`).
 - **A feature that is silent by design has to say why it was silent.** When
