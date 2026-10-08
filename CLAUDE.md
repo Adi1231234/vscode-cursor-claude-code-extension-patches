@@ -343,6 +343,17 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `patches/panel-restart-button`; measured in a live editor, the clicked panel
   got a new document and a new channel while its neighbours kept theirs, and
   exactly one `claude.exe` was left running.
+- **The folder a session is launched in becomes its anchor, and the panel
+  relaunches worktree sessions inside the worktree.** `EnterWorktree` moves the
+  transcript into the worktree's projects folder and `ExitWorktree` moves it back
+  - unless the CLI was *started* in that worktree, which is what the panel does
+  when it restores a session whose cwd is one (`fromServer`: `cwd =
+  worktree.path`). Then `ExitWorktree` logs `not moving the permission anchor`,
+  still answers "Session is now back in ...", leaves the transcript behind, and
+  deleting the worktree drops the session from history (it only scans folders of
+  worktrees git still lists). Measured 2026-10-08 after two sessions vanished;
+  `patches/worktree-resume-origin` launches such sessions from where they came
+  from, and its `recover-sessions.ps1` brings stranded ones back.
 - **An OS notification has to leave the editor, and only the host can send it.**
   Upstream already has a `show_notification` request the webview calls in a
   dozen places - message, severity, buttons, even an `onlyIfNotVisible` gate -

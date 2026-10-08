@@ -86,10 +86,12 @@ export async function throwingPatch(check, lay) {
 export async function missingAnchor(check, lay) {
     await vsix.restore(lay);
     const r = withBrokenPatch('cwd-drive-case/patch.ps1',
-        (s) => s.replace("$rx = 'cwd:", "$rx = 'NO_SUCH_ANCHOR_zzz_cwd:"),
+        (s) => s.replace("$rxSdk = '", "$rxSdk = 'NO_SUCH_ANCHOR_zzz"),
         () => runApply(lay.extensions));
     if (r.skipped) return check('a missing anchor can be simulated', false, r.skipped);
-    const section = r.out.slice(r.out.indexOf('==> cwd-drive-case'), r.out.indexOf('==> reload-restore'));
+    /* up to whichever patch runs next, so a patch added to $order does not land in it */
+    const from = r.out.indexOf('==> cwd-drive-case');
+    const section = r.out.slice(from, r.out.indexOf('==> ', from + 4));
     check('the broken patch reports a miss, not an ok', /\[miss\]/.test(section) && !/\[ok\]/.test(section), section.trim().replace(/\s+/g, ' '));
     check('the run still finishes', /Done \(/.test(r.out));
     check('no patch threw', count(r.out, 'fail') === 0);
