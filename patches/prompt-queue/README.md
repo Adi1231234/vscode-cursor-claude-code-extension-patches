@@ -128,6 +128,42 @@ Decorating an instance method is safe here (an own property over the prototype,
 `orig.apply(this, arguments)` returns the original promise untouched) - it is
 not the `acquireVsCodeApi` wrap the root CLAUDE.md forbids.
 
+## A usage limit parks the queue (`usage-limit.js`)
+
+A turn refused by a usage limit ends like any other turn: `busy` falls and the
+queue sent its next item, which was refused at once - and so on until the queue
+was empty, every item spent on *"You've hit your weekly limit · resets ..."*.
+Now the queue parks instead, exactly like a Stop, and the header says why: a
+**usage limit** badge (in `--app-warning-accent`, beside the paused label) whose
+tooltip names the limit and its reset time in the app's own words.
+
+What tells it is the CLI's own `rate_limit_event` frame. The CLI sends one
+whenever the account's limit state changes (and when the windows' usage moves),
+a 429 included, before the turn's `result`. The store uses it for its banner
+and meter but keeps none of it where a patch can read it, and the row a refused
+turn leaves in the transcript is only `<synthetic>` text, so matching that text
+is the one thing not to do. The queue reads the frame on its way in, by
+decorating the store's own `processIncomingMessage` (`decorateSession` in
+`session.js`, the same once-per-store decoration the Stop hook uses).
+
+- **Refused** is `status: "rejected"`, unless usage credits cover it
+  (`overageStatus` `allowed` / `allowed_warning`) - the app's own reading.
+- **The state is the latest frame**, not a sticky flag: an `allowed` frame
+  clears it, and so does the reset time passing (no frame says that). The CLI
+  sends `allowed` after a refusal the moment a request goes through again.
+- **Parked on the run's end**, like a stop from elsewhere: the busy callback is
+  a microtask and the flushing pass a timer. An empty queue is never parked.
+- **Play overrides it**, as with any pause: the next item is sent anyway, and
+  if the limit still holds, that turn's end parks the queue again. The badge
+  goes away by itself at the reset time.
+
+Measured in the lab on 2.1.292 by feeding a `rejected` frame (the shape of a
+real transcript row's `quotaLimits`) right before a real turn's `result`: the
+turn's item ran, the two behind it stayed, the queue parked, Play sent one and
+parked again, an `allowed` frame took the badge away. Fed mid-turn instead, the
+CLI's next real frame (`allowed`, the five-hour usage having moved) cleared it
+before the turn ended, and nothing parked - which is right.
+
 ## Persistence (`persist.js`)
 
 The queue survives a full editor restart, per session:
@@ -396,6 +432,12 @@ at-time degrading to a plain item, attachments never reaching the store, a
 loaded timer coming back inactive, loading appending and parking the queue only
 while idle, a corrupt or foreign store reading as empty, and the cap. Then
 `check-injected` and `check-ps1`.
+
+`limit.test.js` (14 checks) runs `session.js` + `usage-limit.js` against a
+plain store: a refused turn parks the queue and says which limit, a finished
+one does not, usage credits and an `allowed` frame and a passed reset time all
+lift it, an empty queue is never parked, and a second pass never wraps the
+store twice.
 
 **The fragment list is `order.json`, read by both `patch.ps1` and
 `tools/check-injected.mjs`.** They used to keep a copy each, and when the

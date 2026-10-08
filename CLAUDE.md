@@ -430,6 +430,16 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   that rather than reaching into the queue's own state, the way `auto-followup`
   and `panel-settings` both do. Treat a **paused** queue as nothing pending: it
   will not send anything, so the run that just ended was the last one.
+- **A turn refused by a usage limit ends exactly like a finished one.** `busy`
+  falls, and the only row it leaves is `<synthetic>` text ("You've hit your
+  weekly limit · resets ..."). What says the account is refused is the CLI's
+  `rate_limit_event` frame (`status: "rejected"`, not covered by
+  `overageStatus` allowed), sent on every change of limit state and before the
+  turn's `result` - and the store keeps none of it readable. Read the frame on
+  its way in through the store's `processIncomingMessage`, the way
+  `patches/prompt-queue/queue/usage-limit.js` does to park the queue; anything
+  that sends on a turn's end (the queue, a responder) has to ask this first, or
+  it drains itself into the limit.
 - **A feature that is silent by design has to say why it was silent.** When
   nothing happens there is no way to tell from the outside whether it decided to
   stay quiet or never saw the event at all - one run in testing raised no toast

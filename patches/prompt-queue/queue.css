@@ -16,8 +16,11 @@
 .__qToggle.__qPlay::after{display:none}
 .__qToggle.__qPlay::before{width:0;height:0;border-radius:0;background:none;border-style:solid;border-width:5px 0 5px 9px;border-color:transparent transparent transparent currentColor}
 .__qHeadLabel{flex:1;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:500;opacity:.55;line-height:1}
-.__qHeldBadge{flex:none;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:500;line-height:1;color:var(--app-warning-accent,#e5a54b);cursor:default}
-.__qHeldBadge:empty{display:none}
+/* The badges give way before the header's buttons do: at a 200px composer the
+   limit badge pushed the minimize button 36px out of the header. The full
+   reason stays in the title. */
+.__qHeldBadge,.__qLimitBadge{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:500;line-height:1;color:var(--app-warning-accent,#e5a54b);cursor:default}
+.__qHeldBadge:empty,.__qLimitBadge:empty{display:none}
 .__qRow{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:12px;line-height:1.45;position:relative}
 .__qRow:not(:last-child){border-bottom:1px solid color-mix(in srgb,var(--vscode-foreground,#cccccc) 12%,transparent)}
 .__qRow:hover{background:rgba(128,128,128,.08)}
