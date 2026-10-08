@@ -1,0 +1,114 @@
+/* MSGCARDS-TERM */
+/* A command's IN and OUT as one terminal block: no labels and no rule between
+   them, the command muted (after a "$" for a shell), its output 8 under it,
+   whole wrapped lines clamped to 2 + 4. Only the app's grid body is restyled;
+   an Edit's diff editor or a Write's file keeps the app's own look. */
+[data-testid="assistant-message"] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+  margin: var(--cc-gap-inline) 0 0;
+  padding: var(--cc-gap-inline) var(--cc-gap-block);
+  border: 0;
+  border-radius: var(--corner-radius-medium, 6px);
+  background: var(--app-tool-background);
+}
+[data-testid="assistant-message"] [class*="toolBodyGrid_"] { display: block; }
+[data-testid="assistant-message"] [class*="toolBodyRow_"] {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+[data-testid="assistant-message"] [class*="toolBodyRow_"] + [class*="toolBodyRow_"] {
+  margin-top: var(--cc-gap-inline);
+}
+[data-testid="assistant-message"] [class*="toolBodyRowLabel_"] { display: none; }
+
+/* Whole lines, wrapped, in the code font; the app's 60px fade-out clip
+   becomes a clamp of whole lines. */
+[data-testid="assistant-message"] [class*="toolBodyRow_"] [class*="toolBodyRowContent_"] {
+  padding: 0;
+  max-height: calc(4 * var(--cc-code-line));
+  overflow: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
+  font: 12px / var(--cc-code-line) var(--app-monospace-font-family);
+}
+[data-testid="assistant-message"] [class*="inputRow_"] [class*="toolBodyRowContent_"] {
+  max-height: calc(2 * var(--cc-code-line));
+  color: var(--app-secondary-foreground);
+}
+[data-testid="assistant-message"] [class*="toolBodyRowContent_"] :is(pre, [class*="toolResult_"]) {
+  margin: 0;
+  background: none;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+}
+[aria-label^="Claude, Bash"] [class*="inputRow_"] pre::before,
+[aria-label^="Claude, PowerShell"] [class*="inputRow_"] pre::before {
+  content: "$ ";
+  color: var(--app-disabled-foreground);
+}
+
+/* Where a clamp really hides something (more.js measures it), the last line
+   fades out, the way the app's own clip did. */
+[data-testid="assistant-message"] [class*="toolBodyRowContent_"][data-cc-clip] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cc-code-line)), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cc-code-line)), transparent);
+}
+[data-cc-open] [class*="toolBodyRow_"] [class*="toolBodyRowContent_"] {
+  max-height: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+[data-cc-open] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+  max-height: 360px;
+  overflow: auto;
+}
+
+/* A failed command: its block tinted with the error colour. */
+[class*="dotFailure_"] [class*="toolBody_"]:has(> [class*="toolBodyGrid_"]) {
+  background: color-mix(in srgb, var(--app-error-foreground) 8%, var(--app-tool-background));
+}
+
+/* The badge (badge.js): a pill at the header's end, in the room the header
+   keeps for it. Absolute, so arriving a frame after the app adds no height. */
+.__ccBadge {
+  position: absolute;
+  top: var(--cc-gap-block);
+  right: var(--cc-gap-block);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cc-gap-tight);
+  height: 20px;
+  max-width: var(--cc-badge-w);
+  padding: 0 var(--cc-gap-inline);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-primary-foreground) 10%, transparent);
+  color: var(--app-secondary-foreground);
+  font-size: 11px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  overflow-anchor: none;
+}
+[class*="dotFailure_"] > .__ccBadge {
+  color: var(--app-error-foreground);
+  background: color-mix(in srgb, var(--app-error-foreground) 14%, transparent);
+}
+
+/* "Show all" (more.js): on the card's last row, left, opposite the time;
+   absolute in that row, so it adds no height either. */
+.__ccMore {
+  position: absolute;
+  left: var(--cc-gap-block);
+  bottom: var(--cc-gap-block);
+  display: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: 11px / 16px var(--vscode-chat-font-family, inherit);
+  color: var(--app-link-foreground);
+  overflow-anchor: none;
+}
+[data-cc-clipped] > .__ccMore, [data-cc-open] > .__ccMore { display: inline-block; }
+.__ccMore:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }

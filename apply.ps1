@@ -52,6 +52,7 @@ $order = @(
     'phone-queue'
     'input-usage'
     'message-time'
+    'message-cards'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to
