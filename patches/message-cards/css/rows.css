@@ -1,0 +1,57 @@
+/* MSGCARDS-ROWS */
+/* The rows that are not commands. Each ends in one line: what you can do at
+   one end, when it happened at the other - the stamp message-time put under
+   the row is that line, and the app's own buttons join it. */
+
+/* Claude's rows sit on the content edge now that the rail's gutter is gone:
+   message-time stepped their stamp 23px back into that gutter, so it steps
+   out again, 4 under the row's text. Same weight as message-time's rule, and
+   later, so it wins without !important. */
+[data-transcript-message][class*="timelineMessage_"] > [data-message-stamp] {
+  margin: var(--cc-gap-tight) 0 0;
+}
+
+/* Thinking: one quiet line, its time (on hover) right after the words. */
+[data-testid="assistant-message"]:has(> [class*="thinking_"]) {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--cc-gap-inline);
+  direction: ltr;
+}
+[data-testid="assistant-message"]:has(> [class*="thinking_"]) > [data-message-stamp] {
+  align-self: center;
+  flex: none;
+  margin: 0;
+}
+
+/* A reply: its time on the left of the last line (message-time keeps it
+   there in either direction), the app's Copy and Bookmark on the right of the
+   same line instead of a line of their own. The row is already the
+   positioning box, and the buttons' 16px strip matches the time's line. */
+[data-testid="assistant-message"] > [class*="assistantActions_"] {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+}
+
+/* Your message: the one filled surface in a turn - the menu surface, no
+   frame, 12 inside like a card. Its time keeps message-time's place at the
+   bottom left, moved to the new inner edge; the app's actions (rewind / fork,
+   and copy-message's Copy) leave the top corner for the right end of that
+   same line, centred on it (20px buttons on a 16px line). */
+[data-transcript-message][class*="userMessageContainer_"] [class*="userMessage_"] {
+  padding: var(--cc-gap-block) var(--cc-gap-block) calc(var(--cc-gap-block) + 16px + var(--cc-gap-tight));
+  border-color: transparent;
+  border-radius: var(--corner-radius-large, 8px);
+  background: var(--app-menu-background);
+  color: var(--app-list-active-foreground, var(--app-primary-foreground));
+}
+[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+  padding-left: calc(1px + var(--cc-gap-block));
+  margin-bottom: calc(1px + var(--cc-gap-block));
+}
+[data-transcript-message][class*="userMessageContainer_"] [class*="userMessageContainer_"] > [class*="container_"] {
+  top: auto;
+  right: calc(1px + var(--cc-gap-block));
+  bottom: calc(1px + var(--cc-gap-block) - 2px);
+}

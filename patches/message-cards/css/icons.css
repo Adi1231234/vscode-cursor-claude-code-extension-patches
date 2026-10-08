@@ -1,0 +1,59 @@
+/* MSGCARDS-ICONS */
+/* The glyphs a card wears, as masks painted in a token colour (so a theme
+   change recolours them). The row's aria-label names its tool ("Claude, Bash"),
+   and that picks the header icon; anything unlisted gets the generic tool. */
+[data-testid="assistant-message"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 2.5a3.5 3.5 0 0 0-3.3 4.6L2.5 11.3a1.4 1.4 0 0 0 2 2l4.2-4.2A3.5 3.5 0 0 0 13.4 6l-2 .4-1.8-1.8.4-2z'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, Bash"], [aria-label^="Claude, PowerShell"], [aria-label^="Claude, KillShell"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h12v10H2z M4.5 6.5l2 1.5-2 1.5 M8 10h3'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, Read"], [aria-label^="Claude, NotebookRead"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 1.5h5l3 3v10H4z M9 1.5v3h3 M6 8h4 M6 10.5h4'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, Edit"], [aria-label^="Claude, MultiEdit"], [aria-label^="Claude, Write"], [aria-label^="Claude, NotebookEdit"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.5 2.5l3 3-8 8H2.5v-3z M9 4l3 3'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, Grep"], [aria-label^="Claude, Glob"], [aria-label^="Claude, ToolSearch"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 2.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z M10.3 10.3l3.2 3.2'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, Task"], [aria-label^="Claude, Agent"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 1.5v2 M4 4.5h8v7H4z M6.5 7.5v1 M9.5 7.5v1 M2 7.5v2 M14 7.5v2 M6 13.5h4'/%3E%3C/svg%3E");
+}
+[aria-label^="Claude, WebFetch"], [aria-label^="Claude, WebSearch"] {
+  --cc-ic-tool: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2a6 6 0 1 1 0 12A6 6 0 0 1 8 2z M2 8h12 M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14 M8 2C6.2 3.7 5.4 5.7 5.4 8s.8 4.3 2.6 6'/%3E%3C/svg%3E");
+}
+
+/* The badge's status glyph: a check, a cross, or the spinner while it runs. */
+.__ccBadge {
+  --cc-ic-status: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3 3 7-7'/%3E%3C/svg%3E");
+}
+[class*="dotFailure_"] > .__ccBadge {
+  --cc-ic-status: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 4l8 8 M12 4l-8 8'/%3E%3C/svg%3E");
+}
+.__ccBadge::before {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  background: var(--app-success-foreground);
+  -webkit-mask: var(--cc-ic-status) center / contain no-repeat;
+  mask: var(--cc-ic-status) center / contain no-repeat;
+}
+[class*="dotFailure_"] > .__ccBadge::before { background: var(--app-error-foreground); }
+[class*="dotWarning_"] > .__ccBadge::before { background: var(--app-warning-accent, var(--app-secondary-foreground)); }
+[class*="dotProgress_"] > .__ccBadge::before {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  -webkit-mask: none;
+  mask: none;
+  background: none;
+  border: 1.6px solid color-mix(in srgb, var(--app-spinner-foreground) 30%, transparent);
+  border-top-color: var(--app-spinner-foreground);
+  animation: cc-card-spin 0.9s linear infinite;
+}
+@keyframes cc-card-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [class*="dotProgress_"] > .__ccBadge::before { animation: none; border-style: dotted; }
+}
