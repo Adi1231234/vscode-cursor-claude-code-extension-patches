@@ -380,8 +380,10 @@ is the queue.
 The fourth switch, **on by default**, belongs to the queue
 (`patches/prompt-queue/queue/limit-resume.js`; its README has the whole story).
 When the five-hour limit cuts a run, the queue puts a `continue` at its front,
-timed a minute past the reset, and the rest follow it; off, the queue parks
-instead, as it does for a weekly limit. It stands on its own rather than under
+timed a minute past the reset, and the rest follow it; off, the queue only
+parks and adds nothing. (A weekly limit always parks the queue with a
+`continue` first in line, waiting for Play - the switch is about going on by
+itself.) It stands on its own rather than under
 "Notify when a run finishes", so it is never disabled. The queue reads it when
 the continue would be added and again just before it is sent, so turning it off
 also cancels one that is already waiting.

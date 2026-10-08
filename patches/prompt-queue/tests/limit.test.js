@@ -1,6 +1,7 @@
-/* The queue parks when a run is refused by a usage limit it will not
- * continue after - a weekly one, the session limit with the setting off, or
- * one it cannot name (queue/usage-limit.js, queue/limit-resume.js).
+/* The queue parks when a run is refused by a usage limit it will not carry
+ * on after by itself - a weekly one, or one it cannot name, with a "continue"
+ * waiting at the front for Play; or the session limit with the setting off,
+ * with nothing added (queue/usage-limit.js, queue/limit-resume.js).
  *
  *     node patches/prompt-queue/tests/limit.test.js
  *
@@ -14,12 +15,18 @@ const { queueWith, frame, rejected, refusal, result429, resultOk, tick, ok, done
   ok(q.paused(), 'a run refused by a weekly limit parks the queue');
   ok(/weekly limit, resets .* - queue parked/.test(q.logs.join()), 'and the log says which limit and when it resets');
   ok(q.seen.length === 2, 'every frame still reaches the store (the app call is not altered)');
-  ok(q.badge().textContent === 'usage limit' && /weekly limit.*Press play/.test(q.badge().attrs.title), 'the header says why it is paused');
-  ok(q.Q.length === 2 && !q.Q.some((it) => it.resume), 'and nothing is added to continue a weekly limit');
+  ok(q.badge().textContent === 'usage limit' && /weekly limit.*Press play once it resets/.test(q.badge().attrs.title), 'the header says why it is paused');
+  let c = q.Q[0];
+  ok(q.Q.length === 3 && c.resume === 'play' && c.text === 'continue' && c.mode === 'queue' && !c.at,
+    'a "continue" waits at the front, untimed, to go first on Play');
+  ok(/continue first on play/.test(q.logs.join()), 'and the log says so');
 
   q = queueWith(['next'], { resumeAfterLimit: false });
   q.run(...refusal('five_hour'));
-  ok(q.paused() && !q.Q.some((it) => it.resume), 'the session limit with the setting off parks too');
+  ok(q.paused() && !q.Q.some((it) => it.resume), 'the session limit with the setting off parks, and adds nothing');
+  q = queueWith([], { resumeAfterLimit: false });
+  q.run(...refusal('five_hour'));
+  ok(!q.paused() && !q.Q.length, 'and with an empty queue it has nothing to park');
 
   q = queueWith(['next']);
   q.run(frame({ status: 'allowed', rateLimitType: 'five_hour' }), resultOk);
@@ -40,11 +47,12 @@ const { queueWith, frame, rejected, refusal, result429, resultOk, tick, ok, done
   /* Refused with no frame at all: still a refusal, of a limit it cannot name. */
   q = queueWith(['next']);
   q.run(result429);
-  ok(q.paused() && q.badge().textContent === 'usage limit', 'a 429 with no frame parks, and says so');
+  ok(q.paused() && q.badge().textContent === 'usage limit' && q.Q[0].resume === 'play',
+    'a 429 with no frame parks, says so, and leaves a continue for Play');
 
   q = queueWith([]);
   q.run(...refusal('seven_day'));
-  ok(!q.paused(), 'an empty queue has nothing to park');
+  ok(q.paused() && q.Q.length === 1 && q.Q[0].resume === 'play', 'an empty queue gets its continue too - a task typed by hand was cut');
 
   q = queueWith(['next']);
   q.frame(rejected('seven_day'));
@@ -57,9 +65,11 @@ const { queueWith, frame, rejected, refusal, result429, resultOk, tick, ok, done
   q = queueWith(['next', 'after']);
   q.run(...refusal('seven_day'));
   q.pause(false);
+  q.Q.shift();                  /* Play sent the continue first */
   ok(q.badge().textContent === '', 'Play releases it, and the badge goes with the pause');
   q.run(result429);
-  ok(q.paused(), 'and a run refused again with no new frame parks it again');
+  ok(q.paused() && q.Q[0].resume === 'play' && q.Q.length === 3,
+    'refused again with no new frame: parked again, a fresh continue first in line');
 
   q = queueWith(['next']);
   q.rehook();

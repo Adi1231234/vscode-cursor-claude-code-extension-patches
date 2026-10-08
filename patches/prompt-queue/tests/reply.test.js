@@ -30,7 +30,7 @@ const store = (list) => ({ messages: { value: list } });
 let s = store([user('u1', 'hi'), reply('a1', 'hello')]);
 let at = R.mark(s);
 s.messages.value.push(user('u2', '<command-name>/queue</command-name>'), command('c1', 'queue: Paused'));
-ok(JSON.stringify(R.since(at, s)) === '{"replied":false,"stopped":false}', 'a /queue run: no reply from Claude');
+ok(JSON.stringify(R.since(at, s)) === '{"replied":false,"answered":false,"stopped":false}', 'a /queue run: no reply from Claude');
 s.messages.value.push(notice('n1'));
 ok(!R.since(at, s).replied, 'the Remote Control notice is not a reply either');
 s.messages.value.push(user('u3', 'go'), reply('a2', 'done'));
@@ -54,17 +54,18 @@ s = store([user('u1', 'write it')]);
 at = R.mark(s);
 s.messages.value.push(apiError('e1', 'API Error: usage limit reached'));
 ok(R.since(at, s).replied, 'an API error after a real prompt is news, not a command');
+ok(!R.since(at, s).answered, 'but no model answered: a usage limit or an error is not a run that went through');
 s = store([user('u1', '<command-name>/context</command-name>'), command('c1', 'ctx')]);
 at = R.mark(s);
 s.messages.value.push(user('u2', 'go on'), reply('a1', 'ok'), apiError('e1', 'Connection lost mid-response'));
-ok(R.since(at, s).replied, 'a run with a reply and then an error: replied');
+ok(R.since(at, s).replied && R.since(at, s).answered, 'a run with a reply and then an error: replied, and answered');
 
 /* The store trims its list (past 600 rows it drops 100): a mark that was a
    position pointed into the run's own rows after that. */
 s = store(Array.from({ length: 600 }, (_, i) => reply('r' + i, 'old')));
 at = R.mark(s);
 s.messages.value = s.messages.value.slice(100).concat([user('u9', '<command-name>/queue</command-name>'), command('c9', 'queue: x')]);
-ok(JSON.stringify(R.since(at, s)) === '{"replied":false,"stopped":false}', 'after a trim, the old rows are still not part of this run');
+ok(JSON.stringify(R.since(at, s)) === '{"replied":false,"answered":false,"stopped":false}', 'after a trim, the old rows are still not part of this run');
 s.messages.value = s.messages.value.slice(100).concat([user('u10', '[Request interrupted by user]')]);
 ok(R.since(at, s).stopped, 'and a stop after a trim is still seen');
 

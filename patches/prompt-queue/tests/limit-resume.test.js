@@ -3,7 +3,7 @@
  * rest (queue/limit-resume.js).
  *
  *     node patches/prompt-queue/tests/limit-resume.test.js */
-const { queueWith, frame, refusal, result429, resultOk, tick, ok, done, HOUR } = require('./limit-harness.js');
+const { queueWith, frame, refusal, result429, resultOk, said, answer, command, tick, ok, done, HOUR } = require('./limit-harness.js');
 const MIN = 60000;
 
 (async () => {
@@ -11,7 +11,7 @@ const MIN = 60000;
   let q = queueWith(['next', 'after']);
   q.run(...refusal('five_hour', { resetsAt: reset }));
   let r = q.Q[0];
-  ok(r && r.resume && r.text === 'continue', 'a "continue" goes at the front of the queue');
+  ok(r && r.resume === 'reset' && r.text === 'continue', 'a "continue" goes at the front of the queue');
   ok(r.mode === 'time' && r.hold && r.at === reset * 1000 + MIN, 'timed a minute past the reset, holding the rest');
   ok(!q.paused(), 'the queue is not parked - the continue is what holds it');
   ok(q.next() === null, 'nothing is sent before then');
@@ -72,11 +72,26 @@ const MIN = 60000;
     Date.now = realNow;
   }
 
+  /* The weekly limit refuses while a session continue waits: the same item,
+     now waiting for Play, the schedule gone. */
+  q = queueWith(['next']);
+  q.run(...refusal('five_hour'));
+  const same = q.Q[0];
+  q.run(...refusal('seven_day'));
+  ok(q.Q[0] === same && same.resume === 'play' && same.mode === 'queue' && !same.at && q.paused() &&
+    q.Q.filter((it) => it.resume).length === 1, 'a weekly refusal turns the waiting continue into one for Play');
+
+  /* Somebody took over: a run of their own went through while it waited. */
   q = queueWith(['next']);
   q.run(...refusal('five_hour'));
   q.frame(frame({ status: 'allowed', rateLimitType: 'five_hour' }));
   await tick();
-  ok(!q.Q.some((it) => it.resume) && q.Q.length === 1, 'a refusal lifted early (somebody took over) drops the continue');
+  ok(q.Q[0].resume, 'an allowed frame alone drops nothing - a side call on another model sends one too');
+  q.runRows([said('/queue'), command('queue: 2 queued')], resultOk);
+  ok(q.Q[0].resume, 'nor does a local command, in which no model answered');
+  q.runRows([said('go on yourself'), answer('done')], resultOk);
+  ok(!q.Q.some((it) => it.resume) && q.Q.length === 1 && /somebody took over/.test(q.logs.join()),
+    'a prompt of their own that went through drops the continue');
 
   q = queueWith(['next'], { resumeAfterLimit: true });
   q.run(...refusal('five_hour'));

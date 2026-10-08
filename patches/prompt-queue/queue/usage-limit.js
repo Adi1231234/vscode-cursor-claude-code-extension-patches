@@ -36,8 +36,8 @@
   };
 
   /* A change of state redraws the badge - out of the app's own frame
-     handling, which is where this runs - and a refusal lifted by a frame
-     tells limit-resume.js, which may be waiting on it. */
+     handling, which is where this runs. Nothing is decided on it: a frame can
+     come from a side call (limit-resume.js acts on runs). */
   function noteFrame(m) {
     if (m && m.type === "result") runRefused = !!(m.is_error && m.api_error_status === 429);
     if (!m || m.type !== "rate_limit_event" || !m.rate_limit_info) return;
@@ -50,7 +50,7 @@
       limit = null;
     }
     if (was === limitInForce(now)) return;
-    Promise.resolve().then(function () { if (was) limitLifted(); render(); });
+    Promise.resolve().then(render);
   }
 
   function limitInForce(now) {
@@ -84,9 +84,11 @@
     return limit.resetsAt ? name + ", resets " + fmtDayClock(limit.resetsAt) : name;
   }
 
-  /* What happens next, in the badge's tooltip: the continue sends by itself,
-     waits for Play with the person's own items, or there is none to wait on. */
+  /* What happens next, in the badge's tooltip: the continue waits for Play
+     (limit-resume.js "play"), sends by itself, waits for Play with the
+     person's own items, or there is none to wait on. */
   function limitNext(r) {
+    if (r && r.resume === "play") return "Press play once it resets: Claude picks up the cut task first, then the rest of the queue.";
     if (r && !paused) return "Claude continues by itself at " + fmtClock(r.at) + " (Settings: Continue after the session limit).";
     if (r) return "Claude continues at " + fmtClock(r.at) + ", once you press play.";
     return "The queue paused instead of sending into it. Press play to send anyway.";

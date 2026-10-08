@@ -1,14 +1,19 @@
   /* Where a line came from when the person did not type it: a responder
-     wrote it (auto), or a session limit put it there to continue at the reset
-     (resume, limit-resume.js). The same quiet mark, its own tooltip. */
+     wrote it (auto), or a usage limit put it there to carry on the cut task
+     (resume, limit-resume.js: at the reset, or first on Play). The same quiet
+     mark, its own tooltip. */
+  var ORIGIN = {
+    reset: "Added when the session limit stopped Claude - sends once the limit resets",
+    play: "Added when a usage limit stopped Claude - goes first when you press play"
+  };
+
   function originMark(it) {
-    var why = it.resume ? "Added when the session limit stopped Claude - sends once the limit resets"
-      : it.auto ? "Written by a responder, not by you" : "";
+    var why = it.resume ? ORIGIN[it.resume] || ORIGIN.play : it.auto ? "Written by a responder, not by you" : "";
     if (!why) return null;
     var ai = el("span", "__qAi");
     ai.textContent = "✦";
     ai.title = why;
-    ai.setAttribute("aria-label", it.resume ? "added by the session limit" : "written by a responder");
+    ai.setAttribute("aria-label", it.resume ? "added by a usage limit" : "written by a responder");
     return ai;
   }
 
