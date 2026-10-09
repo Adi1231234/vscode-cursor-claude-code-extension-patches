@@ -7,21 +7,14 @@
    assertion, not an afterthought. */
 
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { REPO } from '../paths.mjs';
 import * as vsix from '../vsix.mjs';
+import { runApply as run } from '../../apply-run.mjs';
 
-/* apply.ps1 writes with Write-Host, which does not go through the PowerShell
-   pipeline - only a child process's stdout has it. */
-function runApply(extensions) {
-    try {
-        return { out: execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-            '-File', join(REPO, 'apply.ps1'), '-ExtensionsDir', extensions], { encoding: 'utf8', cwd: REPO }), code: 0 };
-    } catch (e) {
-        return { out: String(e.stdout || '') + String(e.stderr || ''), code: e.status };
-    }
-}
+/* The way install.ps1 runs it (tools/apply-run.mjs), not -File: the two differ in
+   what lib/ functions a closure can see, and only one of them is what users get. */
+const runApply = (extensions) => run({ repo: REPO, extensionsDir: extensions });
 
 const count = (out, tag) => (out.match(new RegExp(`\\[${tag}\\]`, 'g')) || []).length;
 
@@ -62,6 +55,24 @@ export function idempotency(check, lay) {
         (r.out.match(/\[miss\][^\n]*/g) || []).join(' | '));
 }
 
+/* worktree-banner, made to throw as its first statement. */
+const withThrowingBanner = (body) => withBrokenPatch('worktree-banner/patch.ps1',
+    (s) => s.replace(/(function Invoke-Patch \{\r?\n\s*param\(\$Ctx\))/, "$1\n    throw 'deliberate self-test failure'"), body);
+
+/* A run that would leave the install with fewer working patches writes nothing
+   (lib/Regression.ps1) - the run that took RTL off an install on 2026-10-09. Runs
+   against the fully patched lab the idempotency check leaves behind. */
+export function keepsInstall(check, lay) {
+    const dir = readdirSync(lay.extensions).find((d) => d.includes('claude-code'));
+    const files = ['extension.js', 'webview/index.js', 'webview/index.css'].map((f) => join(lay.extensions, dir, f));
+    const before = files.map((f) => readFileSync(f));
+    const r = withThrowingBanner(() => runApply(lay.extensions));
+    if (r.skipped) return check('a run that drops a patch can be simulated', false, r.skipped);
+    check('a run that would drop a working patch writes nothing', files.every((f, i) => readFileSync(f).equals(before[i])));
+    check('it names the patch it would have dropped', /this run would have removed: worktree-banner/.test(r.out));
+    check('and exits non-zero', r.code !== 0, `exit ${r.code}`);
+}
+
 /* A patch that throws used to end the run, and a run that stopped a third of the
    way through still had plenty of [ok] behind it.
 
@@ -71,9 +82,7 @@ export function idempotency(check, lay) {
    patched and read it as a failure. */
 export async function throwingPatch(check, lay) {
     await vsix.restore(lay);
-    const r = withBrokenPatch('worktree-banner/patch.ps1',
-        (s) => s.replace(/(function Invoke-Patch \{\r?\n\s*param\(\$Ctx\))/, "$1\n    throw 'deliberate self-test failure'"),
-        () => runApply(lay.extensions));
+    const r = withThrowingBanner(() => runApply(lay.extensions));
     if (r.skipped) return check('a throwing patch can be simulated', false, r.skipped);
     check('the failure is reported as [fail]', /\[fail\] worktree-banner threw/.test(r.out));
     check('the failure names its editor', /\/ worktree-banner : deliberate self-test failure/.test(r.out));

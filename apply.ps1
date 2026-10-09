@@ -78,6 +78,7 @@ $script:failures = @()
 # Patches whose anchor did not match. Collected so the run ends by naming them:
 # see the comment in lib/Ui.ps1 for what a miss that scrolled past cost once.
 $script:missed = @()
+$guardMap = Get-PatchGuardMap (Join-Path $here 'patches') @($order | Where-Object { $Skip -notcontains $_ })
 
 foreach ($Ctx in $installs) {
     Write-Head "Patching $($Ctx.Editor): $($Ctx.Name)"
@@ -86,18 +87,20 @@ foreach ($Ctx in $installs) {
         Write-Miss "extension $($Ctx.Version) is older than the anchored $minTested - expect [miss] lines; update it in $($Ctx.Editor) and re-run"
     }
 
+    # The bundles are held in memory from here and written once, at the end, only
+    # if no patch installed now is lost (lib/Io.ps1, lib/Regression.ps1).
+    Open-TextBatch @($Ctx.Js, $Ctx.WebJs, $Ctx.Css)
+    $installed = Get-InstalledGuards $Ctx $guardMap
+
     # Restore the original before applying anything. Without this every patch
     # sees its own guard from the last run and skips, so an install patched
     # yesterday never gets today version of a patch - and the run says [skip] on
     # every line and exits 0, which reads exactly like success. See lib/Pristine.ps1.
     if (-not (Restore-Pristine -Ctx $Ctx -PatchesDir (Join-Path $here "patches"))) {
+        Close-TextBatch
         $script:failures += "$($Ctx.Editor) : no unpatched copy of the bundle to apply to"
         continue
     }
-
-    # The patches work on the bundles in memory; each is written once, after
-    # the last patch (lib/Io.ps1 has why).
-    Open-TextBatch @($Ctx.Js, $Ctx.WebJs, $Ctx.Css)
     foreach ($name in $order) {
         if ($Skip -contains $name) { Write-Skip "$name left out (-Skip)"; continue }
         $patchFile = Join-Path $here "patches\$name\patch.ps1"
@@ -120,9 +123,9 @@ foreach ($Ctx in $installs) {
         }
         if ((Get-MissCount) -gt $missesBefore) { $script:missed += "$($Ctx.Editor) / $name" }
     }
-    foreach ($f in Save-TextBatch) {
-        $script:failures += "$($Ctx.Editor) : could not write $f"
-        Write-Fail "could not write $f"
+    foreach ($f in Save-UnlessRegressed $Ctx $guardMap $installed) {
+        $script:failures += "$($Ctx.Editor) : $f"
+        Write-Fail $f
     }
 }
 

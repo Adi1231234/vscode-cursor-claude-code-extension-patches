@@ -9,7 +9,8 @@ in place. Read this before changing anything so the structure stays clean.
 - **`install.ps1`** - one-line bootstrap: downloads the repo zip, runs `apply.ps1`, cleans up. Users never edit this.
 - **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, finds every install (one `$Ctx` each), then runs each patch in the `$order` list against each of them. `-ExtensionsDir <dir>` patches one specific dir instead of auto-discovering.
 - **`lib/`** - shared plumbing, one file per concern. Never put patch-specific logic here.
-  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched). And `apply.ps1` holds an install's three bundles in memory while its patches run (`Open-TextBatch` / `Save-TextBatch`) and writes each one once, at the end: every write of a 5 MB bundle is scanned, and the next open of it waits for the scan (100-560 ms a time, measured - most of a run's time when each patch wrote its own). So mid-run the bundle on disk is still the original: read it with `Read-Text`, never with anything else. `lib/tests/run.ps1` runs both proofs (`io-retry`, `io-batch`), on every pull request too.
+  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched). And `apply.ps1` holds an install's three bundles in memory while its patches run (`Open-TextBatch` / `Save-TextBatch`) and writes each one once, at the end: every write of a 5 MB bundle is scanned, and the next open of it waits for the scan (100-560 ms a time, measured - most of a run's time when each patch wrote its own). So mid-run the bundle on disk is still the install as the run found it - even the restore of the original happens in the held copy: read it with `Read-Text`, never with anything else. `lib/tests/run.ps1` runs the proofs (`io-retry`, `io-batch`, `regression`), on every pull request too.
+  - `Regression.ps1` - a run never writes an install with fewer working patches than it found. The patch guards it carries are read before the run; if any is gone afterwards the held bundles are dropped, the install stays as it was, and the run fails naming the patch. Only patches the run applies count (`-Skip` and `$order` are choices), and a fresh extension folder takes a partial run. On 2026-10-09 an `install.ps1` run from a master with a bug in it wrote 47 of 54 patches over a full install and took RTL away.
   - `Anchor.ps1` - `Find-IdentifierAnchored` / `Find-NearLiteral`, for an anchor that opens with a captured identifier. Such a pattern has no literal for the regex engine to jump to and is tried at every position of the bundle (1.2 s a pass over 5 MB, measured); these find the literal after it with an ordinal search and run the pattern only there - same matches, a few ms.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
@@ -70,6 +71,12 @@ in place. Read this before changing anything so the structure stays clean.
     the code behind a phase's work. It runs on every push to a pull request
     into master, and master will not merge one it fails
     (`.github/workflows/perf.yml`). Its README has what each number means.
+    It also fails a pull request whose apply.ps1 run on the current extension has
+    any `[fail]` or `[miss]`.
+  - `tools/apply-run.mjs` - **the one way a tool runs apply.ps1**: `& apply.ps1`,
+    the way `install.ps1` does, never `-File` (under `-File` the lib/ functions are
+    global and a closure bug that broke seven patches for users passes). The lab,
+    its self-test and the perf check all go through it.
 
 ## The `$Ctx` contract
 

@@ -20,7 +20,7 @@ import { readWidth } from '../measure.mjs';
 import { setWidth } from '../width.mjs';
 import { claudePanels } from '../../cdp/panels.mjs';
 import { staticChecks, bundleChecks } from './checks.mjs';
-import { idempotency, missingAnchor, throwingPatch } from './apply.mjs';
+import { idempotency, keepsInstall, missingAnchor, throwingPatch } from './apply.mjs';
 
 const fresh = process.argv.includes('--fresh');
 /* Everything except the width section works on a bundle alone, and the editor is
@@ -89,6 +89,7 @@ else {
 
 head('apply.ps1 when things go wrong');
 idempotency(check, lay);
+keepsInstall(check, lay);
 await throwingPatch(check, lay);
 await missingAnchor(check, lay);
 console.log('   (that left the bundles half-patched on purpose - putting them back)');
