@@ -24,13 +24,20 @@
 # '/* QUEUE */', '/* AUTOFOLLOWUP */'. Twenty-seven of them across the tree; a
 # first version looked for -Guard and found none, which turned "this bundle is
 # already patched" into "there is nothing to check against".
+# Two spellings of the same marker: '/* NAME */' as written into the bundle, and
+# '/\* NAME \*/' as the -match a patch checks it with (subagent-stream-flags,
+# electron-run-as-node and reload-restore only ever spell it the second way).
+function Get-GuardsIn([string]$PatchFile) {
+    $text = Read-Text $PatchFile
+    [regex]::Matches($text, "'(/\*[^']*?\*/[^']*?)'") | ForEach-Object { $_.Groups[1].Value }
+    [regex]::Matches($text, "'/\\\* ([^'\\]+?) \\\*/'") | ForEach-Object { "/* $($_.Groups[1].Value) */" }
+}
+
 function Get-PatchGuards {
     param([Parameter(Mandatory)][string]$PatchesDir)
     $guards = @()
     foreach ($f in Get-ChildItem $PatchesDir -Recurse -Filter 'patch.ps1' -ErrorAction SilentlyContinue) {
-        foreach ($m in [regex]::Matches((Read-Text $f.FullName), "'(/\*[^']*?\*/[^']*?)'")) {
-            $guards += $m.Groups[1].Value
-        }
+        $guards += @(Get-GuardsIn $f.FullName)
     }
     $guards | Sort-Object -Unique
 }
@@ -57,8 +64,11 @@ function Restore-Pristine {
         if (-not $file -or -not (Test-Path $file)) { continue }
         $pristine = "$file.pristine"
 
+        # Into the held copy when apply.ps1 has the bundles open (lib/Io.ps1), so
+        # the installed file is replaced only once the run is known to be no worse
+        # than it (lib/Regression.ps1).
         if (Test-Path $pristine) {
-            Copy-Item $pristine $file -Force
+            Write-Text $file (Read-Text $pristine)
             continue
         }
 

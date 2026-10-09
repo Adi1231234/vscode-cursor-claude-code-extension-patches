@@ -8,11 +8,11 @@
    (resources/native-binary, 256 MB unpacked of its 120 MB), which no panel
    loads - vsix.mjs reads ~4 MB of it instead of downloading it all. The slim
    copy is cached per version (CC_PERF_CACHE, default <tmp>/cc-perf/cache). */
-import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fetchExtension } from './vsix.mjs';
+import { runApply } from '../apply-run.mjs';
 
 const API = 'https://open-vsx.org/api/Anthropic/claude-code/win32-x64';
 const vsixUrl = (v) => `${API}/${v}/file/Anthropic.claude-code-${v}@win32-x64.vsix`;
@@ -48,10 +48,16 @@ export async function prepareExtension({ repo, version, skip = [], log = () => {
   const ext = join(extensions, `anthropic.claude-code-${v}-win32-x64`);
   cpSync(await slimExtension(v, log), ext, { recursive: true });
   log(`patching ${v} with apply.ps1`);
-  const shell = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
-  const out = execFileSync(shell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(repo, 'apply.ps1'),
-    '-ExtensionsDir', extensions, ...(skip.length ? ['-Skip', skip.join(',')] : [])], { encoding: 'utf8' });
-  const missed = out.split(/\r?\n/).filter((l) => /\[(miss|fail)\]/.test(l)).map((l) => l.trim());
+  /* The way install.ps1 runs it (tools/apply-run.mjs), and nothing less than a
+     clean run passes: this is the check every pull request into master has to
+     pass, so a patch that throws or no longer finds its anchor in the current
+     extension stops the merge instead of reaching users. */
+  const run = await runApply({ repo, extensionsDir: extensions, skip });
+  const missed = [...run.failures.map((l) => `[fail] ${l}`), ...run.misses.map((l) => `[miss] ${l}`)];
+  if (run.code || missed.length || !run.finished) {
+    throw new Error(`apply.ps1 did not patch ${v} cleanly (exit ${run.code}):\n${missed.join('\n')}\n${run.out.slice(-2000)}`);
+  }
+  const out = run.out;
   for (const f of ['extension.js', 'webview/index.js', 'webview/index.css']) {
     if (!existsSync(join(ext, `${f}.pristine`))) throw new Error(`apply.ps1 left no ${f}.pristine:\n${out.slice(-2000)}`);
   }

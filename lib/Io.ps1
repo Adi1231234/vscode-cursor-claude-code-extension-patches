@@ -53,6 +53,9 @@ function Open-TextBatch {
     }
 }
 
+# Lets go of every held file without writing any: the disk keeps what it had.
+function Close-TextBatch { $script:Held.Clear() }
+
 # Writes every held file a patch changed and lets go of them all. Returns what
 # could not be written; one failure does not keep the others from being tried.
 function Save-TextBatch {
