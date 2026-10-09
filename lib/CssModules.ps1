@@ -47,6 +47,13 @@ function Resolve-CssClass {
 # that resolved to no class or to more than one. -Stylesheet leaves /* comments */
 # alone: a comment that explains the syntax is not a class, and one naming an
 # ambiguous key would otherwise refuse the whole block.
+#
+# The evaluator is a plain script block, never .GetNewClosure(): a closure runs in
+# a module of its own that sees global functions only. `-File apply.ps1` happens
+# to make lib/ global, but install.ps1 runs `& $apply`, where lib/ is script-scoped
+# - and there Resolve-CssClass was "not recognized" and every patch that names an
+# app class threw. [regex]::Replace calls the block synchronously, from inside
+# this function, so $modules and $missing are in reach without capturing them.
 function Expand-CssClasses {
     param($Ctx, [string]$Text, [switch]$Stylesheet)
     $rx = if ($Stylesheet) { '/\*[\s\S]*?\*/|' + $script:CssPlaceholder } else { $script:CssPlaceholder }
@@ -59,6 +66,6 @@ function Expand-CssClasses {
         if ($c) { return $c }
         $missing.Add($m.Value)
         $m.Value
-    }.GetNewClosure())
+    })
     return @{ Text = $out; Missing = @($missing | Sort-Object -Unique) }
 }
