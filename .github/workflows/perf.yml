@@ -1,0 +1,55 @@
+# Every push: do the patches still leave the panel as fast as it should be?
+#
+# 1. The static rules, in a second: no timers, one DOM observer, no class
+#    matched by substring (tools/check-webview-runtime.mjs).
+# 2. The real panel measured: the published extension and the same extension
+#    after apply.ps1, side by side in a headless Chrome, opening a long
+#    conversation, idling, scrolling and streaming a working turn
+#    (tools/perf/README.md). Fails when the patched panel goes over
+#    tools/perf/budgets.json.
+#
+# Windows, because apply.ps1 is Windows PowerShell; the runner image has
+# Chrome and Node. The VSIX (~120 MB) is cached between runs.
+name: Panel performance
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Static rules (no timers, one observer, exact classes)
+        run: node tools/check-webview-runtime.mjs
+
+      - name: Cache the extension VSIX
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/cc-perf-cache
+          key: cc-perf-vsix-${{ hashFiles('tools/perf/budgets.json') }}
+          restore-keys: cc-perf-vsix-
+
+      - name: Measure the patched panel against the published one
+        env:
+          CC_PERF_CACHE: ${{ runner.temp }}/cc-perf-cache
+        run: node tools/perf/perf.mjs --json perf.json
+
+      - name: Keep every number
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf
+          path: perf.json
+          if-no-files-found: ignore
