@@ -95,6 +95,9 @@ foreach ($Ctx in $installs) {
         continue
     }
 
+    # The patches work on the bundles in memory; each is written once, after
+    # the last patch (lib/Io.ps1 has why).
+    Open-TextBatch @($Ctx.Js, $Ctx.WebJs, $Ctx.Css)
     foreach ($name in $order) {
         if ($Skip -contains $name) { Write-Skip "$name left out (-Skip)"; continue }
         $patchFile = Join-Path $here "patches\$name\patch.ps1"
@@ -116,6 +119,10 @@ foreach ($Ctx in $installs) {
             Write-Fail "$name threw: $($_.Exception.Message)"
         }
         if ((Get-MissCount) -gt $missesBefore) { $script:missed += "$($Ctx.Editor) / $name" }
+    }
+    foreach ($f in Save-TextBatch) {
+        $script:failures += "$($Ctx.Editor) : could not write $f"
+        Write-Fail "could not write $f"
     }
 }
 

@@ -45,18 +45,21 @@ const base = { port: chrome.port, origin: server.origin, minRows: budgets.minRow
 const visits = { pristine: [], patched: [] };
 let sel;
 try {
-  log('warm-up visit of each variant (not counted)');
-  for (const v of ['pristine', 'patched']) await visit({ ...base, variant: v, phases: ['mount'] });
-  for (let r = 1; r <= rounds; r++) {
-    for (const v of r % 2 ? ['pristine', 'patched'] : ['patched', 'pristine']) {
-      visits[v].push(await visit({ ...base, variant: v }));
-      log(`round ${r} ${v}: open ${visits[v].at(-1).mount.busyMs} ms, stream ${visits[v].at(-1).stream.busyMs} ms busy`);
-    }
-  }
-  log('selector stats');
+  /* The warm-up visits are not counted, so they are the ones that carry the
+     selector stats (which slow a visit down several times over). */
+  log('warm-up visit of each variant, with selector stats (not timed)');
   const s = {};
   for (const v of ['pristine', 'patched']) s[v] = (await visit({ ...base, variant: v, selectors: true, phases: ['mount'] })).mount;
   sel = checkSelectors(s.pristine.selectorStats, s.patched.selectorStats, s.patched.styleElements, budgets.selectors);
+  for (let r = 1; r <= rounds; r++) {
+    /* Idle is checked once per variant: its limits are absolute caps, and 3 s
+       of nothing is the same 3 s every round. */
+    const phases = r === 1 ? ['mount', 'idle', 'scroll', 'stream'] : ['mount', 'scroll', 'stream'];
+    for (const v of r % 2 ? ['pristine', 'patched'] : ['patched', 'pristine']) {
+      visits[v].push(await visit({ ...base, variant: v, phases }));
+      log(`round ${r} ${v}: open ${visits[v].at(-1).mount.busyMs} ms, stream ${visits[v].at(-1).stream.busyMs} ms busy`);
+    }
+  }
 } finally {
   await chrome.close();
   await server.close();

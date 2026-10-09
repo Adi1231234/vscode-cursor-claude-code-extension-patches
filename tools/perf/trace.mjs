@@ -11,11 +11,18 @@
                              stack); inline = from a <script> in the page, which
                              is where the patches' scripts live
      selectors               with { selectors: true }: Blink's per-selector
-                             stats (attempts, matches, time), summed */
+                             stats (attempts, matches, time), summed
+
+   Only the categories DevTools' own Performance panel reads: a task is its
+   RunTask, style is its Recalculate Style. `toplevel`, `blink` and
+   `v8.execute` were three quarters of every trace - every task of every
+   process, and Blink's inner steps - and the time spent recording and
+   handing them over was most of a visit; no number above needs them (measured:
+   the counters came out identical, busyMs within 1%). */
 import { connect } from '../cdp/client.mjs';
 
 const BASE = ['devtools.timeline', 'disabled-by-default-devtools.timeline',
-  'disabled-by-default-devtools.timeline.stack', 'toplevel', 'v8.execute', 'blink', '__metadata'];
+  'disabled-by-default-devtools.timeline.stack', '__metadata'];
 
 export async function startTrace(browserWs, { selectors = false, extra = [] } = {}) {
   const c = await connect(browserWs);
@@ -70,7 +77,7 @@ export function summarize(events, frameId, knownPid) {
   let end = -1;
   const stack = [];
   for (const e of mine) {
-    if (e.cat.includes('toplevel')) {
+    if (e.name === 'RunTask') {
       const s = Math.max(e.ts, end), f = e.ts + e.dur;
       if (f > s) { out.busyMs += (f - s) / 1000; end = f; }
       out.longestTaskMs = Math.max(out.longestTaskMs, e.dur / 1000);

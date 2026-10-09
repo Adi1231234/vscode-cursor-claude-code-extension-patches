@@ -9,7 +9,8 @@ in place. Read this before changing anything so the structure stays clean.
 - **`install.ps1`** - one-line bootstrap: downloads the repo zip, runs `apply.ps1`, cleans up. Users never edit this.
 - **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, finds every install (one `$Ctx` each), then runs each patch in the `$order` list against each of them. `-ExtensionsDir <dir>` patches one specific dir instead of auto-discovering.
 - **`lib/`** - shared plumbing, one file per concern. Never put patch-specific logic here.
-  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched); `lib/tests/io-retry.test.ps1` proves it, on every pull request too.
+  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched). And `apply.ps1` holds an install's three bundles in memory while its patches run (`Open-TextBatch` / `Save-TextBatch`) and writes each one once, at the end: every write of a 5 MB bundle is scanned, and the next open of it waits for the scan (100-560 ms a time, measured - most of a run's time when each patch wrote its own). So mid-run the bundle on disk is still the original: read it with `Read-Text`, never with anything else. `lib/tests/run.ps1` runs both proofs (`io-retry`, `io-batch`), on every pull request too.
+  - `Anchor.ps1` - `Find-IdentifierAnchored` / `Find-NearLiteral`, for an anchor that opens with a captured identifier. Such a pattern has no literal for the regex engine to jump to and is tried at every position of the bundle (1.2 s a pass over 5 MB, measured); these find the literal after it with an ordinal search and run the pattern only there - same matches, a few ms.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
@@ -18,7 +19,8 @@ in place. Read this before changing anything so the structure stays clean.
     `{{key@within}}` placeholders filled in from it (`Expand-CssClasses`;
     `Add-StyleBlock` does it for every stylesheet). `{{root@toolSummary}}` is
     the `root` of the module that also defines `toolSummary`. A key that
-    resolves to no class or to several writes nothing.
+    resolves to no class or to several writes nothing. In a stylesheet a
+    `/* comment */` is left as written, so a comment can name `{{key}}`.
   - `Patch.ps1` - reusable inject helpers.
   - `js/` - shared runtime JS, one copy each: `ccCopyText.js`
     (`window.__ccCopyText`), `ccStore.js` (`__ccStore` / `__ccFiber`, the webview

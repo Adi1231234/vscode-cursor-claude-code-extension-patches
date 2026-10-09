@@ -12,8 +12,11 @@
 #    tools/perf/budgets.json.
 #
 # Windows, because apply.ps1 is Windows PowerShell; the runner image has
-# Chrome and Node. The VSIX (~120 MB) is cached per pull request, so only a
-# request's first run downloads it.
+# Chrome and Node (its own LTS - actions/setup-node found the same kind of
+# Node already there and spent 6 s printing versions). The extension, unpacked
+# and without the CLI binary (~11 MB), is cached per pull request, so only a
+# request's first run downloads the VSIX (~120 MB). A whole run is under 2
+# minutes; tools/perf/README.md ("Keeping a run short") has what keeps it so.
 name: Panel performance
 
 on:
@@ -32,22 +35,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: lts/*
-
       - name: Static rules (no timers, one observer, exact classes)
         run: node tools/check-webview-runtime.mjs
 
-      - name: File writes survive a file another process holds for a moment
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File lib/tests/io-retry.test.ps1
+      - name: File writes (a brief lock waited out, each bundle written once)
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File lib/tests/run.ps1
 
-      - name: Cache the extension VSIX
+      - name: Cache the unpacked extension
         uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/cc-perf-cache
-          key: cc-perf-vsix-${{ hashFiles('tools/perf/budgets.json') }}
-          restore-keys: cc-perf-vsix-
+          key: cc-perf-ext-${{ hashFiles('tools/perf/budgets.json') }}
+          restore-keys: cc-perf-ext-
 
       - name: Measure the patched panel against the published one
         env:

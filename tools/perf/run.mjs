@@ -35,16 +35,21 @@ const evaluate = async (page, expression) =>
 
 /* deep: { phase, extra: [categories] } - that one phase is traced with the
    extra categories too and hands back its raw events (why.mjs). */
+/* wall: where the phase's own wall-clock time went - the page doing it, and
+   collecting its trace - for keeping the whole run short. */
 async function phase(tab, name, body, { selectors = false, deep } = {}) {
   const extra = deep && deep.phase === name ? deep.extra : [];
+  const t0 = Date.now();
   const stop = await startTrace(tab.browserWs, { selectors, extra });
+  const t1 = Date.now();
   const result = await body();
+  const t2 = Date.now();
   const events = await stop();
   const m = summarize(events, tab.id, tab.pid);
   tab.pid = tab.pid || m.pid;
   if (selectors) m.selectorStats = selectorStats(events);
   if (extra.length) m.events = events;
-  return { ...m, result };
+  return { ...m, result, wall: { start: t1 - t0, body: t2 - t1, trace: Date.now() - t2, events: events.length } };
 }
 
 /* setup: an expression run in the page once the conversation is open, before
@@ -54,7 +59,7 @@ export async function visit({ port, origin, variant, minRows, selectors = false,
   const tab = await openTab(port, `${origin}/__host/blank.html`);
   const out = {};
   try {
-    const mounted = script('settled.js', { __QUIET__: '800', __UNTIL__: `document.querySelectorAll('[data-transcript-message]').length >= ${minRows}` });
+    const mounted = script('settled.js', { __QUIET__: '500', __UNTIL__: `document.querySelectorAll('[data-transcript-message]').length >= ${minRows}` });
     out.mount = await phase(tab, 'mount', async () => {
       const loaded = new Promise((r) => tab.page.on('Page.loadEventFired', r));
       await tab.page.send('Page.navigate', { url: pageUrl });
@@ -73,7 +78,7 @@ export async function visit({ port, origin, variant, minRows, selectors = false,
         const key = { windowsVirtualKeyCode: 13, code: 'Enter', key: 'Enter' };
         await tab.page.send('Input.dispatchKeyEvent', { type: 'keyDown', ...key, text: CR });
         await tab.page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...key });
-        return evaluate(tab.page, script('settled.js', { __QUIET__: '800', __UNTIL__: 'window.__perfTurnDone > 0' }));
+        return evaluate(tab.page, script('settled.js', { __QUIET__: '500', __UNTIL__: 'window.__perfTurnDone > 0' }));
       }, { deep });
       if (!out.stream.result.ok) throw new Error(`${variant}: the scripted turn never finished (${JSON.stringify(out.stream.result)})`);
     }

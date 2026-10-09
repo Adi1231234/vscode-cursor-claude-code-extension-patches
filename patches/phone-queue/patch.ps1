@@ -31,10 +31,12 @@ function Copy-ModTree {
 
 # Insert $New right after the single match of $Rx, or $null when it does not
 # match exactly once - two spawn sites would mean the anchor no longer knows
-# which one it is looking at.
+# which one it is looking at. $Literal: the text right after the identifier a
+# pattern opens with, so the search starts there (lib/Anchor.ps1) instead of
+# trying every position of the bundle.
 function Add-AfterOnly {
-    param([string]$Text, [string]$Rx, [string]$New)
-    $m = [regex]::Matches($Text, $Rx)
+    param([string]$Text, [string]$Rx, [string]$New, [string]$Literal)
+    $m = if ($Literal) { Find-IdentifierAnchored $Text $Literal $Rx } else { [regex]::Matches($Text, $Rx) }
     if ($m.Count -ne 1) { return $null }
     Set-MatchText $Text $m[0] ($m[0].Value + $New)
 }
@@ -64,7 +66,7 @@ function Invoke-Patch {
     $js = Add-AfterOnly $js 'extraArgs:\{' (Read-Text (Join-Path $PSScriptRoot 'host/args.js')).Trim()
     if (-not $js) { Write-Miss 'CLI spawn extraArgs anchor not found exactly once'; return }
     $rxEnv = '([\w$]+)\.pathToClaudeCodeExecutable=[\w$]+,\1\.executableArgs=[\w$]+,\1\.env=\{[^{};]+(?=\})'
-    $js = Add-AfterOnly $js $rxEnv (Read-Text (Join-Path $PSScriptRoot 'host/env.js')).Trim()
+    $js = Add-AfterOnly $js $rxEnv (Read-Text (Join-Path $PSScriptRoot 'host/env.js')).Trim() '.pathToClaudeCodeExecutable='
     if (-not $js) { Write-Miss 'CLI spawn env anchor not found exactly once'; return }
     $js = Add-WebviewMessageHook $js (Join-Path $PSScriptRoot 'host/hook.js')
     if (-not $js) { Write-Miss 'webview message listener not found'; return }

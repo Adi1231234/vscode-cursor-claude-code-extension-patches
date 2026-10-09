@@ -14,7 +14,7 @@ function Add-StyleBlock {
     param($Ctx, [string]$CssPath, [string]$Guard, [string]$Label, $Tokens = @{})
     $css = Read-Text $Ctx.Css
     if ($css.Contains($Guard)) { Write-Skip "$Label already present"; return }
-    $x = Expand-CssClasses $Ctx (Expand-JsTokens (Read-Text $CssPath) $Tokens)
+    $x = Expand-CssClasses $Ctx (Expand-JsTokens (Read-Text $CssPath) $Tokens) -Stylesheet
     if ($x.Missing.Count) { Write-Miss "$($Label): no single app class for $($x.Missing -join ', ')"; return }
     Add-Text $Ctx.Css ("`r`n`r`n" + $x.Text)
     Write-Ok "$Label appended"
@@ -35,10 +35,12 @@ function Add-ScriptAfterMarker {
         Write-Miss "$Label does not open with <script> - something is concatenated before the fragment that opens it, and it would render as page text"
         return
     }
+    # Ordinal: .NET Framework's IndexOf(string) compares by culture, which is
+    # far slower over a 5 MB bundle and buys nothing for ASCII markers.
     $at = -1
-    foreach ($a in $Anchors) { $at = $js.IndexOf($a); if ($at -ge 0) { break } }
+    foreach ($a in $Anchors) { $at = $js.IndexOf($a, [StringComparison]::Ordinal); if ($at -ge 0) { break } }
     if ($at -lt 0) { Write-Miss "$Label anchor not found ($($Anchors -join ' / '))"; return }
-    $end = $js.IndexOf('</script>', $at) + '</script>'.Length
+    $end = $js.IndexOf('</script>', $at, [StringComparison]::Ordinal) + '</script>'.Length
     Write-Text $Ctx.Js ($js.Substring(0, $end) + "`n        " + $Script + $js.Substring($end))
     Write-Ok "$Label injected"
 }
@@ -85,12 +87,22 @@ function Add-WebviewMessageHook {
     # The match stays lazy, so it still binds to the *nearest* fromClient and cannot
     # reach into a neighbouring listener. The doc-preview surface has none within
     # 20k and is still correctly excluded.
+    #
+    # Found through the literal after the listener's name (lib/Anchor.ps1): a
+    # pass of this pattern over the whole bundle cost 1.2 s, twice per hook.
     $rx = '(([\w$]+)\.webview\.onDidReceiveMessage\(\(([\w$]+)\)=>\{)([\s\S]{0,2000}?([\w$]+)\?\.fromClient\(\3\))'
-    if ($Js -notmatch $rx) { return $null }
-    $hook = (Get-InjectedJs $HookPath ([ordered]@{
-                '__WV__' = '${2}'; '__MSG__' = '${3}'; '__COMMS__' = '${5}'
-            })).Trim()
-    [regex]::Replace($Js, $rx, ('${1}' + $hook + '${4}'))
+    $found = Find-IdentifierAnchored $Js '.webview.onDidReceiveMessage((' $rx
+    if (-not $found.Count) { return $null }
+    $hook = Read-Text $HookPath
+    # Last first, so the earlier matches' offsets still hold.
+    for ($k = $found.Count - 1; $k -ge 0; $k--) {
+        $g = $found[$k].Groups
+        $filled = (Expand-JsTokens $hook ([ordered]@{
+                    '__WV__' = $g[2].Value; '__MSG__' = $g[3].Value; '__COMMS__' = $g[5].Value
+                })).Trim()
+        $Js = Set-MatchText $Js $found[$k] ($g[1].Value + $filled + $g[4].Value)
+    }
+    $Js
 }
 
 # Substitute __TOKEN__ placeholders in an injected-JS string. Literal .Replace

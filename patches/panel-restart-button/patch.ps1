@@ -35,7 +35,10 @@ function Invoke-Patch {
     # - the definition; every call site carries a `this.` prefix and real arguments.
     $rxHtml = '(getHtmlForWebview\(([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+)\)\{)'
 
-    $nBtn = [regex]::Matches($wc, $rxBtn).Count
+    # Run only around the header's own literal (lib/Anchor.ps1): a pass over the
+    # whole bundle of a pattern that opens with an identifier cost 2.4 s.
+    $btn = Find-NearLiteral $wc 'ariaLabel:"Session history",iconSize:20,' $rxBtn -Before 200 -After 600
+    $nBtn = $btn.Count
     $nHtml = [regex]::Matches($xc, $rxHtml).Count
     if ($nBtn -ne 1) { Write-Miss "header button anchor not found ($nBtn matches)"; return }
     if ($nHtml -ne 1) { Write-Miss "getHtmlForWebview anchor not found ($nHtml matches)"; return }
@@ -57,7 +60,7 @@ function Invoke-Patch {
             '__LIST_ONLY__'   = '${7}'
         })
 
-    Write-Text $Ctx.WebJs ([regex]::Replace($wc, $rxBtn, $button))
+    Write-Text $Ctx.WebJs (Set-MatchText $wc $btn[0] $btn[0].Result($button))
     Write-Text $Ctx.Js ([regex]::Replace($hooked, $rxHtml, $reload))
     Write-Ok 'restart button in the header, reloading one panel'
 }

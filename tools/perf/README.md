@@ -14,8 +14,9 @@ node tools/perf/why.mjs --phase stream       # which code did the work
 ```
 
 Needs Chrome (`CHROME_PATH` to point elsewhere) and Windows PowerShell for
-`apply.ps1`. Nothing outside a temp folder is touched; the VSIX is cached in
-`CC_PERF_CACHE` (default `%TEMP%\cc-perf\cache`).
+`apply.ps1`. Nothing outside a temp folder is touched; the extension is cached
+in `CC_PERF_CACHE` (default `%TEMP%\cc-perf\cache`), unpacked and without the
+CLI binary (256 MB no panel loads).
 
 ## What runs
 
@@ -37,10 +38,32 @@ Needs Chrome (`CHROME_PATH` to point elsewhere) and Windows PowerShell for
   conversation), *idle* (3 s of nothing - polling shows up here), *scroll* (up
   and back, a step a frame), *stream* (a prompt typed and sent, then
   `host/turn.js` streams a working turn: thinking, 25 commands, a reply a few
-  words at a time - the frames are the ones the CLI sends, recorded in the lab).
+  words at a time - the frames are the ones the CLI sends, recorded in the lab,
+  a frame or two apart). Idle is measured in the first round only: its limits
+  are absolute caps, and 3 s of nothing is the same every round.
 - **Pristine and patched alternate**, a warm-up visit each first, then
-  `rounds` visits each; the report shows medians. One more visit each with
-  Blink's selector stats on.
+  `rounds` visits each; the report shows medians. The warm-ups are not
+  counted, so they are the visits that carry Blink's selector stats (which slow
+  a page down several times over).
+
+## Keeping a run short
+
+A run is about 70 s on a laptop (it was over 3 minutes) and the whole CI job
+should stay under 2 minutes. What it took, so it is not undone:
+
+- **The trace records what DevTools' Performance panel records** (`trace.mjs`):
+  `toplevel`, `blink` and `v8.execute` were three quarters of every trace -
+  every task of every process - and recording and handing them over was most
+  of a visit, slowing the page under test too. A task is the timeline's
+  `RunTask`; the counters came out identical and busy times within 1%.
+- **Waiting for the page is pushed, not polled** (`scenarios/settled.js`): every
+  DOM change re-arms one timer, so the page is not woken while measured and the
+  quiet window is exact (500 ms).
+- **The turn keeps the CLI's clock** (`host/turn.js`): each frame goes out at
+  its own time from the start, so a slow panel queues frames, as it does in
+  the editor, instead of stretching the turn.
+- **`apply.ps1` writes each bundle once** (`lib/Io.ps1`), and finds its anchors
+  without scanning the bundle from every position (`lib/Anchor.ps1`).
 
 ## The numbers
 
