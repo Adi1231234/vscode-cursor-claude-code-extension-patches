@@ -31,33 +31,48 @@ const opt = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1
 const budgets = readBudgets();
 const log = (s) => console.log(`[perf] ${s}`);
 
-const prepared = opt('--ext')
-  ? { ext: resolve(opt('--ext')), version: '(given)', missed: [] }
-  : await prepareExtension({ repo: opt('--repo') ? resolve(opt('--repo')) : REPO, log, skip: (opt('--skip') || '').split(',').filter(Boolean),
-    version: opt('--version') === 'latest' ? undefined : opt('--version') || budgets.version });
+/* Chrome starts while the extension is fetched and patched: neither waits on
+   the other, and a cold Chrome took 4.6 s on a CI runner. */
+const chromeStarting = launchChrome();
+chromeStarting.catch(() => {}); // a failed start is reported where it is awaited
+let prepared;
+try {
+  prepared = opt('--ext')
+    ? { ext: resolve(opt('--ext')), version: '(given)', missed: [] }
+    : await prepareExtension({ repo: opt('--repo') ? resolve(opt('--repo')) : REPO, log, skip: (opt('--skip') || '').split(',').filter(Boolean),
+      version: opt('--version') === 'latest' ? undefined : opt('--version') || budgets.version });
+} catch (e) {
+  await chromeStarting.then((c) => c.close(), () => {});
+  throw e;
+}
 log(`extension ${prepared.version} at ${prepared.ext}`);
 
 const data = panelData(budgets.turns);
 const rounds = Number(opt('--rounds') || budgets.rounds);
 const server = await startServer({ ext: prepared.ext, data });
-const chrome = await launchChrome();
+const chrome = await chromeStarting;
 const base = { port: chrome.port, origin: server.origin, minRows: budgets.minRows };
 const visits = { pristine: [], patched: [] };
+const secs = (t) => `${((Date.now() - t) / 1000).toFixed(1)} s`;
 let sel;
 try {
   /* The warm-up visits are not counted, so they are the ones that carry the
      selector stats (which slow a visit down several times over). */
-  log('warm-up visit of each variant, with selector stats (not timed)');
   const s = {};
-  for (const v of ['pristine', 'patched']) s[v] = (await visit({ ...base, variant: v, selectors: true, phases: ['mount'] })).mount;
+  for (const v of ['pristine', 'patched']) {
+    const t = Date.now();
+    s[v] = (await visit({ ...base, variant: v, selectors: true, phases: ['mount'] })).mount;
+    log(`warm-up ${v}, with selector stats (not counted): ${secs(t)} ${JSON.stringify(s[v].wall)}`);
+  }
   sel = checkSelectors(s.pristine.selectorStats, s.patched.selectorStats, s.patched.styleElements, budgets.selectors);
   for (let r = 1; r <= rounds; r++) {
     /* Idle is checked once per variant: its limits are absolute caps, and 3 s
        of nothing is the same 3 s every round. */
     const phases = r === 1 ? ['mount', 'idle', 'scroll', 'stream'] : ['mount', 'scroll', 'stream'];
     for (const v of r % 2 ? ['pristine', 'patched'] : ['patched', 'pristine']) {
+      const t = Date.now();
       visits[v].push(await visit({ ...base, variant: v, phases }));
-      log(`round ${r} ${v}: open ${visits[v].at(-1).mount.busyMs} ms, stream ${visits[v].at(-1).stream.busyMs} ms busy`);
+      log(`round ${r} ${v}: open ${visits[v].at(-1).mount.busyMs} ms, stream ${visits[v].at(-1).stream.busyMs} ms busy; ${secs(t)}`);
     }
   }
 } finally {

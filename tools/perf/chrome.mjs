@@ -3,7 +3,7 @@
    background page gets - the measured page must run every frame it would run
    on screen. CHROME_PATH overrides where it is looked for. */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, watch } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { connect } from '../cdp/client.mjs';
@@ -23,6 +23,29 @@ export function findChrome() {
   return hit;
 }
 
+/* The port Chrome writes into <profile>/DevToolsActivePort once it listens -
+   watched for, not polled. Every change in the folder is a reason to look:
+   Chrome writes the file under a temporary name and renames it, and Windows
+   reports only the temporary name. Not read off stderr: the chrome.exe that
+   starts can be a launcher handing off to another build, whose output never
+   reaches us. */
+function debuggingPort(profile, timeoutMs = 20000) {
+  const file = join(profile, 'DevToolsActivePort');
+  return new Promise((resolve, reject) => {
+    const read = () => {
+      let port;
+      try { port = Number(readFileSync(file, 'utf8').split('\n')[0]); } catch { return; }
+      if (!port) return;
+      watcher.close();
+      clearTimeout(timer);
+      resolve(port);
+    };
+    const watcher = watch(profile, read);
+    const timer = setTimeout(() => { watcher.close(); reject(new Error('Chrome did not open a debugging port')); }, timeoutMs);
+    read();
+  });
+}
+
 export async function launchChrome({ width = 520, height = 1000 } = {}) {
   const profile = mkdtempSync(join(tmpdir(), 'cc-perf-chrome-'));
   const proc = spawn(findChrome(), [
@@ -31,10 +54,8 @@ export async function launchChrome({ width = 520, height = 1000 } = {}) {
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
     '--disable-backgrounding-occluded-windows', `--window-size=${width},${height}`, 'about:blank',
   ], { stdio: 'ignore' });
-  const portFile = join(profile, 'DevToolsActivePort');
-  for (let i = 0; i < 100 && !existsSync(portFile); i++) await new Promise((r) => setTimeout(r, 100));
-  if (!existsSync(portFile)) { proc.kill(); throw new Error('Chrome did not open a debugging port'); }
-  const port = Number(readFileSync(portFile, 'utf8').split('\n')[0]);
+  let port;
+  try { port = await debuggingPort(profile); } catch (e) { proc.kill(); throw e; }
   return {
     port,
     /* Closed through CDP, not by killing the process we started: that one can
