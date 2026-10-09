@@ -7,26 +7,38 @@
    global, under & they are script-scoped, and a script block that only sees
    globals (a .GetNewClosure() closure) works in one and throws in the other. The
    lab and the perf check ran -File while every user ran &, so seven patches threw
-   for users only, and nothing that runs on a pull request could see it (#135). */
+   for users only, and nothing that runs on a pull request could see it (#135).
 
-import { spawnSync } from 'node:child_process';
+   Asynchronous on purpose: a run takes 5-16 s, and the perf check starts Chrome
+   alongside it and waits for Chrome's port file with a watcher. A synchronous
+   child blocked the event loop for the whole run, the watcher's event queued
+   behind it, and the port timeout fired first - "Chrome did not open a debugging
+   port" on CI, with Chrome up the whole time. */
+
+import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
 const quotePs = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
 /* `exit $LASTEXITCODE` carries apply.ps1's own exit code out of -Command; apply.ps1
    states it itself, 0 or 1 (#138). Write-Host output reaches only a child process's
-   stdout, which is why this is a child process at all. */
+   stdout, which is why this is a child process at all. Resolved on 'close', after
+   the output streams end, not on 'exit', which can come before the last lines. */
 export function runApply({ repo, extensionsDir, skip = [] }) {
     const cmd = `& ${quotePs(join(repo, 'apply.ps1'))}`
         + (extensionsDir ? ` -ExtensionsDir ${quotePs(extensionsDir)}` : '')
         + (skip.length ? ` -Skip ${skip.map(quotePs).join(',')}` : '')
         + '; exit $LASTEXITCODE';
     const shell = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
-    const r = spawnSync(shell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cmd],
-        { encoding: 'utf8', cwd: repo, windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
-    const out = `${r.stdout || ''}${r.stderr || ''}`;
-    return { out, code: r.status, ...readApply(out) };
+    return new Promise((resolve, reject) => {
+        const p = spawn(shell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', cmd],
+            { cwd: repo, windowsHide: true });
+        let out = '';
+        p.stdout.setEncoding('utf8').on('data', (d) => { out += d; });
+        p.stderr.setEncoding('utf8').on('data', (d) => { out += d; });
+        p.on('error', reject);
+        p.on('close', (code) => resolve({ out, code, ...readApply(out) }));
+    });
 }
 
 /* What a run said: its [ok] sites, every [miss] and [fail] line, and whether it

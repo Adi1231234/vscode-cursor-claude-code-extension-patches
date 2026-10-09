@@ -52,7 +52,7 @@ export async function prepareExtension({ repo, version, skip = [], log = () => {
      clean run passes: this is the check every pull request into master has to
      pass, so a patch that throws or no longer finds its anchor in the current
      extension stops the merge instead of reaching users. */
-  const run = runApply({ repo, extensionsDir: extensions, skip });
+  const run = await runApply({ repo, extensionsDir: extensions, skip });
   const missed = [...run.failures.map((l) => `[fail] ${l}`), ...run.misses.map((l) => `[miss] ${l}`)];
   if (run.code || missed.length || !run.finished) {
     throw new Error(`apply.ps1 did not patch ${v} cleanly (exit ${run.code}):\n${missed.join('\n')}\n${run.out.slice(-2000)}`);

@@ -19,13 +19,13 @@ const runApply = (extensions) => run({ repo: REPO, extensionsDir: extensions });
 const count = (out, tag) => (out.match(new RegExp(`\\[${tag}\\]`, 'g')) || []).length;
 
 /* Edit a patch, run, put it back - whatever happens in between. */
-function withBrokenPatch(rel, edit, body) {
+async function withBrokenPatch(rel, edit, body) {
     const file = join(REPO, 'patches', rel);
     const original = readFileSync(file, 'utf8');
     const broken = edit(original);
     if (broken === original) return { skipped: `could not break ${rel}` };
     writeFileSync(file, broken);
-    try { return body(); } finally { writeFileSync(file, original); }
+    try { return await body(); } finally { writeFileSync(file, original); }
 }
 
 /* What "idempotent" means here changed, and this is the check that says so.
@@ -39,12 +39,12 @@ function withBrokenPatch(rel, edit, body) {
    the original, and lands on the same bytes. Same patches in, same bundle out -
    which is the property that was actually wanted, and unlike the old one it does
    not stop an edited patch from arriving. */
-export function idempotency(check, lay) {
+export async function idempotency(check, lay) {
     /* the same way the checks below find it: the one claude-code dir in there */
     const bundle = join(lay.extensions,
         readdirSync(lay.extensions).find((d) => d.includes('claude-code')), 'extension.js');
     const before = readFileSync(bundle);
-    const r = runApply(lay.extensions);
+    const r = await runApply(lay.extensions);
     check('a second apply re-applies every patch', count(r.out, 'ok') >= 20, `${count(r.out, 'ok')} sites`);
     check('a second apply skips nothing', count(r.out, 'skip') === 0, `${count(r.out, 'skip')} skips`);
     check('a second apply lands on the same bytes', readFileSync(bundle).equals(before),
@@ -62,11 +62,11 @@ const withThrowingBanner = (body) => withBrokenPatch('worktree-banner/patch.ps1'
 /* A run that would leave the install with fewer working patches writes nothing
    (lib/Regression.ps1) - the run that took RTL off an install on 2026-10-09. Runs
    against the fully patched lab the idempotency check leaves behind. */
-export function keepsInstall(check, lay) {
+export async function keepsInstall(check, lay) {
     const dir = readdirSync(lay.extensions).find((d) => d.includes('claude-code'));
     const files = ['extension.js', 'webview/index.js', 'webview/index.css'].map((f) => join(lay.extensions, dir, f));
     const before = files.map((f) => readFileSync(f));
-    const r = withThrowingBanner(() => runApply(lay.extensions));
+    const r = await withThrowingBanner(() => runApply(lay.extensions));
     if (r.skipped) return check('a run that drops a patch can be simulated', false, r.skipped);
     check('a run that would drop a working patch writes nothing', files.every((f, i) => readFileSync(f).equals(before[i])));
     check('it names the patch it would have dropped', /this run would have removed: worktree-banner/.test(r.out));
@@ -82,7 +82,7 @@ export function keepsInstall(check, lay) {
    patched and read it as a failure. */
 export async function throwingPatch(check, lay) {
     await vsix.restore(lay);
-    const r = withThrowingBanner(() => runApply(lay.extensions));
+    const r = await withThrowingBanner(() => runApply(lay.extensions));
     if (r.skipped) return check('a throwing patch can be simulated', false, r.skipped);
     check('the failure is reported as [fail]', /\[fail\] worktree-banner threw/.test(r.out));
     check('the failure names its editor', /\/ worktree-banner : deliberate self-test failure/.test(r.out));
@@ -94,7 +94,7 @@ export async function throwingPatch(check, lay) {
 /* The project's core safety rule: a missing anchor leaves the file untouched. */
 export async function missingAnchor(check, lay) {
     await vsix.restore(lay);
-    const r = withBrokenPatch('cwd-drive-case/patch.ps1',
+    const r = await withBrokenPatch('cwd-drive-case/patch.ps1',
         (s) => s.replace("$rxSdk = '", "$rxSdk = 'NO_SUCH_ANCHOR_zzz"),
         () => runApply(lay.extensions));
     if (r.skipped) return check('a missing anchor can be simulated', false, r.skipped);

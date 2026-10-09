@@ -88,8 +88,8 @@ else {
 }
 
 head('apply.ps1 when things go wrong');
-idempotency(check, lay);
-keepsInstall(check, lay);
+await idempotency(check, lay);
+await keepsInstall(check, lay);
 await throwingPatch(check, lay);
 await missingAnchor(check, lay);
 console.log('   (that left the bundles half-patched on purpose - putting them back)');

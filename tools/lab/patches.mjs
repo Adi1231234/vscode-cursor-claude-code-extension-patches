@@ -19,18 +19,16 @@
 import { REPO } from './paths.mjs';
 import { runApply } from '../apply-run.mjs';
 
-export function applyPatches(lay, log) {
-    return new Promise((resolve, reject) => {
-        const r = runApply({ repo: REPO, extensionsDir: lay.extensions });
-        const stop = (why) => reject(new Error(`${why}\n${r.out.trim()}`));
-        if (r.failures.length) return stop(`apply.ps1: ${r.failures.length} patch(es) threw`);
-        if (r.code) return stop(`apply.ps1 exited ${r.code}`);
-        if (!r.ok) return stop('apply.ps1 patched nothing');
-        /* Reached the end, or died between two patches with [ok]s behind it. */
-        if (!r.finished) return stop('apply.ps1 stopped before the end - the install is only partly patched');
+export async function applyPatches(lay, log) {
+    const r = await runApply({ repo: REPO, extensionsDir: lay.extensions });
+    const stop = (why) => { throw new Error(`${why}\n${r.out.trim()}`); };
+    if (r.failures.length) stop(`apply.ps1: ${r.failures.length} patch(es) threw`);
+    if (r.code) stop(`apply.ps1 exited ${r.code}`);
+    if (!r.ok) stop('apply.ps1 patched nothing');
+    /* Reached the end, or died between two patches with [ok]s behind it. */
+    if (!r.finished) stop('apply.ps1 stopped before the end - the install is only partly patched');
 
-        log(`apply.ps1: ${r.ok} sites patched${r.misses.length ? `, ${r.misses.length} missed` : ''}`);
-        for (const m of r.misses) log(`  [miss] ${m}`);
-        resolve({ ok: r.ok, misses: r.misses });
-    });
+    log(`apply.ps1: ${r.ok} sites patched${r.misses.length ? `, ${r.misses.length} missed` : ''}`);
+    for (const m of r.misses) log(`  [miss] ${m}`);
+    return { ok: r.ok, misses: r.misses };
 }
