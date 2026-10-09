@@ -58,6 +58,7 @@ $order = @(
     'input-usage'
     'message-time'
     'message-cards'
+    'panel-background'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to

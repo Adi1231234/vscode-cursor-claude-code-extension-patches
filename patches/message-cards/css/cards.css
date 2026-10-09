@@ -53,14 +53,18 @@
   margin-top: calc(var(--cc-gap-turn) - 14px);
 }
 
-/* A command: one card, 12 inside on every side. Commands read left to right,
-   whatever the panel's direction. */
+/* A command: one card, 12 inside on every side, filled a step above the
+   panel. The fill is the app's own tint recipe (its pills are the foreground
+   at 10% over whatever is under them) at 6%: under the badge pill it holds,
+   under your message's menu surface, and lighter on a dark theme, darker on a
+   light one. Commands read left to right, whatever the panel's direction. */
 [data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) {
   direction: ltr;
   text-align: left;
   padding: var(--cc-gap-block);
   border: 1px solid var(--app-widget-border);
   border-radius: var(--corner-radius-large, 8px);
+  background: color-mix(in srgb, var(--app-primary-foreground) 6%, transparent);
 }
 
 /* Its header: icon, the tool's name, Claude's description, and room kept on

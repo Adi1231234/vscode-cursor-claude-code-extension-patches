@@ -5,7 +5,9 @@ the content it has today - your prompt, each of Claude's steps with its command
 and output, the reply - and only how each piece looks changes:
 
 - **A command is a card**: a 1px `--app-widget-border` frame, 12px inside on
-  every side. Its header is one line: the tool's icon, its name, **8px**, then
+  every side, filled a step above the panel (the foreground at 6% over it - the
+  recipe of the app's pills, which use 10% - so the badge still reads on it and
+  your message stays the strongest surface). Its header is one line: the tool's icon, its name, **8px**, then
   Claude's description (which wraps under itself, two lines at most), and a
   **badge** on the right: a check and how long it took (`12s`, `1m 26s`), a
   cross and `exit 1` / `failed`, or a spinner and `running`.
