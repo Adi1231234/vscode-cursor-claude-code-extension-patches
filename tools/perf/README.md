@@ -14,13 +14,15 @@ node tools/perf/why.mjs --phase stream       # which code did the work
 ```
 
 Needs Chrome (`CHROME_PATH` to point elsewhere) and Windows PowerShell for
-`apply.ps1`. Nothing outside a temp folder is touched; the VSIX is cached in
-`CC_PERF_CACHE` (default `%TEMP%\cc-perf\cache`).
+`apply.ps1`. Nothing outside a temp folder is touched. Of the published VSIX
+only the files a panel loads are fetched (`vsix.mjs`: ~4 MB of 120 MB, the
+rest is the CLI binary) and kept in `CC_PERF_CACHE` (default
+`%TEMP%\cc-perf\cache`).
 
 ## What runs
 
-- **The real panel, in a plain headless Chrome.** The published VSIX is
-  unpacked and patched by `apply.ps1 -ExtensionsDir`, which keeps every bundle's
+- **The real panel, in a plain headless Chrome.** The published extension is
+  patched by `apply.ps1 -ExtensionsDir`, which keeps every bundle's
   original beside it (`*.pristine`), so one folder serves both variants: the
   panel as published and as patched. `page.mjs` builds the page from the
   extension's own `getHtmlForWebview` template - the app's skeleton plus every
@@ -37,10 +39,41 @@ Needs Chrome (`CHROME_PATH` to point elsewhere) and Windows PowerShell for
   conversation), *idle* (3 s of nothing - polling shows up here), *scroll* (up
   and back, a step a frame), *stream* (a prompt typed and sent, then
   `host/turn.js` streams a working turn: thinking, 25 commands, a reply a few
-  words at a time - the frames are the ones the CLI sends, recorded in the lab).
-- **Pristine and patched alternate**, a warm-up visit each first, then
-  `rounds` visits each; the report shows medians. One more visit each with
-  Blink's selector stats on.
+  words at a time - the frames are the ones the CLI sends, recorded in the lab,
+  a frame or two apart). Idle is measured in the first round only: its limits
+  are absolute caps, and 3 s of nothing is the same every round.
+- **A warm-up first**, not counted: both variants opened side by side, then
+  one full style pass over each traced with Blink's selector stats on
+  (`scenarios/restyle-all.js`). Tracing the stats over the whole opening - 300
+  style passes - made a warm-up 3-4x slower, and the start of the second such
+  trace once took 10 s on a CI runner; the verdicts are the same either way
+  (the same 182 patch rules, measured).
+- **Then pristine and patched alternate**, `rounds` visits each; the report
+  shows medians.
+
+## Keeping a run short
+
+The whole CI job takes about 100 s, 74 of them measuring (it took 4 minutes),
+and should stay under 2. Each step times itself in the log (`[perf] ... 8.7 s`),
+so a slow one shows up there. What it took, so it is not undone:
+
+- **The trace records what DevTools' Performance panel records** (`trace.mjs`):
+  `toplevel`, `blink` and `v8.execute` were three quarters of every trace -
+  every task of every process - and recording and handing them over was most
+  of a visit, slowing the page under test too. A task is the timeline's
+  `RunTask`; the counters came out identical and busy times within 1%.
+- **Waiting for the page is pushed, not polled** (`scenarios/settled.js`): every
+  DOM change re-arms one timer, so the page is not woken while measured and the
+  quiet window is exact (500 ms).
+- **The turn keeps the CLI's clock** (`host/turn.js`): each frame goes out at
+  its own time from the start, so a slow panel queues frames, as it does in
+  the editor, instead of stretching the turn.
+- **`apply.ps1` writes each bundle once** (`lib/Io.ps1`), and finds its anchors
+  without scanning the bundle from every position (`lib/Anchor.ps1`).
+- **Only the panel's part of the VSIX is downloaded.** A zip lists its entries
+  at its end; `vsix.mjs` reads that list with one range request and fetches
+  only the entries it keeps (5 requests, ~2 s). The whole file took 25-70 s on
+  a CI runner, so there is no CI cache to keep any more.
 
 ## The numbers
 
@@ -57,9 +90,11 @@ tight limits; times swing with the machine and carry loose ones - they are
 there to catch a freeze, not a millisecond.
 
 Selectors: a rule only the patched stylesheet has, that gets past Blink's
-ancestor filter on more than `maxAttemptRatio` of the elements styled while the
-conversation opens, is one Blink could not file under a class, id or tag. It
-fails the run by name.
+ancestor filter on more than `maxAttemptRatio` of the elements of one full
+style pass over the open conversation, is one Blink could not file under a
+class, id or tag. It fails the run by name. (A `[class*="_"]` slipped into the
+page is tried on 140% of them, pseudo-elements included; the patches' own
+rules top out near 12%.)
 
 ## When it fails
 

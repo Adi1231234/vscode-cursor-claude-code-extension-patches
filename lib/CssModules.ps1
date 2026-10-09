@@ -15,7 +15,7 @@
 # A key that no module defines, or that more than one does and nothing narrows
 # it to one, is a miss: the caller writes nothing (fail-safe), never a guess.
 
-$script:CssPlaceholder = '\{\{([A-Za-z][A-Za-z0-9_]*)(?:@([A-Za-z][A-Za-z0-9_]*))?\}\}'
+$script:CssPlaceholder = '\{\{(?<key>[A-Za-z][A-Za-z0-9_]*)(?:@(?<within>[A-Za-z][A-Za-z0-9_]*))?\}\}'
 
 # Every module map in the bundle, as hashtables of key -> class. Read once per
 # install, in Find-ClaudeExtension.
@@ -44,16 +44,21 @@ function Resolve-CssClass {
 }
 
 # Fill in every {{key}} / {{key@within}}. Returns the text and the placeholders
-# that resolved to no class or to more than one.
+# that resolved to no class or to more than one. -Stylesheet leaves /* comments */
+# alone: a comment that explains the syntax is not a class, and one naming an
+# ambiguous key would otherwise refuse the whole block.
 function Expand-CssClasses {
-    param($Ctx, [string]$Text)
-    $missing = @()
+    param($Ctx, [string]$Text, [switch]$Stylesheet)
+    $rx = if ($Stylesheet) { '/\*[\s\S]*?\*/|' + $script:CssPlaceholder } else { $script:CssPlaceholder }
     $modules = $Ctx.CssModules
-    $out = [regex]::Replace($Text, $script:CssPlaceholder, {
+    $missing = New-Object System.Collections.Generic.List[string]
+    $out = [regex]::Replace($Text, $rx, {
         param($m)
-        $c = Resolve-CssClass $modules $m.Groups[1].Value $m.Groups[2].Value
-        if ($c) { $c } else { $m.Value }   # left in place, reported below
+        if (-not $m.Groups['key'].Success) { return $m.Value }   # a comment
+        $c = Resolve-CssClass $modules $m.Groups['key'].Value $m.Groups['within'].Value
+        if ($c) { return $c }
+        $missing.Add($m.Value)
+        $m.Value
     }.GetNewClosure())
-    foreach ($m in [regex]::Matches($out, $script:CssPlaceholder)) { $missing += $m.Value }
     return @{ Text = $out; Missing = @($missing | Sort-Object -Unique) }
 }

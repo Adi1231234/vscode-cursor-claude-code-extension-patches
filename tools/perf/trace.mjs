@@ -11,11 +11,18 @@
                              stack); inline = from a <script> in the page, which
                              is where the patches' scripts live
      selectors               with { selectors: true }: Blink's per-selector
-                             stats (attempts, matches, time), summed */
+                             stats (attempts, matches, time), summed
+
+   Only the categories DevTools' own Performance panel reads: a task is its
+   RunTask, style is its Recalculate Style. `toplevel`, `blink` and
+   `v8.execute` were three quarters of every trace - every task of every
+   process, and Blink's inner steps - and the time spent recording and
+   handing them over was most of a visit; no number above needs them (measured:
+   the counters came out identical, busyMs within 1%). */
 import { connect } from '../cdp/client.mjs';
 
 const BASE = ['devtools.timeline', 'disabled-by-default-devtools.timeline',
-  'disabled-by-default-devtools.timeline.stack', 'toplevel', 'v8.execute', 'blink', '__metadata'];
+  'disabled-by-default-devtools.timeline.stack', '__metadata'];
 
 export async function startTrace(browserWs, { selectors = false, extra = [] } = {}) {
   const c = await connect(browserWs);
@@ -23,11 +30,19 @@ export async function startTrace(browserWs, { selectors = false, extra = [] } = 
   let done;
   const finished = new Promise((r) => (done = r));
   c.on('Tracing.dataCollected', (p) => { for (const e of p.value) events.push(e); });
-  c.on('Tracing.tracingComplete', () => done());
+  /* A full buffer drops events and says so only here - two pages' selector
+     stats in one trace once filled it and lost half of one page, silently. */
+  c.on('Tracing.tracingComplete', (p) => done(p.dataLossOccurred));
   const cats = [...BASE, ...(selectors ? ['disabled-by-default-blink.debug'] : []), ...extra];
   await c.send('Tracing.start', { transferMode: 'ReportEvents',
     traceConfig: { recordMode: 'recordAsMuchAsPossible', includedCategories: cats, excludedCategories: ['*'] } });
-  return async () => { await c.send('Tracing.end'); await finished; c.close(); return events; };
+  return async () => {
+    await c.send('Tracing.end');
+    const lost = await finished;
+    c.close();
+    if (lost) throw new Error('the trace buffer filled up and dropped events - the numbers would be wrong');
+    return events;
+  };
 }
 
 const KIND = [
@@ -70,7 +85,7 @@ export function summarize(events, frameId, knownPid) {
   let end = -1;
   const stack = [];
   for (const e of mine) {
-    if (e.cat.includes('toplevel')) {
+    if (e.name === 'RunTask') {
       const s = Math.max(e.ts, end), f = e.ts + e.dur;
       if (f > s) { out.busyMs += (f - s) / 1000; end = f; }
       out.longestTaskMs = Math.max(out.longestTaskMs, e.dur / 1000);

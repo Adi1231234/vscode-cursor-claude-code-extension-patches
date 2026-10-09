@@ -34,10 +34,10 @@
   function command(add, sid, wait) {
     var msg = 'msg_perf_' + (++n), tool = 'toolu_perf_' + (++n);
     var cmd = { command: 'npm test -- --grep "case ' + n + '"', description: 'Run test case ' + n };
-    add(60, ev({ type: 'message_start', message: { model: MODEL, id: msg, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
+    add(16, ev({ type: 'message_start', message: { model: MODEL, id: msg, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
     add(5, ev({ type: 'content_block_start', index: 0, content_block: { type: 'tool_use', id: tool, name: 'Bash', input: {} } }, sid));
     add(5, ev({ type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: JSON.stringify(cmd) } }, sid));
-    add(20, assistant(msg, { type: 'tool_use', id: tool, name: 'Bash', input: cmd, caller: { type: 'direct' } }, sid));
+    add(16, assistant(msg, { type: 'tool_use', id: tool, name: 'Bash', input: cmd, caller: { type: 'direct' } }, sid));
     add(5, ev({ type: 'content_block_stop', index: 0 }, sid));
     add(5, ev({ type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: {} }, sid));
     add(1, ev({ type: 'message_stop' }, sid));
@@ -56,9 +56,9 @@
       mcp_servers: [], model: MODEL, permissionMode: 'default', slash_commands: [], apiKeySource: 'none',
       output_style: 'default', agents: [], skills: [], plugins: [], capabilities: ['msg_lifecycle_v1'], uuid: uid() });
     add(20, Object.assign({}, prompt, { session_id: sid, isReplay: true, timestamp: new Date().toISOString() }));
-    add(200, ev({ type: 'message_start', message: { model: MODEL, id: m1, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
+    add(50, ev({ type: 'message_start', message: { model: MODEL, id: m1, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
     add(10, ev({ type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '', signature: '' } }, sid));
-    for (var i = 0; i < 6; i++) add(80, ev({ type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: '', estimated_tokens: 50 * (i + 1) } }, sid));
+    for (var i = 0; i < 6; i++) add(16, ev({ type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: '', estimated_tokens: 50 * (i + 1) } }, sid));
     add(20, ev({ type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'sig' } }, sid));
     add(5, assistant(m1, { type: 'thinking', thinking: '', signature: 'sig' }, sid));
     add(5, ev({ type: 'content_block_stop', index: 0 }, sid));
@@ -68,15 +68,15 @@
     add(5, ev({ type: 'content_block_stop', index: 1 }, sid));
     add(5, ev({ type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: {} }, sid));
     add(1, ev({ type: 'message_stop' }, sid));
-    add(1200, { type: 'user', message: { role: 'user', content: [{ tool_use_id: tool, type: 'tool_result', content: OUT, is_error: false }] },
+    add(400, { type: 'user', message: { role: 'user', content: [{ tool_use_id: tool, type: 'tool_result', content: OUT, is_error: false }] },
       parent_tool_use_id: null, session_id: sid, uuid: uid(), timestamp: new Date().toISOString(),
       tool_use_result: { stdout: OUT, stderr: '', interrupted: false, isImage: false } });
-    for (var c = 0; c < 24; c++) command(add, sid, 80);
-    add(300, ev({ type: 'message_start', message: { model: MODEL, id: m2, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
+    for (var c = 0; c < 24; c++) command(add, sid, 32);
+    add(50, ev({ type: 'message_start', message: { model: MODEL, id: m2, type: 'message', role: 'assistant', content: [], usage: {} } }, sid));
     add(10, ev({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } }, sid));
     var words = REPLY.split(' ');
     for (var w = 0; w < words.length; w += 3) {
-      add(25, ev({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: words.slice(w, w + 3).join(' ') + ' ' } }, sid));
+      add(16, ev({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: words.slice(w, w + 3).join(' ') + ' ' } }, sid));
     }
     add(10, assistant(m2, { type: 'text', text: REPLY }, sid));
     add(5, ev({ type: 'content_block_stop', index: 0 }, sid));
@@ -87,16 +87,19 @@
     return f;
   }
 
+  /* Every frame at its own time from the start, the way the CLI sends them: a
+     busy panel does not slow the CLI down, its frames wait in the panel's
+     queue. (Each one timed from the last one's delivery made the turn as long
+     as the panel was slow, and the run with it.) */
   window.__perfTurn = function (channelId, sid, prompt, deliver) {
-    var list = frames(sid, prompt), i = 0;
+    var list = frames(sid, prompt), at = 0;
     window.__perfTurnDone = 0;
-    (function next() {
-      if (i >= list.length) { window.__perfTurnDone = performance.now(); return; }
-      var fr = list[i++];
+    list.forEach(function (fr, i) {
+      at += fr[0];
       setTimeout(function () {
         deliver({ type: 'io_message', channelId: channelId, message: fr[1], done: false });
-        next();
-      }, fr[0]);
-    })();
+        if (i === list.length - 1) window.__perfTurnDone = performance.now();
+      }, at);
+    });
   };
 })();

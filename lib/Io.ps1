@@ -29,17 +29,60 @@ function Invoke-FileIo {
     }
 }
 
+# An install's three bundles are 4-5 MB each, and nearly every patch reads one
+# and writes it back: about 50 reads and 30 writes per install. Each write is
+# scanned by the anti-virus, and the next open of that file waits for the scan -
+# measured on 2.1.294, 100-560 ms a time, 3.6 of apply.ps1's 6 s. So apply.ps1
+# holds an install's bundles in memory while its patches run (Open-TextBatch)
+# and writes each one once, at the end (Save-TextBatch). On a held path the
+# three helpers below work on that copy; on any other they go to disk. A run
+# that stops half way leaves the bundles as they were, not half-patched.
+$script:Held = @{}
+
+function Get-HeldKey([string]$Path) {
+    $key = [System.IO.Path]::GetFullPath($Path)
+    if ($script:Held.ContainsKey($key)) { $key }
+}
+
+function Open-TextBatch {
+    param([string[]]$Paths)
+    foreach ($p in $Paths) {
+        if (-not $p -or -not (Test-Path $p)) { continue }
+        $key = [System.IO.Path]::GetFullPath($p)
+        $script:Held[$key] = @{ Text = (Invoke-FileIo { [System.IO.File]::ReadAllText($key) }); Changed = $false }
+    }
+}
+
+# Writes every held file a patch changed and lets go of them all. Returns what
+# could not be written; one failure does not keep the others from being tried.
+function Save-TextBatch {
+    $failed = @()
+    foreach ($key in @($script:Held.Keys)) {
+        $h = $script:Held[$key]
+        $script:Held.Remove($key)
+        if (-not $h.Changed) { continue }
+        try { Write-Text $key $h.Text } catch { $failed += "$key : $($_.Exception.Message)" }
+    }
+    $failed
+}
+
 function Read-Text {
     param([Parameter(Mandatory)][string]$Path)
+    $held = Get-HeldKey $Path
+    if ($held) { return $script:Held[$held].Text }
     Invoke-FileIo { [System.IO.File]::ReadAllText($Path) }
 }
 
 function Write-Text {
     param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Text)
+    $held = Get-HeldKey $Path
+    if ($held) { $script:Held[$held] = @{ Text = $Text; Changed = $true }; return }
     Invoke-FileIo { [System.IO.File]::WriteAllText($Path, $Text, $script:Utf8NoBom) }
 }
 
 function Add-Text {
     param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Text)
+    $held = Get-HeldKey $Path
+    if ($held) { $script:Held[$held] = @{ Text = $script:Held[$held].Text + $Text; Changed = $true }; return }
     Invoke-FileIo { [System.IO.File]::AppendAllText($Path, $Text, $script:Utf8NoBom) }
 }
