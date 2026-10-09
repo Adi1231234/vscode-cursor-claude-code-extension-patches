@@ -14,14 +14,15 @@ node tools/perf/why.mjs --phase stream       # which code did the work
 ```
 
 Needs Chrome (`CHROME_PATH` to point elsewhere) and Windows PowerShell for
-`apply.ps1`. Nothing outside a temp folder is touched; the extension is cached
-in `CC_PERF_CACHE` (default `%TEMP%\cc-perf\cache`), unpacked and without the
-CLI binary (256 MB no panel loads).
+`apply.ps1`. Nothing outside a temp folder is touched. Of the published VSIX
+only the files a panel loads are fetched (`vsix.mjs`: ~4 MB of 120 MB, the
+rest is the CLI binary) and kept in `CC_PERF_CACHE` (default
+`%TEMP%\cc-perf\cache`).
 
 ## What runs
 
-- **The real panel, in a plain headless Chrome.** The published VSIX is
-  unpacked and patched by `apply.ps1 -ExtensionsDir`, which keeps every bundle's
+- **The real panel, in a plain headless Chrome.** The published extension is
+  patched by `apply.ps1 -ExtensionsDir`, which keeps every bundle's
   original beside it (`*.pristine`), so one folder serves both variants: the
   panel as published and as patched. `page.mjs` builds the page from the
   extension's own `getHtmlForWebview` template - the app's skeleton plus every
@@ -64,6 +65,10 @@ should stay under 2 minutes. What it took, so it is not undone:
   the editor, instead of stretching the turn.
 - **`apply.ps1` writes each bundle once** (`lib/Io.ps1`), and finds its anchors
   without scanning the bundle from every position (`lib/Anchor.ps1`).
+- **Only the panel's part of the VSIX is downloaded.** A zip lists its entries
+  at its end; `vsix.mjs` reads that list with one range request and fetches
+  only the entries it keeps (5 requests, ~2 s). The whole file took 25-70 s on
+  a CI runner, so there is no CI cache to keep any more.
 
 ## The numbers
 

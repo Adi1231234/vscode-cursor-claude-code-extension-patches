@@ -4,19 +4,19 @@
    lib/Pristine.ps1), so that one folder serves both variants. Nothing outside
    the folder is touched.
 
-   Only what a panel needs is kept: the VSIX also carries the CLI itself
+   Only what a panel needs is fetched: the VSIX also carries the CLI itself
    (resources/native-binary, 256 MB unpacked of its 120 MB), which no panel
-   loads and which was most of the time spent unpacking. The slim copy is
-   cached per version (CC_PERF_CACHE, default <tmp>/cc-perf/cache), so a CI
-   cache restores ~11 MB instead of the VSIX. */
+   loads - vsix.mjs reads ~4 MB of it instead of downloading it all. The slim
+   copy is cached per version (CC_PERF_CACHE, default <tmp>/cc-perf/cache). */
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fetchExtension } from './vsix.mjs';
 
 const API = 'https://open-vsx.org/api/Anthropic/claude-code/win32-x64';
 const vsixUrl = (v) => `${API}/${v}/file/Anthropic.claude-code-${v}@win32-x64.vsix`;
-const NOT_FOR_A_PANEL = ['extension/resources/native-binary', 'extension/resources/audio-capture'];
+const NOT_FOR_A_PANEL = ['resources/native-binary', 'resources/audio-capture'];
 
 export async function latestVersion() {
   const r = await fetch(API);
@@ -24,32 +24,20 @@ export async function latestVersion() {
   return (await r.json()).version;
 }
 
-/* A VSIX is a zip with the extension under extension/. Windows' own tar
-   (bsdtar, in System32) reads zips - named by path, because a GNU tar that
-   Git puts on PATH does not; elsewhere unzip does. */
-function unpack(vsix, into) {
-  const tmp = mkdtempSync(join(tmpdir(), 'cc-perf-vsix-'));
-  const tar = join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe');
-  if (process.platform === 'win32') execFileSync(tar, ['-xf', vsix, '-C', tmp, ...NOT_FOR_A_PANEL.flatMap((p) => ['--exclude', p])]);
-  else execFileSync('unzip', ['-q', vsix, '-d', tmp, '-x', ...NOT_FOR_A_PANEL.map((p) => `${p}/*`)]);
-  renameSync(join(tmp, 'extension'), into);
-  rmSync(tmp, { recursive: true, force: true });
-}
-
-/* The slim, unpatched extension of a version, from the cache or OpenVSX. */
+/* The slim, unpatched extension of a version, from the cache or OpenVSX.
+   Fetched into a sibling folder and renamed into place, so a run cut short
+   never leaves a half copy that looks complete. */
 async function slimExtension(version, log) {
   const cache = process.env.CC_PERF_CACHE || join(tmpdir(), 'cc-perf', 'cache');
   const slim = join(cache, `claude-code-${version}`);
   if (existsSync(join(slim, 'extension.js'))) return slim;
-  mkdirSync(cache, { recursive: true });
-  log(`downloading ${version} from OpenVSX`);
-  const r = await fetch(vsixUrl(version));
-  if (!r.ok) throw new Error(`OpenVSX said ${r.status} for ${version}`);
-  const vsix = join(cache, `claude-code-${version}.vsix.part`);
-  writeFileSync(vsix, Buffer.from(await r.arrayBuffer()));
-  unpack(vsix, `${slim}.part`);
-  rmSync(vsix, { force: true });
-  renameSync(`${slim}.part`, slim);
+  const part = `${slim}.part`;
+  rmSync(part, { recursive: true, force: true });
+  mkdirSync(part, { recursive: true });
+  const t = Date.now();
+  const bytes = await fetchExtension(vsixUrl(version), part, NOT_FOR_A_PANEL);
+  log(`fetched ${version} from OpenVSX: ${(bytes / 1e6).toFixed(1)} MB in ${Date.now() - t} ms`);
+  renameSync(part, slim);
   return slim;
 }
 
