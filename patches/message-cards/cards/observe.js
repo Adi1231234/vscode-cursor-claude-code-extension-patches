@@ -22,9 +22,10 @@
     }
   }
 
-  /* Every read first - the store, and the one layout the clamps need - then
-     every write, so the panel is laid out once per pass however many rows
-     changed. */
+  /* Every read first - the store, and the one layout the clamps need (the app
+     has usually laid the frame out already, scrolling to the bottom) - then
+     every write, so a pass costs the panel at most one more layout however
+     many rows changed. */
   function pass() {
     pending = false;
     var rows = (all ? Array.from(document.querySelectorAll(ROW)) : Array.from(dirty))

@@ -9,7 +9,7 @@
 
 /* One spacing scale, a 4px base whose first four steps are the app's own
    --app-spacing-*, each gap named by what it separates. */
-.__MESSAGES_CONTAINER__ {
+.{{messagesContainer}} {
   --cc-gap-tight: var(--app-spacing-small, 4px);
   --cc-gap-inline: var(--app-spacing-medium, 8px);
   --cc-gap-block: var(--app-spacing-large, 12px);
@@ -21,11 +21,11 @@
 
 /* No rail and no dots. A row's status is told by its card's badge, as an
    icon and a word (WCAG 1.4.1), so the 30px gutter they lived in goes too. */
-[data-testid="assistant-message"].__TIMELINE_MESSAGE__ {
+[data-testid="assistant-message"].{{timelineMessage}} {
   padding: 0;
 }
-[data-testid="assistant-message"].__TIMELINE_MESSAGE__::before,
-[data-testid="assistant-message"].__TIMELINE_MESSAGE__::after {
+[data-testid="assistant-message"].{{timelineMessage}}::before,
+[data-testid="assistant-message"].{{timelineMessage}}::after {
   content: none;
 }
 
@@ -38,24 +38,24 @@
 [data-transcript-message] + [data-testid="assistant-message"] {
   margin-top: var(--cc-gap-reply);
 }
-.__USER_MESSAGE_CONTAINER__[data-transcript-message] + [data-testid="assistant-message"] {
+.{{userMessageContainer}}[data-transcript-message] + [data-testid="assistant-message"] {
   margin-top: var(--cc-gap-tight);
 }
-[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) + [data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
+[data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) + [data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) {
   margin-top: var(--cc-gap-block);
 }
-[data-testid="assistant-message"][aria-label="Claude, thinking"] + [data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
+[data-testid="assistant-message"][aria-label="Claude, thinking"] + [data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) {
   margin-top: var(--cc-gap-inline);
 }
 
 /* Request to request: 32, the sticky header's own 14px top padding included. */
-.__TURN__ + .__TURN__ {
+.{{turn}}:not(:nth-child(1 of .{{turn}})) {
   margin-top: calc(var(--cc-gap-turn) - 14px);
 }
 
 /* A command: one card, 12 inside on every side. Commands read left to right,
    whatever the panel's direction. */
-[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) {
+[data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) {
   direction: ltr;
   text-align: left;
   padding: var(--cc-gap-block);
@@ -66,16 +66,16 @@
 /* Its header: icon, the tool's name, Claude's description, and room kept on
    the right for the badge (badge.js fills it), so the title never re-wraps
    when the badge arrives. */
-[data-testid="assistant-message"] .__TOOL_SUMMARY__ {
+[data-testid="assistant-message"] .{{toolSummary}} {
   padding-right: calc(var(--cc-badge-w) + var(--cc-gap-inline));
   line-height: 20px;
 }
-[data-testid="assistant-message"] .__TOOL_NAME_TEXT__ {
+[data-testid="assistant-message"] .{{toolNameText}} {
   margin-right: var(--cc-gap-inline);
   font-weight: 600;
   color: var(--app-list-active-foreground, var(--app-primary-foreground));
 }
-[data-testid="assistant-message"] .__TOOL_NAME_TEXT__::before {
+[data-testid="assistant-message"] .{{toolNameText}}::before {
   content: "";
   display: inline-block;
   width: 14px;
@@ -89,11 +89,11 @@
 
 /* A plain description (a command's) hangs beside the name, 8 from it, and
    wraps under itself rather than under the name; still two lines at most. */
-[data-testid="assistant-message"] .__TOOL_SUMMARY__ > span:has(> .__TOOL_NAME_TEXT_SECONDARY_PLAINTEXT__) {
+[data-testid="assistant-message"] .{{toolSummary}} > span:has(> .{{toolNameTextSecondaryPlaintext}}) {
   display: flex;
   align-items: baseline;
 }
-[data-testid="assistant-message"] .__TOOL_NAME_TEXT_SECONDARY_PLAINTEXT__ {
+[data-testid="assistant-message"] .{{toolNameTextSecondaryPlaintext}} {
   flex: 1;
   min-width: 0;
   display: -webkit-box;
@@ -105,7 +105,7 @@
 /* The card's last row is the stamp message-time put under it: the time on
    the right, 4 under the terminal block. "Show all" (more.js) shares the row
    on the left. */
-[data-testid="assistant-message"]:is(.__DOT_SUCCESS__, .__DOT_FAILURE__, .__DOT_PROGRESS__) > [data-message-stamp] {
+[data-testid="assistant-message"]:is(.{{dotSuccess}}, .{{dotFailure}}, .{{dotProgress}}) > [data-message-stamp] {
   justify-content: flex-end;
   margin: var(--cc-gap-tight) 0 0;
 }
@@ -115,11 +115,11 @@
    end, where "Show all" sits on other cards, instead of a row of its own
    over an empty one. Absolute in the card's padding box, so no height moves;
    the 4 the summary keeps below it make the header-to-line gap 8. */
-[data-testid="assistant-message"] .__ROOT__:has(> .__TOOL_SUMMARY__ + .__SECONDARY_LINE__:last-child) {
+[data-testid="assistant-message"] .{{root@toolSummary}}:has(> .{{toolSummary}} + .{{secondaryLine}}:last-child) {
   position: static;   /* so the line is placed in the card, not in the tool's own box */
   padding-bottom: var(--cc-gap-tight);
 }
-[data-testid="assistant-message"] .__TOOL_SUMMARY__ + .__SECONDARY_LINE__:last-child {
+[data-testid="assistant-message"] .{{toolSummary}} + .{{secondaryLine}}:last-child {
   position: absolute;
   left: var(--cc-gap-block);
   bottom: var(--cc-gap-block);

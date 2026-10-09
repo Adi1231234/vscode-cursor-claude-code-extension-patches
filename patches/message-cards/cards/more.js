@@ -29,9 +29,12 @@
       : "Show all" + (n > 4 ? " · " + n + " lines" : ""));
   }
 
+  /* The button is made only for a row whose clamp really cuts something:
+     every node put into a row makes Blink re-check the app's :has() rules on
+     it, and most commands print a few lines that fit. */
   function ensureMore(row, list) {
-    if (!list.length) return;
     var b = row.querySelector(":scope > .__ccMore");
+    if (!b && !list.some(function (x) { return x.cut; })) return;
     if (!b) {
       b = document.createElement("button");
       b.type = "button";

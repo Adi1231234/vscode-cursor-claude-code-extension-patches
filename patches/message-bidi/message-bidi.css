@@ -19,10 +19,25 @@
    bidi/*.js decides the direction once per message and declares it as `dir` on the
    message root; the rule below is what lets that declaration reach the blocks
    inside it. It has to out-specify the plaintext rule above (0,1,1), hence the
-   extra attribute selectors (0,3,1). Scoped to a root the script has actually
-   decided on - with the script absent, nothing here matches and the app's own
-   behaviour is untouched. */
-[class*="messagesContainer_"] [class*="root_"][dir] :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th) {
+   extra class and attribute selectors (0,3,1). Scoped to a root the script has
+   actually decided on - with the script absent, nothing here matches and the
+   app's own behaviour is untouched.
+
+   The app's classes are named exactly ({{key}}, lib/CssModules.ps1) and each
+   tag is its own selector rather than one :is(): Blink files a rule under the
+   class or tag its last part names, and neither a [class*=...] nor an :is() of
+   tags names one - such a rule is tried on every element of every style pass. */
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] p,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] li,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h1,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h2,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h3,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h4,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h5,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] h6,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] blockquote,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] td,
+.{{messagesContainer}} .{{root@codeBlockWrapper}}[dir] th {
   unicode-bidi: isolate;
 }
 
@@ -32,6 +47,6 @@
    (which sits on the opposite side), where the markdown root's overflow:hidden
    clips it away. That one item draws its marker inline instead - the class is
    set by bidi/observe.js. */
-[class*="messagesContainer_"] [class*="root_"] li.__ccBidiOdd {
+.{{messagesContainer}} .{{root@codeBlockWrapper}} li.__ccBidiOdd {
   list-style-position: inside;
 }

@@ -15,7 +15,13 @@
  *   - no setInterval in webview code - periodic work is __ccClock.every, which
  *     runs only while something is subscribed and the panel is visible;
  *   - no MutationObserver outside lib/js/ccWatch.js - subscribe with
- *     __ccWatch.on instead.
+ *     __ccWatch.on instead;
+ *   - no class matched by substring in a stylesheet ([class*="x_"],
+ *     [class^=...], [class$=...]) - name it exactly, {{key}}, filled in from
+ *     the bundle's CSS-module maps (lib/CssModules.ps1). Blink cannot file such
+ *     a rule under a class: it is tried on every element of every style pass,
+ *     and any class change anywhere re-checks every element that has a class.
+ *     tools/perf measures the rest (README there).
  *
  * Webview code is every .js under lib/js and patches/, except host/ and tests/
  * folders. Host code runs in the extension host, not on the panels' thread.
@@ -29,17 +35,31 @@ import { fileURLToPath } from "node:url";
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OBSERVER_HOME = "lib/js/ccWatch.js";
 
-function walk(dir, out = []) {
+function walk(dir, out = [], ext = ".js") {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) {
       if (e.name === "host" || e.name === "tests" || e.name === "node_modules") continue;
-      walk(p, out);
-    } else if (e.name.endsWith(".js")) {
+      walk(p, out, ext);
+    } else if (e.name.endsWith(ext)) {
       out.push(p);
     }
   }
   return out;
+}
+
+/* Stylesheets: comments out, then any [class*= / ^= / $= is a violation. */
+function cssViolations() {
+  const files = [...walk(path.join(REPO, "lib", "css"), [], ".css"), ...walk(path.join(REPO, "patches"), [], ".css")];
+  const bad = [];
+  for (const f of files) {
+    const rel = path.relative(REPO, f).split(path.sep).join("/");
+    const src = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, " "));
+    src.split("\n").forEach((l, i) => {
+      if (/\[class[*^$]=/.test(l)) bad.push(`${rel}:${i + 1} class matched by substring - name it exactly, {{key}} (lib/CssModules.ps1)`);
+    });
+  }
+  return { files: files.length, bad };
 }
 
 /* Code only: a rule stated in a comment ("it used to be a setInterval") is not
@@ -65,7 +85,8 @@ export function webviewRuntimeViolations() {
       }
     });
   }
-  return { files: files.length, bad };
+  const css = cssViolations();
+  return { files: files.length + css.files, bad: [...bad, ...css.bad] };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
@@ -75,5 +96,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     for (const b of bad) console.log(`    ${b}`);
     process.exit(1);
   }
-  console.log(`  webview runtime: ok (${files} files, no setInterval, one MutationObserver)`);
+  console.log(`  webview runtime: ok (${files} files, no setInterval, one MutationObserver, no substring class selector)`);
 }
