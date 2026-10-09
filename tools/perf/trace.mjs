@@ -30,11 +30,19 @@ export async function startTrace(browserWs, { selectors = false, extra = [] } = 
   let done;
   const finished = new Promise((r) => (done = r));
   c.on('Tracing.dataCollected', (p) => { for (const e of p.value) events.push(e); });
-  c.on('Tracing.tracingComplete', () => done());
+  /* A full buffer drops events and says so only here - two pages' selector
+     stats in one trace once filled it and lost half of one page, silently. */
+  c.on('Tracing.tracingComplete', (p) => done(p.dataLossOccurred));
   const cats = [...BASE, ...(selectors ? ['disabled-by-default-blink.debug'] : []), ...extra];
   await c.send('Tracing.start', { transferMode: 'ReportEvents',
     traceConfig: { recordMode: 'recordAsMuchAsPossible', includedCategories: cats, excludedCategories: ['*'] } });
-  return async () => { await c.send('Tracing.end'); await finished; c.close(); return events; };
+  return async () => {
+    await c.send('Tracing.end');
+    const lost = await finished;
+    c.close();
+    if (lost) throw new Error('the trace buffer filled up and dropped events - the numbers would be wrong');
+    return events;
+  };
 }
 
 const KIND = [

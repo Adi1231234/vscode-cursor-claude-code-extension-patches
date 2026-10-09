@@ -6,10 +6,12 @@
    idle). Medians over the rounds, so one noisy visit cannot fail a push.
 
    Selectors: a rule only the patched stylesheet has that got past Blink's
-   ancestor filter on more than maxAttemptRatio of the elements recalculated
-   while the conversation opened is one Blink could not file under a class, id
-   or tag, nor turn away by an ancestor it requires - it runs on every element
-   of every style pass (CLAUDE.md: "CSS the browser can index"). */
+   ancestor filter on more than maxAttemptRatio of the elements of one full
+   style pass over the open conversation (run.mjs, warmUp) is one Blink could
+   not file under a class, id or tag, nor turn away by an ancestor it requires
+   - it runs on every element of every style pass (CLAUDE.md: "CSS the browser
+   can index"). A [class*="_"] slipped into the patched page was tried on 140%
+   of them (pseudo-elements count too); the patches' own top out near 12%. */
 
 const median = (xs) => {
   const s = xs.filter((x) => typeof x === 'number').sort((a, b) => a - b);
@@ -63,7 +65,7 @@ export function report({ version, missed, phases, selectors }) {
   for (const r of phases) {
     lines.push(`${r.phase.padEnd(7)} ${r.metric.padEnd(14)} ${pad(r.pristine ?? '-', 9)} ${pad(r.patched, 9)} ${pad(r.limit, 7)}  ${r.ok ? 'ok' : 'OVER'}`);
   }
-  lines.push('', `patch selectors: ${selectors.oursMs} ms of ${selectors.allMs} ms selector matching while opening the conversation`);
+  lines.push('', `patch selectors: ${selectors.oursMs} ms of ${selectors.allMs} ms selector matching in one full style pass over the conversation`);
   for (const r of selectors.rows.slice(0, 8)) lines.push(`  ${pad(r.ms, 6)} ms  tried on ${pad(Math.round(r.ratio * 100), 3)}%  ${r.selector.slice(0, 110)}`);
   for (const r of selectors.bad) lines.push(`  OVER  tried on every element: ${r.selector.slice(0, 120)}`);
   return lines.join('\n');

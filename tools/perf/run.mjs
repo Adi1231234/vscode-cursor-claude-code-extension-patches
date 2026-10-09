@@ -7,7 +7,9 @@
      stream  a prompt sent the way a person sends it (typed, Enter), and the
              scripted turn (host/turn.js) streamed until its result
 
-   A fresh tab each visit, so no visit inherits another's layout or caches. */
+   A fresh tab each visit, so no visit inherits another's layout or caches.
+   And the warm-up that comes first (warmUp), which carries the selector
+   stats. */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,35 +39,70 @@ const evaluate = async (page, expression) =>
    extra categories too and hands back its raw events (why.mjs). */
 /* wall: where the phase's own wall-clock time went - the page doing it, and
    collecting its trace - for keeping the whole run short. */
-async function phase(tab, name, body, { selectors = false, deep } = {}) {
+async function phase(tab, name, body, { deep } = {}) {
   const extra = deep && deep.phase === name ? deep.extra : [];
   const t0 = Date.now();
-  const stop = await startTrace(tab.browserWs, { selectors, extra });
+  const stop = await startTrace(tab.browserWs, { extra });
   const t1 = Date.now();
   const result = await body();
   const t2 = Date.now();
   const events = await stop();
   const m = summarize(events, tab.id, tab.pid);
   tab.pid = tab.pid || m.pid;
-  if (selectors) m.selectorStats = selectorStats(events);
   if (extra.length) m.events = events;
   return { ...m, result, wall: { start: t1 - t0, body: t2 - t1, trace: Date.now() - t2, events: events.length } };
 }
 
+async function closeTab(port, tab) {
+  tab.page.close();
+  const ver = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+  const browser = await connect(ver.webSocketDebuggerUrl);
+  await browser.send('Target.closeTarget', { targetId: tab.id });
+  browser.close();
+}
+
+/* Opens the conversation in the tab and waits until it has stopped changing. */
+async function open(tab, origin, variant, minRows) {
+  const loaded = new Promise((r) => tab.page.on('Page.loadEventFired', r));
+  await tab.page.send('Page.navigate', { url: `${origin}/v/${variant}/panel.html` });
+  await loaded;
+  return evaluate(tab.page, script('settled.js', {
+    __QUIET__: '500', __UNTIL__: `document.querySelectorAll('[data-transcript-message]').length >= ${minRows}` }));
+}
+
+/* The warm-up, which nothing counts, and Blink's selector stats. Every
+   variant's conversation is opened, each in a tab of its own, and then one
+   full style pass over each open page is traced with the stats on: every rule
+   tried on every element it would be (scenarios/restyle-all.js). Tracing the
+   stats over the whole opening instead - 300 style passes - made each
+   warm-up 3-4x slower and its trace huge, and the start of the second such
+   trace once took 10 s on a CI runner. Opened side by side, not one after the
+   other: only counts come out of here, never times.
+   -> { [variant]: { styleElements, selectorStats } } */
+export async function warmUp({ port, origin, variants, minRows }) {
+  const tabs = await Promise.all(variants.map(() => openTab(port, `${origin}/__host/blank.html`)));
+  try {
+    const opened = await Promise.all(tabs.map((tab, i) => open(tab, origin, variants[i], minRows)));
+    opened.forEach((o, i) => { if (!o.ok) throw new Error(`${variants[i]}: the conversation did not render (${JSON.stringify(o)})`); });
+    const stop = await startTrace(tabs[0].browserWs, { selectors: true });
+    for (const tab of tabs) await evaluate(tab.page, script('restyle-all.js'));
+    const events = await stop();
+    return Object.fromEntries(variants.map((v, i) => {
+      const m = summarize(events, tabs[i].id);
+      return [v, { styleElements: m.styleElements, selectorStats: selectorStats(events.filter((e) => e.pid === m.pid)) }];
+    }));
+  } finally {
+    await Promise.all(tabs.map((tab) => closeTab(port, tab)));
+  }
+}
+
 /* setup: an expression run in the page once the conversation is open, before
    the other phases - why.mjs uses it to take rules out of the live sheet. */
-export async function visit({ port, origin, variant, minRows, selectors = false, deep, setup, phases = ['mount', 'idle', 'scroll', 'stream'] }) {
-  const pageUrl = `${origin}/v/${variant}/panel.html`;
+export async function visit({ port, origin, variant, minRows, deep, setup, phases = ['mount', 'idle', 'scroll', 'stream'] }) {
   const tab = await openTab(port, `${origin}/__host/blank.html`);
   const out = {};
   try {
-    const mounted = script('settled.js', { __QUIET__: '500', __UNTIL__: `document.querySelectorAll('[data-transcript-message]').length >= ${minRows}` });
-    out.mount = await phase(tab, 'mount', async () => {
-      const loaded = new Promise((r) => tab.page.on('Page.loadEventFired', r));
-      await tab.page.send('Page.navigate', { url: pageUrl });
-      await loaded;
-      return evaluate(tab.page, mounted);
-    }, { selectors, deep });
+    out.mount = await phase(tab, 'mount', () => open(tab, origin, variant, minRows), { deep });
     if (!out.mount.result || !out.mount.result.ok) throw new Error(`${variant}: the conversation did not render (${JSON.stringify(out.mount.result)})`);
     if (setup) out.setup = await evaluate(tab.page, setup);
     if (phases.includes('idle')) out.idle = await phase(tab, 'idle', () => new Promise((r) => setTimeout(() => r({ ok: true }), 3000)), { deep });
@@ -83,11 +120,7 @@ export async function visit({ port, origin, variant, minRows, selectors = false,
       if (!out.stream.result.ok) throw new Error(`${variant}: the scripted turn never finished (${JSON.stringify(out.stream.result)})`);
     }
   } finally {
-    tab.page.close();
-    const ver = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
-    const browser = await connect(ver.webSocketDebuggerUrl);
-    await browser.send('Target.closeTarget', { targetId: tab.id });
-    browser.close();
+    await closeTab(port, tab);
   }
   return out;
 }

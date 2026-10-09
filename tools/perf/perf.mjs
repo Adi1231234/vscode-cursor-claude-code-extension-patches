@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { launchChrome } from './chrome.mjs';
 import { checkPhases, checkSelectors, medians, report } from './compare.mjs';
 import { prepareExtension } from './prepare.mjs';
-import { visit } from './run.mjs';
+import { visit, warmUp } from './run.mjs';
 import { startServer } from './serve.mjs';
 import { budgets as readBudgets, panelData } from './data.mjs';
 
@@ -56,14 +56,10 @@ const visits = { pristine: [], patched: [] };
 const secs = (t) => `${((Date.now() - t) / 1000).toFixed(1)} s`;
 let sel;
 try {
-  /* The warm-up visits are not counted, so they are the ones that carry the
-     selector stats (which slow a visit down several times over). */
-  const s = {};
-  for (const v of ['pristine', 'patched']) {
-    const t = Date.now();
-    s[v] = (await visit({ ...base, variant: v, selectors: true, phases: ['mount'] })).mount;
-    log(`warm-up ${v}, with selector stats (not counted): ${secs(t)} ${JSON.stringify(s[v].wall)}`);
-  }
+  /* Not counted, so it is what carries the selector stats (run.mjs). */
+  const t = Date.now();
+  const s = await warmUp({ ...base, variants: ['pristine', 'patched'] });
+  log(`warm-up and selector stats (not counted): ${secs(t)}`);
   sel = checkSelectors(s.pristine.selectorStats, s.patched.selectorStats, s.patched.styleElements, budgets.selectors);
   for (let r = 1; r <= rounds; r++) {
     /* Idle is checked once per variant: its limits are absolute caps, and 3 s

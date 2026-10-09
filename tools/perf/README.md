@@ -42,10 +42,14 @@ rest is the CLI binary) and kept in `CC_PERF_CACHE` (default
   words at a time - the frames are the ones the CLI sends, recorded in the lab,
   a frame or two apart). Idle is measured in the first round only: its limits
   are absolute caps, and 3 s of nothing is the same every round.
-- **Pristine and patched alternate**, a warm-up visit each first, then
-  `rounds` visits each; the report shows medians. The warm-ups are not
-  counted, so they are the visits that carry Blink's selector stats (which slow
-  a page down several times over).
+- **A warm-up first**, not counted: both variants opened side by side, then
+  one full style pass over each traced with Blink's selector stats on
+  (`scenarios/restyle-all.js`). Tracing the stats over the whole opening - 300
+  style passes - made a warm-up 3-4x slower, and the start of the second such
+  trace once took 10 s on a CI runner; the verdicts are the same either way
+  (the same 182 patch rules, measured).
+- **Then pristine and patched alternate**, `rounds` visits each; the report
+  shows medians.
 
 ## Keeping a run short
 
@@ -85,9 +89,11 @@ tight limits; times swing with the machine and carry loose ones - they are
 there to catch a freeze, not a millisecond.
 
 Selectors: a rule only the patched stylesheet has, that gets past Blink's
-ancestor filter on more than `maxAttemptRatio` of the elements styled while the
-conversation opens, is one Blink could not file under a class, id or tag. It
-fails the run by name.
+ancestor filter on more than `maxAttemptRatio` of the elements of one full
+style pass over the open conversation, is one Blink could not file under a
+class, id or tag. It fails the run by name. (A `[class*="_"]` slipped into the
+page is tried on 140% of them, pseudo-elements included; the patches' own
+rules top out near 12%.)
 
 ## When it fails
 
