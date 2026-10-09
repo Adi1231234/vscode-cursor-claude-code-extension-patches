@@ -222,6 +222,42 @@ conversation from history (copy a big session JSONL into the lab's projects
 folder) - that full mount is where a slow rule costs the most. The stats
 inflate the run several times over, so time with them off.
 
+## Measuring memory
+
+`powershell -File tools/lab/memory.ps1 <lab dir | "Microsoft VS Code">` sums one
+editor's whole process tree by role - window and panel renderers, extension
+host, `claude.exe` with everything it started, and so on. Four things it took to
+get numbers that repeat:
+
+- **Read private working set, not private bytes.** The first is Task Manager's
+  Memory column; the second (commit) runs 1.5-2x higher on these Chromium and
+  Bun processes, and 5x on the CLI's MCP children. A report built on commit once
+  ranked the CLIs above the editor; by working set it is the other way round.
+- **Count the `claude.exe` processes before comparing two runs.** With
+  `chat.disableAIFeatures` on, the secondary side bar shows the extension's own
+  view instead of chat - a second session with its own CLI that nobody opened.
+  It reads exactly as "this setting costs 200 MB".
+  `workbench.secondarySideBar.defaultVisibility: "hidden"` keeps it shut.
+- **Collect garbage first, on `page` and `iframe` targets only.** Renderer memory
+  moves 40-70 MB between identical runs with GC timing;
+  `HeapProfiler.collectGarbage` first brings repeats within ~10 MB. A `worker`
+  target never answers it, so a loop that includes one hangs for good.
+- **Give the panel one session.** A lab restores its earlier panels on every
+  `up` (2, then 3 sessions); `down --purge` before a one-panel number.
+
+What it showed, one window and one idle panel, two runs each (VS Code 1.139,
+extension 2.1.294/2.1.295):
+
+- The default profile: ~680 MB. `chat.disableAIFeatures` takes the agent host
+  away (-85 MB); disabling the 33 built-in extensions that run code another -70;
+  hardware acceleration off another -95.
+- The patches do not make a panel heavy. The same 5 MB transcript, patched and
+  pristine in one lab: 13.7k vs 12.6k DOM nodes, +2 MB JS heap, renderer memory
+  within noise.
+- On a real machine the panels are what is heavy: every Claude webview is
+  created with `retainContextWhenHidden: true`, so a background tab keeps its
+  whole page - 200-250 MB for a long conversation, one renderer per window.
+
 ## What each step is guarding against
 
 All of these were found the hard way; each one looks like "the patch broke the
