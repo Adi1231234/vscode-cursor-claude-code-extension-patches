@@ -17,12 +17,20 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { REPO } from './paths.mjs';
 
+/* Invoked the way install.ps1 invokes it - `& <apply.ps1>` - and not with
+   `-File`. The two are not equivalent: under `-File` the functions apply.ps1
+   dot-sources from lib/ end up global, under `&` they are script-scoped, and a
+   script block that only sees globals (a .GetNewClosure() closure) works in the
+   first and throws in the second. The lab ran `-File` while every user ran `&`,
+   so seven patches threw for users and passed here. `exit $LASTEXITCODE` carries
+   apply.ps1's own exit code out of -Command. */
+const quotePs = (s) => `'${String(s).replace(/'/g, "''")}'`;
+
 export function applyPatches(lay, log) {
     return new Promise((resolve, reject) => {
         const p = spawn('powershell.exe', [
             '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-            '-File', join(REPO, 'apply.ps1'),
-            '-ExtensionsDir', lay.extensions,
+            '-Command', `& ${quotePs(join(REPO, 'apply.ps1'))} -ExtensionsDir ${quotePs(lay.extensions)}; exit $LASTEXITCODE`,
         ], { windowsHide: true });
 
         let out = '';
