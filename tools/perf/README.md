@@ -1,8 +1,10 @@
 # tools/perf - do the patches slow the panel down?
 
 Every Claude panel of an editor window shares one renderer thread, so whatever a
-patch costs, every panel pays together. This measures it on the real thing and
-fails a push that makes it worse (`.github/workflows/perf.yml`).
+patch costs, every panel pays together. This measures it on the real thing, on
+every push to a pull request into master, and master will not merge a request
+it fails, admins included (`.github/workflows/perf.yml`; the requirement is the
+branch protection's required check `perf`).
 
 ```
 node tools/perf/perf.mjs                     # the version budgets.json pins
