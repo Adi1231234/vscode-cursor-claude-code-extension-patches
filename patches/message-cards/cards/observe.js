@@ -22,19 +22,25 @@
     }
   }
 
+  /* Every read first - the store, and the one layout the clamps need (the app
+     has usually laid the frame out already, scrolling to the bottom) - then
+     every write, so a pass costs the panel at most one more layout however
+     many rows changed. */
   function pass() {
     pending = false;
-    var rows = all ? Array.from(document.querySelectorAll(ROW)) : Array.from(dirty);
+    var rows = (all ? Array.from(document.querySelectorAll(ROW)) : Array.from(dirty))
+      .filter(function (row) { return row.isConnected && isTool(row); });
     all = false;
     dirty.clear();
-    var idx = null;
-    for (var i = 0; i < rows.length; i++) {
-      var row = rows[i];
-      if (!row.isConnected || !isTool(row)) continue;
-      idx = idx || indexStore();
-      ensureBadge(row, idx);
-      ensureMore(row);
-    }
+    if (!rows.length) return;
+    var idx = indexStore();
+    var seen = rows.map(function (row) {
+      return { row: row, text: badgeText(row, idx), cuts: cuts(row) };
+    });
+    seen.forEach(function (s) {
+      ensureBadge(s.row, s.text);
+      ensureMore(s.row, s.cuts);
+    });
   }
 
   /* One pass a frame. A hidden panel runs no frames and keeps its dirty set,

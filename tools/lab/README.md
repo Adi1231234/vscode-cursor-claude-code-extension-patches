@@ -211,6 +211,17 @@ patch inside one lab, run each variant more than once, and attribute time with a
 CPU profile (`Profiler.start` on the panel target) rather than by subtraction.
 `patches/message-time/README.md` has the numbers.
 
+Style and layout cost does not show up in a CPU profile at all (it is
+`(program)`), so trace it from the browser target (`/json/version`) instead.
+`disabled-by-default-devtools.timeline.stack` puts the JS stack on every
+*forced* style pass and layout, which names the code that forced it;
+`disabled-by-default-blink.debug` adds Blink's selector stats (time, attempts
+and matches per selector) to every style pass, which is how
+`patches/message-cards` found a rule tried on every element. Open a long
+conversation from history (copy a big session JSONL into the lab's projects
+folder) - that full mount is where a slow rule costs the most. The stats
+inflate the run several times over, so time with them off.
+
 ## What each step is guarding against
 
 All of these were found the hard way; each one looks like "the patch broke the

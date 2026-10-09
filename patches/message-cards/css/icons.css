@@ -28,7 +28,7 @@
 .__ccBadge {
   --cc-ic-status: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8.5l3 3 7-7'/%3E%3C/svg%3E");
 }
-[class*="dotFailure_"] > .__ccBadge {
+.{{dotFailure}} > .__ccBadge {
   --cc-ic-status: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 4l8 8 M12 4l-8 8'/%3E%3C/svg%3E");
 }
 .__ccBadge::before {
@@ -40,9 +40,9 @@
   -webkit-mask: var(--cc-ic-status) center / contain no-repeat;
   mask: var(--cc-ic-status) center / contain no-repeat;
 }
-[class*="dotFailure_"] > .__ccBadge::before { background: var(--app-error-foreground); }
-[class*="dotWarning_"] > .__ccBadge::before { background: var(--app-warning-accent, var(--app-secondary-foreground)); }
-[class*="dotProgress_"] > .__ccBadge::before {
+.{{dotFailure}} > .__ccBadge::before { background: var(--app-error-foreground); }
+.{{dotWarning}} > .__ccBadge::before { background: var(--app-warning-accent, var(--app-secondary-foreground)); }
+.{{dotProgress}} > .__ccBadge::before {
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -55,5 +55,5 @@
 }
 @keyframes cc-card-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) {
-  [class*="dotProgress_"] > .__ccBadge::before { animation: none; border-style: dotted; }
+  .{{dotProgress}} > .__ccBadge::before { animation: none; border-style: dotted; }
 }

@@ -45,6 +45,9 @@ function Find-ClaudeExtension {
         FooterHash         = $null
         AgentsPillClass    = $null
         CacheHostClass     = $null
+        # Every CSS-module map in the webview bundle (lib/CssModules.ps1): what
+        # {{key}} / {{key@within}} placeholders in injected CSS and JS resolve to.
+        CssModules         = @()
     }
 
     if (Test-Path $ctx.Js) {
@@ -62,6 +65,7 @@ function Find-ClaudeExtension {
         # The round "Message actions" button beside a user bubble. Four modules
         # define an actionButton_<h>; anchor on subtleVisible_<h>, unique to this one.
         if ($wc -match 'subtleVisible:"subtleVisible_([a-zA-Z0-9]+)"') { $ctx.MsgActionBtnClass = "actionButton_$($matches[1])" }
+        $ctx.CssModules = Get-CssModules $wc
         # Content-block kinds inside an assistant message: rendered markdown vs a
         # thinking block vs a tool call. Anchored on the unique sibling key of each
         # module ("root"/"thinking" alone are far too common to match on).

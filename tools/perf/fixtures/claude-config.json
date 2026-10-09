@@ -1,0 +1,32 @@
+{
+  "commands": [],
+  "agents": [],
+  "output_style": "default",
+  "available_output_styles": ["default"],
+  "user_output_styles_dir": "C:\\work\\.claude\\output-styles",
+  "models": [
+    {
+      "value": "default", "resolvedModel": "claude-opus-5-5", "displayName": "Default (recommended)",
+      "description": "Opus 5.5", "supportsEffort": true, "supportedEffortLevels": ["low", "medium", "high"],
+      "supportsAdaptiveThinking": true, "supportsFastMode": false, "supportsAutoMode": false
+    }
+  ],
+  "account": { "email": "perf@example.com", "organization": "Perf", "subscriptionType": "max", "apiProvider": "firstParty" },
+  "pid": 1,
+  "current_permission_mode": "default",
+  "hooks_applied": [],
+  "sdk_mcp_manifests_parked": [],
+  "permission_mode_from_default_fallback": false,
+  "feedback_survey_config": { "probability": 0 },
+  "feedback_mode": "none",
+  "analytics_disabled": true,
+  "remote_control_auto_enable": false,
+  "remote_control_auto_connect_default": false,
+  "remote_control_available": false,
+  "claude_in_chrome_at_startup": false,
+  "remote_control_auto_on_by_default": false,
+  "ide_rc_auto_enable_gate": false,
+  "fast_mode_state": "off",
+  "session_state": "idle",
+  "capabilities": []
+}

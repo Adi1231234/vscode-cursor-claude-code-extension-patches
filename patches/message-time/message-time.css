@@ -19,14 +19,14 @@
   margin-bottom: calc(-1 * var(--app-spacing-small));
 }
 
-[data-transcript-message] > [class*="assistantActions_"] {
+[data-transcript-message] > .{{assistantActions}} {
   order: 2;
 }
 
 /* A reply row's content starts after its 30px timeline gutter (the app's own
    .timelineMessage padding-left); its time steps back into the gutter to the
    common x. */
-[data-transcript-message][class*="timelineMessage_"] > [data-message-stamp] {
+.{{timelineMessage}}[data-transcript-message] > [data-message-stamp] {
   margin-left: calc(7px - 30px);
 }
 
@@ -49,17 +49,17 @@
    bubble and the time share the cell and the time sits at its bottom. The
    bubble grows by one 16px line (the stamp's own line-height) at the bottom,
    and the time is lifted above the bubble's positioned box to be painted. */
-[data-transcript-message][class*="userMessageContainer_"] {
+.{{userMessageContainer}}[data-transcript-message] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
 
-[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp],
-[data-transcript-message][class*="userMessageContainer_"] > [class*="userMessageContainer_"] {
+.{{userMessageContainer}}[data-transcript-message] > [data-message-stamp],
+.{{userMessageContainer}}[data-transcript-message] > .{{userMessageContainer}} {
   grid-area: 1 / 1;
 }
 
-[data-transcript-message][class*="userMessageContainer_"] > [data-message-stamp] {
+.{{userMessageContainer}}[data-transcript-message] > [data-message-stamp] {
   position: relative;
   z-index: 1;
   align-self: end;
@@ -67,6 +67,6 @@
   margin-bottom: 3px;
 }
 
-[data-transcript-message][class*="userMessageContainer_"] [class*="userMessage_"] {
+.{{userMessageContainer}}[data-transcript-message] .{{userMessage}} {
   padding-bottom: calc(4px + 16px);
 }

@@ -1,0 +1,59 @@
+# Every push: do the patches still leave the panel as fast as it should be?
+#
+# 1. The static rules, in a second: no timers, one DOM observer, no class
+#    matched by substring (tools/check-webview-runtime.mjs).
+# 2. The real panel measured: the published extension and the same extension
+#    after apply.ps1, side by side in a headless Chrome, opening a long
+#    conversation, idling, scrolling and streaming a working turn
+#    (tools/perf/README.md). Fails when the patched panel goes over
+#    tools/perf/budgets.json.
+#
+# Windows, because apply.ps1 is Windows PowerShell; the runner image has
+# Chrome and Node. The VSIX (~120 MB) is cached between runs.
+name: Panel performance
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    # A branch of this repo is measured on its push; a pull request from it
+    # would measure the same commit again. Only a fork's pull request has no
+    # push here to be measured by.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Static rules (no timers, one observer, exact classes)
+        run: node tools/check-webview-runtime.mjs
+
+      - name: Cache the extension VSIX
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/cc-perf-cache
+          key: cc-perf-vsix-${{ hashFiles('tools/perf/budgets.json') }}
+          restore-keys: cc-perf-vsix-
+
+      - name: Measure the patched panel against the published one
+        env:
+          CC_PERF_CACHE: ${{ runner.temp }}/cc-perf-cache
+        run: node tools/perf/perf.mjs --json perf.json
+
+      - name: Keep every number
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf
+          path: perf.json
+          if-no-files-found: ignore

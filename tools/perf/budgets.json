@@ -1,0 +1,38 @@
+{
+  "version": "2.1.294",
+  "rounds": 3,
+  "turns": 60,
+  "minRows": 300,
+  "phases": {
+    "mount": {
+      "busyMs": [1.45, 200],
+      "longestTaskMs": [1.45, 150],
+      "styleMs": [1.6, 60],
+      "styleElements": [1.35, 500],
+      "layouts": [1.2, 30],
+      "forcedInline": [null, 4]
+    },
+    "idle": {
+      "busyMs": [null, 60],
+      "recalcs": [null, 2],
+      "layouts": [null, 2]
+    },
+    "scroll": {
+      "busyMs": [1.5, 150],
+      "styleElements": [null, 200]
+    },
+    "stream": {
+      "busyMs": [1.45, 300],
+      "longestTaskMs": [1.6, 40],
+      "styleMs": [4, 40],
+      "styleElements": [2.3, 300],
+      "recalcs": [6.5, 50],
+      "layouts": [1.4, 30],
+      "forcedInline": [null, 10]
+    }
+  },
+  "selectors": {
+    "maxAttemptRatio": 0.5,
+    "allow": []
+  }
+}

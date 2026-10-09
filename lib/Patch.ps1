@@ -5,15 +5,18 @@
 # Append a CSS resource to the webview stylesheet, once (guarded by a marker the
 # resource itself contains).
 #
-# $Tokens expands the same __TOKEN__ placeholders a .js resource gets, for the
-# stylesheets that have to name a hashed CSS-module class: the hash is detected
-# in Extension.ps1 and threaded in here, so it is never written down in a file
-# that outlives the release that minted it.
+# An app class is named as {{key}} / {{key@within}} and filled in from the
+# bundle's own CSS-module maps (lib/CssModules.ps1), so a hash is never written
+# down in a file that outlives the release that minted it - and never matched
+# by substring, which Blink cannot index. One that resolves to no class, or to
+# more than one, writes nothing. $Tokens expands __TOKEN__ placeholders too.
 function Add-StyleBlock {
     param($Ctx, [string]$CssPath, [string]$Guard, [string]$Label, $Tokens = @{})
     $css = Read-Text $Ctx.Css
     if ($css.Contains($Guard)) { Write-Skip "$Label already present"; return }
-    Add-Text $Ctx.Css ("`r`n`r`n" + (Expand-JsTokens (Read-Text $CssPath) $Tokens))
+    $x = Expand-CssClasses $Ctx (Expand-JsTokens (Read-Text $CssPath) $Tokens)
+    if ($x.Missing.Count) { Write-Miss "$($Label): no single app class for $($x.Missing -join ', ')"; return }
+    Add-Text $Ctx.Css ("`r`n`r`n" + $x.Text)
     Write-Ok "$Label appended"
 }
 

@@ -14,11 +14,14 @@
 # already-applied patches skip; a missing anchor skips instead of corrupting.
 
 # -ExtensionsDir patches one specific dir instead of auto-discovering (an editor
-# started with a custom --extensions-dir).
-param([string]$ExtensionsDir)
+# started with a custom --extensions-dir). -Skip leaves the named patches out of
+# $order, for measuring what one patch costs (tools/perf: `--skip`).
+param([string]$ExtensionsDir, [string[]]$Skip = @())
 
 $ErrorActionPreference = "Stop"
 $here = $PSScriptRoot
+# `-File apply.ps1 -Skip a,b` arrives as one string; a list from PowerShell does not.
+$Skip = @($Skip | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 
 Get-ChildItem (Join-Path $here 'lib') -Filter *.ps1 | ForEach-Object { . $_.FullName }
 
@@ -93,6 +96,7 @@ foreach ($Ctx in $installs) {
     }
 
     foreach ($name in $order) {
+        if ($Skip -contains $name) { Write-Skip "$name left out (-Skip)"; continue }
         $patchFile = Join-Path $here "patches\$name\patch.ps1"
         if (-not (Test-Path $patchFile)) { Write-Miss "patch '$name' not found"; continue }
         Write-Head $name

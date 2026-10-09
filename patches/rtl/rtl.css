@@ -1,12 +1,20 @@
 /* RTL patch */
-[class*="messagesContainer_"]{direction:rtl;text-align:right}
-[class*="userMessageContainer_"]{text-align:right!important}
-pre,code,.monaco-editor,[class*="codeBlock"]{direction:ltr!important;text-align:left!important;unicode-bidi:embed!important}
+/* Every app class named exactly - {{key}}, filled in from the bundle's
+   CSS-module maps (lib/CssModules.ps1). A [class*="..."] here was tried on every
+   element of the panel on every style pass. */
+.{{messagesContainer}}{direction:rtl;text-align:right}
+.{{userMessageContainer}}{text-align:right!important}
+pre,code,.monaco-editor,.{{codeBlockWrapper}}{direction:ltr!important;text-align:left!important;unicode-bidi:embed!important}
 /* The app's message time ("9:23 AM", 2.1.287+) is Latin: inside the rtl list its runs reorder to "AM 9:23" */
 [data-message-stamp] time{direction:ltr;unicode-bidi:isolate}
-/* AskUserQuestion dialog RTL - scoped via :has() so regular permission prompts stay LTR */
-[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]){direction:rtl}
-[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="button_"]{text-align:right}
-[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="shortcutNum_"]{padding-right:0;padding-left:4px}
-[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="otherInput_"] [class*="input_"]{unicode-bidi:plaintext}
-[class*="permissionRequestContainer_"]:has([class*="questionsContainer_"]) [class*="otherInput_"] [class*="placeholder_"]{left:auto;right:8px}
+/* AskUserQuestion dialog RTL - scoped via :has() so regular permission prompts stay LTR.
+   Its option rows come from either of the two modules that define button /
+   shortcutNum, and its free-text field from either that defines input. */
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}){direction:rtl}
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{button@permissionRequestContainer}},
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{button@dialogContainer}}{text-align:right}
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{shortcutNum@permissionRequestContainer}},
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{shortcutNum@dialogContainer}}{padding-right:0;padding-left:4px}
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{otherInput}} .{{input@placeholder}},
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{otherInput}} .{{input@inputContainer}}{unicode-bidi:plaintext}
+.{{permissionRequestContainer}}:has(.{{questionsContainer}}) .{{otherInput}} .{{placeholder}}{left:auto;right:8px}

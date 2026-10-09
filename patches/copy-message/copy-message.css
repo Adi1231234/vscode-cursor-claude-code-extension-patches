@@ -110,15 +110,15 @@
    the app's plain .actionButton (so it reveals) and below its
    .container:hover .actionButton (0,3,0), so hovering the actions area takes
    ours to full opacity together with the app's, as it always did. */
-:where([data-cc-acts]) > [class*="subtleVisible"] ~ .__ccCopyAct {
+:where([data-cc-acts]) > .{{subtleVisible}} ~ .__ccCopyAct {
   opacity: .7;
 }
 
 /* Direct interaction wins - last, and at least as specific as the rule above. */
 .__ccCopyAct:hover,
 .__ccCopyAct:focus-visible,
-[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct:hover,
-[data-cc-acts] > [class*="subtleVisible"] ~ .__ccCopyAct:focus-visible {
+[data-cc-acts] > .{{subtleVisible}} ~ .__ccCopyAct:hover,
+[data-cc-acts] > .{{subtleVisible}} ~ .__ccCopyAct:focus-visible {
   opacity: 1;
 }
 

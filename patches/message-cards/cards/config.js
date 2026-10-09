@@ -7,12 +7,17 @@
      neither is a scroll anchor. Sections: config (here), the shared store / dom
      / watch runtimes, badge, more, observe. */
 
+  /* The app's own classes, named exactly (patch.ps1 fills each one in), the
+     same way the stylesheet names them. */
   var ROW = '[data-testid="assistant-message"]';
-  var CONTENT = '[class*="toolBodyRowContent_"]';
-  var OUT_CONTENT = '[class*="toolBodyRow_"]:not([class*="inputRow_"]) ' + CONTENT;
+  var CONTENT = '.{{toolBodyRowContent}}';
+  var OUT_CONTENT = '.{{toolBodyRow}}:not(.{{inputRow}}) ' + CONTENT;
+  var RUNNING = '{{dotProgress}}', FAILED = '{{dotFailure}}';
   var NL = String.fromCharCode(10);
 
-  /* A command row: one of Claude's rows holding a tool call. */
+  /* A command row: one of Claude's rows holding a tool call - the one the app
+     gives a status class, and the one the stylesheet draws as a card. */
   function isTool(row) {
-    return !!(row && row.matches && row.matches(ROW) && row.querySelector(':scope > [class*="toolUse_"]'));
+    var c = row && row.classList;
+    return !!(c && row.matches(ROW) && (c.contains('{{dotSuccess}}') || c.contains(FAILED) || c.contains(RUNNING)));
   }

@@ -13,6 +13,12 @@ in place. Read this before changing anything so the structure stays clean.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
+  - `CssModules.ps1` - the app's class names, exactly: every CSS-module map in
+    the webview bundle, read once into `$Ctx.CssModules`, and `{{key}}` /
+    `{{key@within}}` placeholders filled in from it (`Expand-CssClasses`;
+    `Add-StyleBlock` does it for every stylesheet). `{{root@toolSummary}}` is
+    the `root` of the module that also defines `toolSummary`. A key that
+    resolves to no class or to several writes nothing.
   - `Patch.ps1` - reusable inject helpers.
   - `js/` - shared runtime JS, one copy each: `ccCopyText.js`
     (`window.__ccCopyText`), `ccStore.js` (`__ccStore` / `__ccFiber`, the webview
@@ -55,6 +61,12 @@ in place. Read this before changing anything so the structure stays clean.
     its README before doing any of that by hand.
   - `tools/cdp/` - drives the Claude panel of a *running* editor over a CDP port
     (see the CDP section below). The lab is built on it.
+  - `tools/perf/` - **does a change slow the panel down?** `node tools/perf/perf.mjs`
+    runs the real panel, published and patched, in a headless Chrome with a fake
+    host and a long made-up conversation, traces opening it, idling, scrolling
+    and a streamed working turn, and fails over `budgets.json`; `why.mjs` names
+    the code behind a phase's work. It runs on every push
+    (`.github/workflows/perf.yml`). Its README has what each number means.
 
 ## The `$Ctx` contract
 
@@ -75,10 +87,14 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Expand-JsTokens <string> @{ ... }` - same substitution on an already-built string (e.g. `prompt-queue`, which joins its `queue/*.js` fragments first).
 4. Reuse the `lib/Patch.ps1` helpers instead of re-writing read/guard/inject/write:
    - `Add-StyleBlock $Ctx <cssPath> '<guard>' '<label>' [@{ '__TOKEN__' = … }]` -
-     append a CSS resource once. The optional token table expands the same
-     `__TOKEN__` placeholders a `.js` resource gets, for a stylesheet that has to
-     name a hashed CSS-module class (see `remote-control-pill-icon`): detect the
-     hash in `Extension.ps1` and thread it in, never write it down.
+     append a CSS resource once. An app class is written `.{{toolSummary}}` (or
+     `.{{root@toolSummary}}` when several modules define the key) and filled in
+     from the bundle's CSS-module maps (`lib/CssModules.ps1`); one that resolves
+     to no class or to several writes nothing. Never write a hash down and never
+     match a class by substring (see "CSS the browser can index"). The optional
+     token table expands `__TOKEN__` placeholders too.
+   - `Expand-CssClasses $Ctx <text>` - the same `{{key}}` filling for injected JS
+     that names app classes (`message-cards`); returns `.Text` and `.Missing`.
    - `Add-ScriptAfterMarker $Ctx <script> '<guard>' '<label>' @('<anchor1>','<anchor2>')` - inject a `<script>` after an existing marker (chained webview scripts).
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
@@ -133,9 +149,34 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   - **A clock on screen gets `__ccClock.every(fn)`**, which ticks only while
     something is subscribed and the panel is visible; stop it when nothing
     needs it.
-  `node tools/check-webview-runtime.mjs` (also in the selftest) fails on any
-  `setInterval` or `new MutationObserver` in webview code outside
-  `lib/js/ccWatch.js`. Host code (`host/`) runs in the extension host and is
+  - **Read every layout value, then write.** A write between two reads of
+    `scrollHeight` / `getBoundingClientRect` makes the second read lay the
+    panel out again. The first `message-cards` did it once per command row and
+    held a panel for 1.2-2.0 s whenever a long conversation opened (188 forced
+    style passes in one task); collect a pass's reads first, then write.
+  - **CSS the browser can index: exact classes, no `:has()` on a row.** Blink
+    tries a rule only on the elements carrying the class, id or tag its last
+    part names; `[class*="x_"]` names none, so it runs on every element of the
+    panel on every style pass (48 of them were 40% of all selector matching),
+    and any class change anywhere re-checks every element that has a class.
+    Name the app's class exactly - `.{{toolSummary}}`, filled in by
+    `lib/CssModules.ps1` - and give each tag of an `:is(p, li, ...)` its own
+    selector. Tell a transcript row's kind from the row itself (its status
+    class, its `aria-label`), never with a `:has()` on it: 7 of those made a
+    full style pass ~4x. Same lesson as copy-message's `div:has(...)`.
+  - **No sibling combinator over the conversation's turns.** `.turn + .turn`
+    marked the list as affected by sibling rules, so every new turn re-checked
+    the whole conversation against every sibling rule in the stylesheet (the
+    app's own `div + div` among them): 5,000 elements restyled per prompt. Say
+    it positionally - `:not(:nth-child(1 of .turn))` - which only touches what
+    follows an insertion. Rows appended at the end of a turn are cheap either
+    way. The flags outlive the rule: dropping it from a loaded page proves
+    nothing, measure with `tools/perf/perf.mjs --skip`.
+  `node tools/check-webview-runtime.mjs` (also in the selftest and on every
+  push) fails on any `setInterval` or `new MutationObserver` in webview code
+  outside `lib/js/ccWatch.js`, and on any class matched by substring in a
+  stylesheet. `tools/perf/perf.mjs` (on every push too) measures the rest
+  against `tools/perf/budgets.json`. Host code (`host/`) runs in the extension host and is
   exempt.
 - **Why it is one thread, and how to get one per window.** Two facts put every
   panel of every window in one renderer. VS Code gives all webviews of one
@@ -526,6 +567,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    VSIX, not the files afterwards. What *does* bite is **auto-update**: both
    editors replace the folder on an extension update and the patches go with it
    (hence: re-run).
+7. **For anything that touches the panel, measure it**: `node tools/perf/perf.mjs`
+   (published against patched, same conversation, medians over rounds). It is
+   what the push will run; `why.mjs --phase <name>` names the code when a
+   phase goes over. A change meant to cost more raises its budget in the same
+   PR, with the reason.
 
 ## Attaching a real debugger to the webview (CDP)
 

@@ -11,8 +11,13 @@
 # Must run after message-time and copy-message: it restyles the stamp the first
 # puts under each row and the button the second adds, and its rules win by
 # coming later at the same weight.
+#
+# Every app class is named exactly, {{toolSummary}}, and filled in from the
+# bundle's own CSS-module maps (lib/CssModules.ps1) - never matched by
+# substring, which Blink cannot index (README: "Why exact classes").
 function Invoke-Patch {
     param($Ctx)
+
     $styles = [ordered]@{
         'css/cards.css'    = '/* MSGCARDS */'
         'css/icons.css'    = '/* MSGCARDS-ICONS */'
@@ -33,6 +38,7 @@ function Invoke-Patch {
         (Join-Path $PSScriptRoot 'cards/observe.js')
     )
     $script = ($parts | ForEach-Object { Read-Text $_ }) -join ''
-    $script = Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce })
-    Add-ScriptAfterMarker $Ctx $script '/* MSGCARDS */' 'message-cards JS' @('/* COPYMSG */', '/* QUEUE */', '/* INPUTRTL */', '/* ZOOM */')
+    $x = Expand-CssClasses $Ctx (Expand-JsTokens $script ([ordered]@{ '__NONCE__' = $Ctx.Nonce }))
+    if ($x.Missing.Count) { Write-Miss "message-cards JS: no single app class for $($x.Missing -join ', ')"; return }
+    Add-ScriptAfterMarker $Ctx $x.Text '/* MSGCARDS */' 'message-cards JS' @('/* COPYMSG */', '/* QUEUE */', '/* INPUTRTL */', '/* ZOOM */')
 }
