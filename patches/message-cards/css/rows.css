@@ -35,7 +35,7 @@
   bottom: 0;
 }
 
-/* Your message: the one filled surface in a turn - the menu surface, no
+/* Your message: the strongest surface in a turn - the menu surface, no
    frame, 12 inside like a card. Its time keeps message-time's place at the
    bottom left, moved to the new inner edge; the app's actions (rewind / fork,
    and copy-message's Copy) leave the top corner for the right end of that

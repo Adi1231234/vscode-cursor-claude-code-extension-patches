@@ -1,0 +1,32 @@
+/* PANELBG */
+/* Every panel on the editor's background, wherever it is open
+   (patches/panel-background/README.md).
+
+   The app paints a panel by where it lives. One opened as an editor tab gets
+   window.IS_FULL_EDITOR, which puts {{editorMode}} on the root and
+   {{fullEditor}} on the message list, and those switch five surfaces from the
+   side bar's colour (--app-primary-background, --app-header-background) to the
+   editor's (--app-secondary-background). A panel in the side bar keeps the side
+   bar's colour, so two panels of one window can differ.
+
+   These are the app's own five declarations, lifted out of those two classes and
+   applied to every panel. Nothing here is a value of ours, and only colour moves:
+   the header keeps its side-bar layout (title, buttons), which the editor-mode
+   rules also change. Each selector carries the same weight as the app's base
+   rule and this stylesheet comes after it, so it wins on order alone. */
+.{{root@editorMode}} {
+  background-color: var(--app-secondary-background);
+  --app-root-background: var(--app-secondary-background);
+}
+.{{header@editorMode}} {
+  background-color: var(--app-secondary-background);
+}
+.{{messagesContainer}} {
+  background-color: var(--app-secondary-background);
+}
+.{{messageGradient}} {
+  background: linear-gradient(to bottom, transparent 0%, var(--app-secondary-background) 100%);
+}
+.{{message@stickyHeader}}.{{stickyHeader}} {
+  --sticky-bg: var(--app-secondary-background);
+}
