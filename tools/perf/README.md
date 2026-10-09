@@ -53,8 +53,9 @@ rest is the CLI binary) and kept in `CC_PERF_CACHE` (default
 
 ## Keeping a run short
 
-A run is about 70 s on a laptop (it was over 3 minutes) and the whole CI job
-should stay under 2 minutes. What it took, so it is not undone:
+The whole CI job takes about 100 s, 74 of them measuring (it took 4 minutes),
+and should stay under 2. Each step times itself in the log (`[perf] ... 8.7 s`),
+so a slow one shows up there. What it took, so it is not undone:
 
 - **The trace records what DevTools' Performance panel records** (`trace.mjs`):
   `toplevel`, `blink` and `v8.execute` were three quarters of every trace -
