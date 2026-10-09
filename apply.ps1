@@ -138,3 +138,6 @@ if ($script:failures) {
     exit 1
 }
 Write-Host "`nDone ($editors). Reload the window: Ctrl+Shift+P -> Developer: Reload Window" -ForegroundColor Cyan
+# Said, not left over: under `& apply.ps1` a caller reads $LASTEXITCODE, which
+# otherwise still holds the stamp's `git rev-parse` (non-zero outside a checkout).
+exit 0
