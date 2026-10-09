@@ -9,7 +9,7 @@ in place. Read this before changing anything so the structure stays clean.
 - **`install.ps1`** - one-line bootstrap: downloads the repo zip, runs `apply.ps1`, cleans up. Users never edit this.
 - **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, finds every install (one `$Ctx` each), then runs each patch in the `$order` list against each of them. `-ExtensionsDir <dir>` patches one specific dir instead of auto-discovering.
 - **`lib/`** - shared plumbing, one file per concern. Never put patch-specific logic here.
-  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles.
+  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched); `lib/tests/io-retry.test.ps1` proves it, on every push too.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).

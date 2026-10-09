@@ -38,6 +38,9 @@ jobs:
       - name: Static rules (no timers, one observer, exact classes)
         run: node tools/check-webview-runtime.mjs
 
+      - name: File writes survive a file another process holds for a moment
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File lib/tests/io-retry.test.ps1
+
       - name: Cache the extension VSIX
         uses: actions/cache@v6
         with:
