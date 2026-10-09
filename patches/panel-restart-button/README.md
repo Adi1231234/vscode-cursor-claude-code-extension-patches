@@ -23,7 +23,7 @@ takes every panel and the whole workbench with it.
    call, so the string always differs and the assignment always re-renders.
 3. **webview, again** - `webview/index.js` runs from scratch, reads
    `data-initial-session`, and `activateSessionFromServer` restores the
-   conversation (the path `patches/reload-restore` hardens).
+   conversation.
 4. **CLI** - the fresh client sends `init` with no `channelId`. That is
    upstream's own "the client reloaded" signal: `processRequest`'s `init` case
    closes every channel the comms object still holds
@@ -55,8 +55,15 @@ reloads exactly as it was first built.
   upstream's own `iconSize` - nothing about its size, hover, focus ring or
   aria/title wiring is chosen here. Nothing is consumed, so no existing code is
   retyped.
-- **`getHtmlForWebview(<6 params>){`** - the definition (call sites all carry a
-  `this.` prefix and non-identifier arguments, so the regex cannot hit them).
+- **`getHtmlForWebview(<6 params>[, more]){`** - the definition (call sites all
+  carry a `this.` prefix and non-identifier arguments, so the regex cannot hit
+  them). 2.1.292 added a seventh, `<reopenedAfterRestart>=!1`, and the exact
+  six-parameter anchor went `[miss]` from then until 2.1.295. Anything after the
+  sixth is now allowed, and left out of the replay: a reload by hand is not a
+  reopen after a restart, and the default is what a fresh render passes. Matches
+  exactly once in every cached version, 2.1.241 to 2.1.295. Measured on 2.1.295:
+  the click gives the panel a new document on the same session, the old `claude`
+  process exits and one new one resumes the same id.
 - **`<view>.webview.onDidReceiveMessage((<msg>)=>{<log>,<comms>?.fromClient(<msg>)}`**
   - matched three times; the original body is captured whole and threaded back
   through the wrapper rather than re-authored.

@@ -6,7 +6,7 @@ let __md=__PE__.webview.onDidReceiveMessage(function(){
 let __try=function(){
   if(__loaded||__att>=3||!__PE__.visible)return;
   __att++;
-  try{__PE__.webview.html=__self.getHtmlForWebview(__PE__.webview,__PT__,__PR__,!1,__PN__)}catch(_){}
+  try{__PE__.webview.html=__self.getHtmlForWebview(__HTML_ARGS__)}catch(_){}
   setTimeout(__try,3000)
 };
 setTimeout(__try,4000);

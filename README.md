@@ -92,7 +92,7 @@ Each links to its folder's README for the full root cause + proof.
 - 🧵 [**ELECTRON_RUN_AS_NODE leak**](patches/electron-run-as-node) — the flag leaks into every subprocess the CLI spawns; stripped at each site.
 - 📜 [**Worktree sessions in history**](patches/worktree-history) — `includeWorktrees` was hardcoded off.
 - 🔤 [**cwd drive-letter case**](patches/cwd-drive-case) — from **CLI 2.1.222** on, IDE-started worktree sessions die on resume with `process exited with code 1`. `URI.fsPath` hands the CLI `c:\…`, git reports `C:/…`, and the new isolation-worktree guard compares them **case-sensitively**. *Proof:* same repo, same session, only the drive letter changed → exit 0 vs exit 1; and 2.1.221 resumes where 2.1.222 refuses.
-- 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) the saved sessionID is seeded on deserialize, which past **2.1.278** means overriding the app's own **10-minute** restore window rather than fixing a drop; (2) VS Code sometimes never loads a restored iframe → recovery re-loads it; (3) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`. Its fourth sub-fix (retry `activate` instead of new-chatting) was retired — see below.
+- 🔄 [**Reload restore**](patches/reload-restore) — blank / new-chat tabs after reload: (1) VS Code sometimes never loads a restored iframe → recovery re-loads it; (2) a `git worktree list` **5s timeout** drops worktree sessions from the list → bumped to 20s. *Proof:* `HOST Xpe empty dur=5270` at the moment of `activate → FAILED-newChat`. Two earlier sub-fixes were retired because the app does them now (see below).
 
 - 📐 [**Footer row runs out of the frame**](patches/footer-fit) - the app fits its footer with a ladder of stages that stops where *its own* buttons fit; the ~118px of buttons these patches add had no stage of their own, so in a narrow panel the permission-mode selector was squeezed to 0px and the send button pushed out of the frame. The ladder now goes on: the app's own narrow form (applied by the row, not by a viewport query that zoom blinds), then our buttons fold one by one into a "⋯" menu that is the twin of the app's "+", then the app's own status pills and "/" join them, and only below a 160px panel does the row wrap between its two halves. *Proof:* swept 700→130px in the lab, also at zoom 1.34 with Remote Control, agents and an open file - nothing leaves the frame at any width.
 
@@ -123,6 +123,12 @@ remaining misses mean what they say. `git log` still has them.
   rewritten: `activateSessionFromServer` now checks the local list, asks the
   server, tests an `isSuperseded` callback and looks again, which is the retry
   the patch used to inject.
+- 🔁 **Reload restore's session seeding** - *not needed by 2.1.295.* It put the
+  saved session id into a reloaded tab so the tab would come back to its
+  conversation past a 10-minute window. Its anchor had been dark since 2.1.287,
+  and when re-anchored it landed but changed nothing a user sees: unpatched and
+  patched tabs reloaded after 12 and after 27 idle minutes both came back to the
+  conversation.
 - 📋 **Copy icon on Claude's replies** (half of [copy-message](patches/copy-message)) - *gone
   between 2.1.258 and 2.1.278.* Every assistant reply now ends in the app's own
   **Copy response** button. The app still has no copy for your *own* message, so

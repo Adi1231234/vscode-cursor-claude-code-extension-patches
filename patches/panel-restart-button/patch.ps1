@@ -31,9 +31,12 @@ function Invoke-Patch {
     $rxBtn = '(?=([\w$]+)\(([\w$]+),\{ref:[\w$]+,ariaLabel:"Session history",iconSize:20,.{0,60}?\}\),' +
              '\1\(\2,\{ariaLabel:"New session",iconSize:20,onClick:\(\)=>\{' +
              'if\(!([\w$]+)\.startNewConversationTab\(\)\)([\w$]+)\.createSession\(\)\})'
-    # getHtmlForWebview(<webview>,<session>,<prompt>,<sidebar>,<fullEditor>,<listOnly>){
+    # getHtmlForWebview(<webview>,<session>,<prompt>,<sidebar>,<fullEditor>,<listOnly>[,...]){
     # - the definition; every call site carries a `this.` prefix and real arguments.
-    $rxHtml = '(getHtmlForWebview\(([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+)\)\{)'
+    # 2.1.294 added a seventh, `<reopenedAfterRestart>=!1`, so anything after the
+    # sixth is allowed and left out of the replay: a reload by hand is not a
+    # reopen after a restart, and its default is what a fresh render passes.
+    $rxHtml = '(getHtmlForWebview\(([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+),([\w$]+)(?:,[\w$]+(?:=[\w$!.]+)?)*\)\{)'
 
     # Run only around the header's own literal (lib/Anchor.ps1): a pass over the
     # whole bundle of a pattern that opens with an identifier cost 2.4 s.
