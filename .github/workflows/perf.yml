@@ -1,4 +1,7 @@
-# Every push: do the patches still leave the panel as fast as it should be?
+# Every pull request into master, on every push to it: do the patches still
+# leave the panel as fast as it should be? master requires this check ("perf")
+# to pass before a pull request can merge, admins included - set in the
+# branch's protection, not here.
 #
 # 1. The static rules, in a second: no timers, one DOM observer, no class
 #    matched by substring (tools/check-webview-runtime.mjs).
@@ -9,23 +12,21 @@
 #    tools/perf/budgets.json.
 #
 # Windows, because apply.ps1 is Windows PowerShell; the runner image has
-# Chrome and Node. The VSIX (~120 MB) is cached between runs.
+# Chrome and Node. The VSIX (~120 MB) is cached per pull request, so only a
+# request's first run downloads it.
 name: Panel performance
 
 on:
-  push:
   pull_request:
+    branches: [master]
 
+# A newer push to the same request replaces the run of the older one.
 concurrency:
-  group: perf-${{ github.ref }}
+  group: perf-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   perf:
-    # A branch of this repo is measured on its push; a pull request from it
-    # would measure the same commit again. Only a fork's pull request has no
-    # push here to be measured by.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: windows-latest
     timeout-minutes: 30
     steps:

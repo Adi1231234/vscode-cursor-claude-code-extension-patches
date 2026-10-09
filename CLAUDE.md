@@ -9,7 +9,7 @@ in place. Read this before changing anything so the structure stays clean.
 - **`install.ps1`** - one-line bootstrap: downloads the repo zip, runs `apply.ps1`, cleans up. Users never edit this.
 - **`apply.ps1`** - orchestrator. Dot-sources `lib/*.ps1`, finds every install (one `$Ctx` each), then runs each patch in the `$order` list against each of them. `-ExtensionsDir <dir>` patches one specific dir instead of auto-discovering.
 - **`lib/`** - shared plumbing, one file per concern. Never put patch-specific logic here.
-  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched); `lib/tests/io-retry.test.ps1` proves it, on every push too.
+  - `Io.ps1` - `Read-Text` / `Write-Text` / `Add-Text` (UTF-8, no BOM). Always use these for file I/O; the bundles contain glyphs that a non-UTF-8 write mangles. They also wait out a file another process holds for a moment (a sharing violation, retried for about 3 s - an anti-virus scan of the previous write once left an install half-patched); `lib/tests/io-retry.test.ps1` proves it, on every pull request too.
   - `Ui.ps1` - `Write-Head/Ok/Skip/Miss/Info` console helpers.
   - `Editors.ps1` - the table of supported editors and where each keeps its extensions (`.cursor`, `.vscode`, `.vscode-insiders`, `.vscode-oss`). The only place that knows about editors; add an editor = add a row.
   - `Extension.ps1` - `Find-ClaudeExtension` (one dir) / `Find-ClaudeExtensions` (every editor) -> the `$Ctx` object (see below).
@@ -65,7 +65,8 @@ in place. Read this before changing anything so the structure stays clean.
     runs the real panel, published and patched, in a headless Chrome with a fake
     host and a long made-up conversation, traces opening it, idling, scrolling
     and a streamed working turn, and fails over `budgets.json`; `why.mjs` names
-    the code behind a phase's work. It runs on every push
+    the code behind a phase's work. It runs on every push to a pull request
+    into master, and master will not merge one it fails
     (`.github/workflows/perf.yml`). Its README has what each number means.
 
 ## The `$Ctx` contract
@@ -173,9 +174,9 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
     way. The flags outlive the rule: dropping it from a loaded page proves
     nothing, measure with `tools/perf/perf.mjs --skip`.
   `node tools/check-webview-runtime.mjs` (also in the selftest and on every
-  push) fails on any `setInterval` or `new MutationObserver` in webview code
+  pull request) fails on any `setInterval` or `new MutationObserver` in webview code
   outside `lib/js/ccWatch.js`, and on any class matched by substring in a
-  stylesheet. `tools/perf/perf.mjs` (on every push too) measures the rest
+  stylesheet. `tools/perf/perf.mjs` (on every pull request too) measures the rest
   against `tools/perf/budgets.json`. Host code (`host/`) runs in the extension host and is
   exempt.
 - **Why it is one thread, and how to get one per window.** Two facts put every
