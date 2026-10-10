@@ -9,7 +9,7 @@
 #   (2) the filter field's place in the dialog body: the button goes right
 #       before it, under the same condition (servers loaded, none selected)
 #   (3) the busy state's own name, from the hook that declares its setter
-#   (4) webview/index.css - lines the button up at the row's end
+#   (4) webview/index.css - the gap under the button, its own guard
 function Invoke-Patch {
     param($Ctx)
 
@@ -55,5 +55,5 @@ function Invoke-Patch {
     Write-Text $Ctx.WebJs $wc
     Write-Ok 'Reconnect all button in the MCP servers dialog'
 
-    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'button.css') '/* MCPRECONNECTALL */' 'Reconnect all CSS'
+    Add-StyleBlock $Ctx (Join-Path $PSScriptRoot 'button.css') '/* MCPRECONNECTALLCSS */' 'Reconnect all CSS'
 }

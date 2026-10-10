@@ -1,6 +1,7 @@
-/* MCPRECONNECTALL - the "Reconnect all" row above the MCP servers dialog's filter.
-   The button wears the dialog's own actionButton class, full width like its
-   "Add server"; this only leaves the same 8px the dialog puts above that one. */
+/* MCPRECONNECTALLCSS */
+/* The "Reconnect all" row above the MCP servers dialog's filter. The button
+   wears the dialog's own actionButton class, full width like its "Add server";
+   this only leaves the same 8px the dialog puts above that one. */
 .cc-mcp-all {
   margin-bottom: var(--app-spacing-medium);
 }
