@@ -59,6 +59,7 @@ $order = @(
     'message-time'
     'message-cards'
     'panel-background'
+    'mcp-reconnect-all'
 )
 
 # The anchors track the current extension line. An install left far behind (easy to
