@@ -351,7 +351,12 @@ extension" rather than like what it is.
   and the panel cannot start a session. The lab copies
   `.claude/.credentials.json` and the account half of `.claude.json` -
   `projects` (every conversation you have ever had) and `mcpServers` (which
-  would spawn your servers) are dropped.
+  would spawn your servers) are dropped. The copy is taken once, at `up`, and
+  goes stale: once your own Claude renews its sign-in, the lab's next renewal is
+  refused, it writes `expiresAt: 0` into its copy and the panel shows the
+  sign-in page (seen 2026-10-10, 4 minutes after the real renewal). `lab.mjs
+  eval` then says "the panel did not render"; copy `.credentials.json` again and
+  `repatch`.
 - **Remote Control stays off.** `<lab>/home/.claude/settings.json` sets
   `remoteControlAtStartup: false`, so starting a lab never publishes a throwaway
   session to claude.ai.
