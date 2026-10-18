@@ -62,10 +62,16 @@
     return 'ok';
   };
 
-  /* Command outputs of /queue, oldest first: the rows that start "queue:". */
-  E.outputs = () => [...document.querySelectorAll('p')]
-    .filter((p) => p.textContent.startsWith('queue:'))
-    .map((p) => (p.parentElement ? p.parentElement.innerText : p.textContent));
+  /* The elements holding a /queue reply, oldest first. Up to 2.1.300 a reply is
+     a paragraph that starts "queue:"; 2.1.301 draws a mod's reply as a message
+     of its own, labelled "From the queue plugin", without the prefix. */
+  const MOD = '[aria-label="From the queue plugin"]';
+  E.outputRows = () => [...document.querySelectorAll(MOD + ', p')]
+    .filter((el) => el.tagName !== 'P' || (el.textContent.startsWith('queue:') && !el.closest(MOD)))
+    .map((el) => (el.tagName === 'P' ? el.parentElement || el : el));
+
+  /* Command outputs of /queue, oldest first, as text. */
+  E.outputs = () => E.outputRows().map((r) => (r.querySelector('[data-engine-markdown]') || r).innerText);
 
   E.outputAfter = (n, ms = 20000) => E.until(() => {
     const all = E.outputs();
