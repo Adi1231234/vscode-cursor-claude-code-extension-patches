@@ -51,7 +51,7 @@ export const STOPS = [
     await t.flow('/queue list', []);
     await t.idle();
     const last = await t.ev('__ccLogs().filter((l) => /\\[notify\\] quiet/.test(l)).slice(-1)[0] || ""');
-    const row = await t.ev('(() => { const r = [...document.querySelectorAll("[class*=timelineMessage_]")].filter((n) => /^queue: /.test(n.innerText)).pop(); return __ccReply.isClaudeRow(r); })()');
+    const row = await t.ev('(() => { const r = __e2e.outputRows().pop(); return __ccReply.isClaudeRow(r && r.closest("[data-bookmark-uuid]")); })()');
     return [[/nothing from Claude/.test(last), 'the finish notice stayed quiet: ' + last],
       [row === false, 'the command row is not taken for a reply']];
   } },

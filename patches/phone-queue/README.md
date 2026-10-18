@@ -19,6 +19,9 @@ prompt queue (`patches/prompt-queue`). Sent alone it opens a menu of buttons;
    CLI learns the address, and a token for **the panel that spawned it**, from
    its environment: `host/env.js` sits in `spawnClaude`, where `this` is that
    panel's comms object and `this.webview` the webview its messages come from.
+   Since 2.1.300 the env is set inside the launch closure, an arrow function,
+   so `this` is the same; the anchor matches the executable and the env and
+   crosses what is between (one match on 2.1.296, 2.1.300 and 2.1.301).
    Both keys go in last and are always set, empty when there is nothing to
    give: a CLI inherits the environment of whatever started the editor, and an
    editor started from a CLI in a patched panel would otherwise answer every

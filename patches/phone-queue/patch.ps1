@@ -63,9 +63,16 @@ function Invoke-Patch {
     # a /queue finds the panel that spawned its CLI. Ours goes at the env
     # object's end: what is between its braces is captured, not spelled out,
     # and a nested object there is a miss rather than a guess.
+    #
+    # The two ends are the site: the options object getting its executable, and
+    # that same object's env. Up to 2.1.300 the env came straight after; 2.1.301
+    # moved it into the launch closure (`;let v={},P=async(o,p)=>{O.env=`), an
+    # arrow function, so `this` is still the comms object. What lies between is
+    # crossed, not spelled out.
     $js = Add-AfterOnly $js 'extraArgs:\{' (Read-Text (Join-Path $PSScriptRoot 'host/args.js')).Trim()
     if (-not $js) { Write-Miss 'CLI spawn extraArgs anchor not found exactly once'; return }
-    $rxEnv = '([\w$]+)\.pathToClaudeCodeExecutable=[\w$]+,\1\.executableArgs=[\w$]+,\1\.env=\{[^{};]+(?=\})'
+    $rxEnv = '([\w$]+)\.pathToClaudeCodeExecutable=[\w$]+,\1\.executableArgs=[\w$]+[,;][\s\S]{0,200}?' +
+             '\1\.env=\{[^{};]+(?=\})'
     $js = Add-AfterOnly $js $rxEnv (Read-Text (Join-Path $PSScriptRoot 'host/env.js')).Trim() '.pathToClaudeCodeExecutable='
     if (-not $js) { Write-Miss 'CLI spawn env anchor not found exactly once'; return }
     $js = Add-WebviewMessageHook $js (Join-Path $PSScriptRoot 'host/hook.js')

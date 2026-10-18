@@ -19,14 +19,20 @@ $script:CssPlaceholder = '\{\{(?<key>[A-Za-z][A-Za-z0-9_]*)(?:@(?<within>[A-Za-z
 
 # Every module map in the bundle, as hashtables of key -> class. Read once per
 # install, in Find-ClaudeExtension.
+#
+# A key is a bare name or a quoted one: a class with a hyphen in it is quoted
+# ("katex-display":"katex-display_-a7MRw"). 2.1.301 put KaTeX's classes into the
+# markdown module, and a reader that took bare keys only dropped that whole map -
+# codeBlockWrapper with it - so rtl and message-bidi wrote nothing.
 function Get-CssModules {
     param([string]$WebJs)
     $mods = @()
-    foreach ($m in [regex]::Matches($WebJs, '\{((?:[\w$]+:"[\w-]+",?)+)\}')) {
+    $key = '(?:([\w$]+)|"([\w-]+)")'
+    foreach ($m in [regex]::Matches($WebJs, '\{((?:' + $key + ':"[\w-]+",?)+)\}')) {
         $keys = @{}
         $hashes = @{}
-        foreach ($p in [regex]::Matches($m.Groups[1].Value, '([\w$]+):"([\w-]+)"')) {
-            $k = $p.Groups[1].Value; $v = $p.Groups[2].Value
+        foreach ($p in [regex]::Matches($m.Groups[1].Value, $key + ':"([\w-]+)"')) {
+            $k = $p.Groups[1].Value + $p.Groups[2].Value; $v = $p.Groups[3].Value
             if (-not $v.StartsWith("$($k)_")) { $keys = $null; break }
             $keys[$k] = $v
             $hashes[$v.Substring($k.Length + 1)] = $true

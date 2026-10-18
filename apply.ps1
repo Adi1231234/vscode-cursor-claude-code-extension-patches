@@ -48,6 +48,7 @@ $order = @(
     'worktree-resume-origin'
     'worktree-gone-history'
     'reload-restore'
+    'restore-breaker-frames'
     'remote-control-pill-icon'
     'panel-settings'
     'footer-fit'
