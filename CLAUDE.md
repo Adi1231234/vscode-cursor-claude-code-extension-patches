@@ -219,12 +219,16 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `RenderWidgetHostImpl::SynchronizeVisualProperties` followed (a healthy window
   sends it at once), so the panel never got a surface to draw into and kept its old
   width while its iframe shrank. Why Chromium dropped that link was not reachable
-  without a debugger, and none of our code is on that path. The fix is to end that
-  renderer, then a real Reload Window: the panels came back in a new process and
-  painted in 1.2 s. Find the renderer by spinning the CPU in one of its panels over
-  CDP and seeing whose `cpuTime` moves in `SystemInfo.getProcessInfo`, and check
-  nothing else lives in it first. Closing the window and reopening the folder works
-  too.
+  without a debugger, and none of our code is on that path. The way out is to end
+  that renderer, then a real Reload Window: the panels came back in a new process
+  and painted in 1.2 s. Find the renderer by spinning the CPU in one of its panels
+  over CDP and seeing whose `cpuTime` moves in `SystemInfo.getProcessInfo`, and
+  check nothing else lives in it first. Closing the window and reopening the folder
+  works too. **Each reload while it paints nothing used to cost the open
+  conversations**: the 2.1.301 restore breaker counts an open as unfinished until
+  two frames arrive, and the third such reload put an empty chat in every tab.
+  `patches/restore-breaker-frames` settles the open without frames when the panel
+  is alive; a tab already skipped needs its conversation reopened from history.
 - **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
   sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
   viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
