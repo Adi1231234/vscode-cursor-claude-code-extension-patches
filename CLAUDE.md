@@ -208,6 +208,23 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   existing shortcut (`ShouldUpdateShortcut` in `build/win32/code.iss`); a manual
   installer run does. It only applies to the first start: every later window
   joins the running process.
+- **Panels that stay blank after `Reload Window` are a stuck webview renderer, and
+  reloading again cannot fix it.** A reload keeps the window's browsing context
+  group, so its new panels go back into the renderer the old ones ran in. Measured
+  2026-10-18 (VS Code 1.139, four reloads in six minutes): every panel booted, ran
+  its patches and launched its CLI, yet never painted - no `paint` performance
+  entry, no `requestAnimationFrame` callback - in a renderer that had been up three
+  days. A traced resize found the break in the browser process:
+  `CrossProcessFrameConnector::OnSynchronizeVisualProperties` arrived and no
+  `RenderWidgetHostImpl::SynchronizeVisualProperties` followed (a healthy window
+  sends it at once), so the panel never got a surface to draw into and kept its old
+  width while its iframe shrank. Why Chromium dropped that link was not reachable
+  without a debugger, and none of our code is on that path. The fix is to end that
+  renderer, then a real Reload Window: the panels came back in a new process and
+  painted in 1.2 s. Find the renderer by spinning the CPU in one of its panels over
+  CDP and seeing whose `cpuTime` moves in `SystemInfo.getProcessInfo`, and check
+  nothing else lives in it first. Closing the window and reopening the folder works
+  too.
 - **The `zoom` patch puts the panel in a second coordinate system.** `patches/zoom`
   sets `document.body.style.zoom`, and CSS `zoom` deliberately does not scale
   viewport units. Measured across zoom 1 / 1.25 / 1.34 / 1.5 / 2 at a fixed panel
