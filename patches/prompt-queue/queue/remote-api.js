@@ -42,15 +42,15 @@
     return "";
   }
 
-  /* An add from the phone is an ordinary item, like __qAuto.add and unlike
-     the composer's Alt+Enter: that one pauses an idle queue so a batch can be
-     built, and from the phone the hold is a command of its own. */
+  /* An add from the phone is an ordinary item, unlike the composer's
+     Alt+Enter: that one pauses an idle queue so a batch can be built, and
+     from the phone the hold is a command of its own. */
   function remoteAdd(c) {
     var text = String(c.text || "").trim();
     if (!text) return { error: "Nothing to add" };
     var bad = badSchedule(c);
     if (bad) return { error: bad };
-    enqueue(text, [], false);
+    enqueue(text, []);
     var it = Q[Q.length - 1];
     return { error: remoteSchedule(it, c), item: it };
   }

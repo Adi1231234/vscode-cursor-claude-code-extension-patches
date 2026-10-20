@@ -1,10 +1,7 @@
 /* "The run finished" - watched, not polled.
 
    `session.busy` is a Preact signal, and a signal carries .subscribe(), so the
-   falling edge arrives as a push. Nothing here runs on a timer. (The queue and
-   the auto-followup patches predate this and poll `busy` at 150/300ms; they
-   need a settled *reply*, which is a different question from "did the turn
-   end".)
+   falling edge arrives as a push. Nothing here runs on a timer.
 
    Two facts make the edge trustworthy. `busy` is set true once, on the SDK's
    `system`/`init` frame, and back to false only in the store's own endTurn(),

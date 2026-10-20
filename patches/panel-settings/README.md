@@ -84,9 +84,7 @@ map first.
 ## "The run finished" is watched, not polled
 
 `session.busy` is a Preact signal and a signal carries `.subscribe()`, so the
-falling edge arrives as a push. Nothing here runs on a timer. (The queue and
-auto-followup patches poll `busy` at 150/300ms; they need a *settled reply*,
-which is a different question from "did the turn end", and they predate this.)
+falling edge arrives as a push. Nothing here runs on a timer.
 
 Three things make the edge trustworthy:
 
@@ -102,7 +100,7 @@ Three things make the edge trustworthy:
   with the click and before the signal flips - is wrapped to mark the next edge
   as one the user caused, and it is swallowed. Someone who just stopped a run
   does not need to be told it stopped. This is the same decoration
-  `prompt-queue` and `auto-followup` already apply to that method.
+  `prompt-queue` already applies to that method.
 
 The store object is **replaced whenever the conversation changes**, which is why
 the watcher is wired from inside the footer's render rather than once at load:
@@ -203,8 +201,7 @@ announcing is the end of it. The third setting holds the notification back while
 anything is still lined up behind the run that just ended.
 
 Nothing is reached into to find that out. The prompt-queue patch publishes its
-own surface on `window.__qAuto` - the same one `auto-followup` reads - and two
-of its methods answer this exactly: `count()`, which already excludes parked
+own surface on `window.__qAuto`, and two of its methods answer this exactly: `count()`, which already excludes parked
 items, and `paused()`.
 
 **A paused queue counts as nothing pending**, deliberately. A held queue will
@@ -487,7 +484,7 @@ And for the focus gate, in a live panel and in Node:
   the top of that list. That is the gate, and it also proves a lab window
   reports itself focused.
 - **The queue gate, driven by the real queue.** Two prompts pushed straight onto
-  it with `window.__qAuto.add(...)` (`count()` 2, `paused()` false), both ran to
+  it from the page (`count()` 2, `paused()` false), both ran to
   completion (`beta` in the transcript, queue back to 0). With the setting
   **on**, the Action Center gained **exactly one** toast for the two runs; with
   the one bit flipped **off** and two more items queued the same way, it gained

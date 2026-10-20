@@ -2,19 +2,13 @@
  *
  *     node tools/which-build.mjs
  *
- * The panel says this for itself - the button's tooltip names both stamps when
- * they differ (patches/auto-followup/host/stamp.js). That only works from a
- * window whose extension host already has the stamp in it, so this exists for
- * the rest: a window patched before the stamp landed cannot tell you anything,
- * and this can, from the outside.
- *
  * The rule is one comparison: an extension host that started BEFORE the bundle
  * was last written is running the code that was there before it. Nothing else -
  * no cache, no service worker, no editor version - is involved. A window reload
  * restarts that host, which is why it is the fix.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readdirSync } from 'node:fs';
@@ -30,11 +24,7 @@ function bundles() {
       if (!name.startsWith('anthropic.claude-code-')) continue;
       const js = join(dir, name, 'extension.js');
       if (!existsSync(js)) continue;
-      let stamp = '';
-      const text = readFileSync(js, 'utf8');
-      const at = text.indexOf('ccAfStamp:"');
-      if (at >= 0) stamp = text.slice(at + 11, text.indexOf('"', at + 11));
-      out.push({ dir, name, js, written: statSync(js).mtime, stamp });
+      out.push({ dir, name, js, written: statSync(js).mtime });
     }
   }
   return out;
@@ -68,7 +58,7 @@ if (!found.length) { console.log('no Claude Code extension found'); process.exit
 console.log('bundles on disk');
 for (const b of found) {
   console.log(`  ${b.name}`);
-  console.log(`    written ${b.written.toLocaleString()}   stamp ${b.stamp || '(none - patched before the stamp existed)'}`);
+  console.log(`    written ${b.written.toLocaleString()}`);
 }
 
 const live = hosts().filter((h) => h.panels > 0);

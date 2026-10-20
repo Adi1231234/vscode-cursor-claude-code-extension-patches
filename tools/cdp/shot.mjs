@@ -6,7 +6,7 @@
    is what you want for layout; `--sel <css>` clips it to one element's box,
    which is what you want when the thing under review is a dialog.
 
-       node tools/cdp/shot.mjs <window-substring> <out.png> [--sel .__afDlg] [--port N]
+       node tools/cdp/shot.mjs <window-substring> <out.png> [--sel .__qModal] [--port N]
 */
 import { writeFileSync } from 'node:fs';
 import { connect, targets } from './client.mjs';

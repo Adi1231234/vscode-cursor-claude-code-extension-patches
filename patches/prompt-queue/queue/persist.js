@@ -55,7 +55,6 @@
       items: Q.map(function (it) {
         var o = { t: it.text };
         if (it.off) o.o = 1;
-        if (it.auto) o.a = 1;
         if (it.resume) o.r = it.resume;   /* "reset" | "play" (limit-resume.js) */
         if (isScheduled(it)) { o.md = it.mode; if (it.at) { o.at = it.at; o.st = it.start; } if (it.dur) o.du = it.dur; if (it.hold) o.h = 1; }
         if (withFiles && it.files && it.files.length) {
@@ -102,7 +101,7 @@
             text: o.t || "",
             off: !!o.o,
             files: (o.f || []).map(function (x) { return { name: x.n, dataUrl: x.d, file: null }; }),
-            mode: "queue", at: null, start: null, dur: null, hold: !!o.h, missed: false, rearm: false, auto: !!o.a, resume: o.r || false
+            mode: "queue", at: null, start: null, dur: null, hold: !!o.h, missed: false, rearm: false, resume: o.r || false
           };
           /* Restart policy (decided with the user):
              - 'time' still in the future -> keep ticking, fires at its time.
@@ -123,8 +122,7 @@
       }
     } catch (e) { Q.length = 0; }
     /* Only if something would actually fire: a restore of nothing but parked
-       items has nothing to hold back, and the hold then blocks the follow-up
-       loop on a queue that will never move. */
+       items has nothing to hold back. */
     if (Q.some(function (it) { return !isParked(it); })) paused = true;
     ccLog("queue", "loadQueue", qKey(sid), "restored=" + Q.length);
     render();

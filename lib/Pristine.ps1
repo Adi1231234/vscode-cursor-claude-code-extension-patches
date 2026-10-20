@@ -21,7 +21,7 @@
 #
 # They are passed positionally, not by name, so what identifies one is the
 # convention every patch in this repo follows - a single-quoted block comment,
-# '/* QUEUE */', '/* AUTOFOLLOWUP */'. Twenty-seven of them across the tree; a
+# '/* QUEUE */', '/* PHONEQUEUE */'. Twenty-seven of them across the tree; a
 # first version looked for -Guard and found none, which turned "this bundle is
 # already patched" into "there is nothing to check against".
 # Two spellings of the same marker: '/* NAME */' as written into the bundle, and

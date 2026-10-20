@@ -143,8 +143,8 @@ per-version folder, so `--purge` costs you a re-patch, not a 110MB download.
 
 ## Testing a patch that needs a live session
 
-Several patches only come alive once a conversation exists - `auto-followup` has
-no reply to answer and `message-bidi` no block to mark, so an untouched lab shows
+Several patches only come alive once a conversation exists - `message-bidi` has
+no block to mark and `message-cards` no row to draw, so an untouched lab shows
 nothing of them because there is correctly nothing to show. The lab carries its own credentials
 for exactly this; keep it to what the test needs and take the lab down after.
 

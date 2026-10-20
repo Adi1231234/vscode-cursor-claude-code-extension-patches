@@ -54,7 +54,6 @@ $order = @(
     'footer-fit'
     'history-dialog-clip'
     'panel-restart-button'
-    'auto-followup'
     'phone-queue'
     'input-usage'
     'message-time'
@@ -67,15 +66,6 @@ $order = @(
 # miss on a second editor) still patches whatever matches, but say so up front -
 # a wall of [miss] otherwise reads like a broken patcher.
 $minTested = [version]'2.1.220'
-
-# One value per run, written into every injected script. It is what lets a
-# panel say "the bundle on disk is newer than the code I am running" instead of
-# leaving someone to reload and wonder - see patches/auto-followup/host/stamp.js.
-$stampSha = ""
-try { $stampSha = (& git -C $here rev-parse --short HEAD 2>$null) } catch {}
-$script:CcStamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mmZ") +
-                  $(if ($stampSha) { " " + $stampSha.Trim() } else { "" })
-Write-Info "build stamp: $script:CcStamp"
 
 $script:failures = @()
 # Patches whose anchor did not match. Collected so the run ends by naming them:
@@ -145,5 +135,5 @@ if ($script:failures) {
 }
 Write-Host "`nDone ($editors). Reload the window: Ctrl+Shift+P -> Developer: Reload Window" -ForegroundColor Cyan
 # Said, not left over: under `& apply.ps1` a caller reads $LASTEXITCODE, which
-# otherwise still holds the stamp's `git rev-parse` (non-zero outside a checkout).
+# otherwise still holds whatever the last native command before it returned.
 exit 0

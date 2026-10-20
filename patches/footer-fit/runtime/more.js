@@ -46,13 +46,4 @@
             })
         });
     };
-
-    /* What a folded button's own popup should hang from: the overflow button,
-       the one thing on screen that stands for it (auto follow-up's menu). */
-    fold.standIn = function (node) {
-        if (!node || node.getClientRects().length) return node;
-        var row = node.closest("[data-fit-stage]");
-        var more = row && row.querySelector(".cc-more > button");
-        return more && more.getClientRects().length ? more : node;
-    };
 })(__ccFold);
