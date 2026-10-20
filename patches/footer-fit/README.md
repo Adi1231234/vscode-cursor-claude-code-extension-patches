@@ -24,9 +24,8 @@ Two, and both are in how the footer fits itself.
    one stage per render while the row does not fit (`data-fit-stage` on the row):
    stage 1 turns the Remote Control and agents pills into glyphs, stage 2 moves
    the model pill onto a row of its own. Stage 2 is the top, because upstream's
-   own buttons always fit by then. Ours do not: the settings gear, auto
-   follow-up, saved queues and add-to-queue are another 118px, and no stage gives
-   that back. What absorbs it instead is whatever has `flex-shrink: 1;
+   own buttons always fit by then. Ours do not: the settings gear, saved queues
+   and add-to-queue take width that no stage gives back. What absorbs it instead is whatever has `flex-shrink: 1;
    min-width: 0` - the mode selector, built to ellipsize its label - and then the
    row simply overflows.
 2. **The mode selector's narrow form is a viewport query.** It drops its label
@@ -51,8 +50,7 @@ model pill behave exactly as before; the rungs above it reach the row as
   button that is the twin of the app's "+": the same `addButton addButtonSquare`,
   opening the same `menuPopup` of `menuItem` rows (20px icon box, labels aligned
   with the app's own at 34px), read off the app's CSS-module map at runtime.
-  Picking a row clicks the real button, so every control keeps its own handler;
-  auto follow-up's own menu hangs from the "⋯" while its button is folded.
+  Picking a row clicks the real button, so every control keeps its own handler.
 - **fold-6 .. fold-9** - then the app's own items go into the same menu: the
   prompt-cache clock, the agents pill, the Remote Control pill and the "/"
   button. Without these the first version wrapped far too early: measured at a
@@ -78,7 +76,7 @@ footer button of ours picks a free number below 6 (renumber if none is left), an
 - 1 - queue logs (`__qLog`, a debugging aid, off by default)
 - 2 - saved queues (`__qSaved`; the queue panel's header has it too)
 - 3 - settings gear (`panel-settings`)
-- 4 - auto follow-up (`__afBtn`)
+- 4 - free
 - 5 - add to queue (`__qAdd`; Alt+Enter does the same)
 - 6 - the app's prompt-cache clock
 - 7 - the app's agents pill
@@ -125,8 +123,8 @@ In `tools/lab` on 2.1.280, every 5-15px from 700 down to 130px and back up, with
 nothing outside the frame and no glyph squeezed at any width, the same rungs in
 both directions, and no row mutation while typing or idle. Repeated at zoom 1.34
 with Remote Control and the agents pill showing, and with a file selection chip.
-The menu, Escape, an outside press, the settings and saved-queues dialogs and
-auto follow-up's menu were each driven from the "⋯". The app items were added
+The menu, Escape, an outside press, and the settings and saved-queues dialogs
+were each driven from the "⋯". The app items were added
 after, and checked the same way at zoom 1 and 1.34 in both directions: the "/" row
 opens the command menu, the agents row opens the agent map, and the menu stays
 inside a 166px page. Unit tests:

@@ -65,7 +65,7 @@ ok(JSON.stringify(withFiles).indexOf('data:') < 0, 'attachments never reach the 
 /* ---- 2. and what comes back ---- */
 const backPlain = s.queueItemOf({ t: 'hello' });
 ok(backPlain.text === 'hello' && backPlain.mode === 'queue' && backPlain.off === false, 'a plain item restores plain');
-ok(backPlain.files.length === 0 && backPlain.auto === false, 'restored with no files and not marked written');
+ok(backPlain.files.length === 0, 'restored with no files');
 const backTimer = s.queueItemOf({ t: 'x', md: 'timer', du: 600000 });
 ok(backTimer.mode === 'timer' && backTimer.rearm === true && backTimer.at === null,
    'a timer restores INACTIVE - arming it would start a countdown nobody watched begin');

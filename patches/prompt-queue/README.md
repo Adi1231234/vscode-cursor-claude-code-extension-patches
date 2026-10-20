@@ -65,8 +65,8 @@ Three rules keep a pass from asking for itself:
   when it reaches zero.
 
 `__qAuto.busy()` is true while the queue is sending as well as while a turn runs,
-so auto-followup never answers a reply in the gap between the queue taking an
-item and the app marking the turn busy.
+so nothing that reads it mistakes the gap between the queue taking an item and
+the app marking the turn busy for an idle panel.
 
 ## Stopping Claude parks the queue (`stop-pause.js`)
 
@@ -151,7 +151,7 @@ kinds (`it.resume`):
 
 Either kind happens with an empty queue too - a task typed by hand is cut just
 the same. It is an ordinary row (move it, edit it, reschedule it, delete it),
-marked with the responder's star and its own tooltip, and saved with the queue
+marked with a small orange star and its own tooltip, and saved with the queue
 (`r: "reset" | "play"`). There is one at most: a second refusal re-uses it, and
 a weekly refusal while a session continue waits turns that one into a `play`.
 
@@ -531,20 +531,3 @@ files and both lib runtimes never scanned. Add a fragment to `order.json` and
 nothing else needs telling.
 
 Exposes a single `Invoke-Patch $Ctx` (dot-sourced and called by `../../apply.ps1`). Idempotent and fail-safe: if its anchor isn't found it skips instead of corrupting anything.
-
-## Items a responder wrote
-
-`window.__qAuto.add(text, { off })` puts a line in the queue as an **ordinary**
-item: same position at the end, same menu, same skip checkbox, same position box,
-same editable text, same persistence. The only difference is `it.auto`, which puts
-a small mark on the row (`.__qAi`, an orange four-pointed star with the tooltip
-*Written by a responder, not by you*). A duplicate of one is still marked - a copy
-of a written line was still written.
-
-It does not go through `commitComposerToQueue`, which pauses the queue on an idle
-add - and idle is exactly when a responder writes, so that route would hold the
-queue every time. This is the same push the composer ends in, without that.
-
-`off: true` parks the item skipped: present, editable, one click from being sent.
-That is what a responder set to ask before sending uses, and it is also forced for
-an answer that did not parse, whatever the responder says.

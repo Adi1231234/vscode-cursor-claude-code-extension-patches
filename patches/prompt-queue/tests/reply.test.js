@@ -76,15 +76,5 @@ at = R.mark(s);
 s.messages.value.push(user('u3', '<command-name>/queue</command-name>'), command('c3', 'queue: x'));
 ok(!R.since(at, s).replied, 'a row with no uuid from before the mark is not this run\'s reply');
 
-/* ---- transcript rows, by the uuid they carry ---- */
-s = store([reply('a1', 'x'), user('u1', '<command-name>/queue</command-name>'), command('c1', 'queue: x'), notice('n1')]);
-const row = (uuid) => ({ getAttribute: (k) => (k === 'data-bookmark-uuid' ? uuid : null) });
-ok(R.isClaudeRow(row('a1'), s) === true, 'a reply row is Claude\'s');
-ok(R.isClaudeRow(row('c1'), s) === false, 'a command\'s output row is not');
-ok(R.isClaudeRow(row('n1'), s) === false, 'the notice row is not');
-s.messages.value.push(user('u5', 'go'), apiError('e5', 'API Error'));
-ok(R.isClaudeRow(row('e5'), s) === true, 'an API error row is read as a reply, as before');
-ok(R.isClaudeRow(row('zz'), s) === null && R.isClaudeRow({ getAttribute: () => null }, s) === null, 'a row it cannot place: no verdict');
-
 console.log(fail ? fail + ' failed, ' + pass + ' passed' : pass + ' passed');
 process.exit(fail ? 1 : 0);

@@ -89,9 +89,8 @@ session ids answered "no panel" to the first `/queue` of every new tab.
 - **Every `/queue` is a run of its own** to the rest of the panel, and **the
   phone's Stop never passes the panel's `interrupt()`**. Both broke other patches
   and are fixed where they live, on `lib/js/ccReply.js`: the queue now parks on a
-  stop from anywhere (`prompt-queue`), "Claude finished" stays quiet for a run
-  with no reply (`panel-settings`), and a command's output is no longer a reply
-  to answer (`auto-followup`).
+  stop from anywhere (`prompt-queue`), and "Claude finished" stays quiet for a
+  run with no reply (`panel-settings`).
 - Below 2.1.287 the patch writes nothing and says why: there are no mods to run
   in, and 2.1.280's spawn code has no env assignment of this shape.
 

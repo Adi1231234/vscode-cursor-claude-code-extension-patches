@@ -1,6 +1,6 @@
   /* ---------- React fiber / session discovery ----------
-     The walk itself lives in lib/js/ccStore.js (shared with auto-followup and
-     prepended to this script); these are the two names the rest of the queue and
+     The walk itself lives in lib/js/ccStore.js (shared, and prepended to this
+     script); these are the two names the rest of the queue and
      the log probe already use. */
   function fiberOf(node) {
     return globalThis.__ccFiber(node);

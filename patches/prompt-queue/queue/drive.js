@@ -17,7 +17,6 @@
      A countdown on screen is the only thing that needs a clock, and it gets
      the shared one (lib/js/ccClock.js) for exactly as long as it is showing. */
   var passQueued = false, dueTimer = 0, dueAt = 0, stopRings = null;
-  var queueListeners = [];
 
   function pass() {
     passQueued = false;
@@ -30,9 +29,6 @@
     keepRingClock();
     armDueTimer();
     if (!isBusy() && Q.length) flush();
-    for (var i = 0; i < queueListeners.length; i++) {
-      try { queueListeners[i](); } catch (e) {}
-    }
   }
 
   /* A timer, not requestAnimationFrame: a hidden panel never gets a frame, and
@@ -93,12 +89,6 @@
     var showing = !!(panel && panel.isConnected && panel.querySelector(".__qRing,.__qWhen"));
     if (showing && !stopRings) stopRings = window.__ccClock.every(tickRings);
     else if (!showing && stopRings) { stopRings(); stopRings = null; }
-  }
-
-  /* The surface auto-followup waits on: told after every pass, so a queue that
-     empties or un-pauses releases a follow-up without anyone polling count(). */
-  function onQueueChange(fn) {
-    if (typeof fn === "function") queueListeners.push(fn);
   }
 
   function composerArea() {

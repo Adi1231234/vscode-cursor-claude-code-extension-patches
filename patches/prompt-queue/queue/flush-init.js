@@ -71,74 +71,18 @@
     }
   }
 
-  /* ---------- The surface auto-followup consumes ----------
-     That patch keeps its own single slot beside this queue rather than pushing
-     into it, for reasons its README sets out - chiefly that commitComposerToQueue
-     deliberately pauses on an idle add, which is exactly when a follow-up is
-     generated. But it must not re-implement sending: the session/DOM split, the
-     root protection and the busy check below took real bugs to get right.
-
-     So this is the whole contract, read-only except for send():
-       count()   items the queue will send on its own. Non-zero means the user
-                 is driving. A parked item is not driving and never leaves.
-       paused()  the user's hold. Nothing auto may send through it.
+  /* ---------- The surface other patches read ----------
+     Read-only, so nothing outside reaches into the queue's own state:
+       count()   items the queue will send on its own. A parked item never
+                 leaves, so it is not counted.
+       paused()  the user's hold. Nothing goes out through it.
        busy()    a turn is running, or this queue is sending one.
-       panel()   the queue panel node, or null - the lane renders inside it.
-       send(t)   send one text now, by the same path a queued item takes.
-       log(...)  append to the shared log ring, readable with Ctrl+Alt+L.
-       sid()     the conversation id, resolved and cached by persist.js.
-       subscribe(fn)  fn() after every queue pass - a push instead of polling
-                 count() / paused() (see drive.js).
-     Guarded so the first definition wins, like every other shared global here.
-
-     send() cannot go through sendNow: that one takes an item already in Q and
-     no-ops on anything else. sendText is the same two paths and the same guards,
-     on a text that was never queued. */
-  async function sendText(text) {
-    var t = String(text || "").trim();
-    if (!t || flushing || editing || isBusy()) return false;
-    var e = inp();
-    if (!e) return false;
-    var s = getSession();
-    var canSend = !!(s && typeof s.send === "function");
-    if (!canSend && (e.textContent || "").trim().length > 0) return false;  /* root protection */
-    flushing = true;
-    try {
-      if (canSend) await sendViaSession(s, { text: t }, []);
-      else await sendViaDom(e, { text: t }, []);
-      return true;
-    } catch (err) {
-      return false;
-    } finally {
-      flushing = false;
-      schedulePass();   /* an item queued while this was in flight is next */
-    }
-  }
-
+     panel-settings asks count() and paused() whether more work is lined up
+     behind the run that just ended. Guarded so the first definition wins, like
+     every other shared global here. */
   window.__qAuto = window.__qAuto || {
     count: function () { return Q.filter(function (it) { return !isParked(it); }).length; },
     paused: function () { return paused; },
-    busy: function () { return isBusy() || flushing; },
-    panel: function () { return panel && panel.isConnected ? panel : null; },
-    send: sendText,
-    log: function (a, b, c) { try { ccLog("autofollowup", a, b, c); } catch (e) {} },
-    sid: function () { return _curSid || ""; },
-    subscribe: onQueueChange,
-
-    /* Put a line in the queue as an ordinary item. Not through the composer:
-       commitComposerToQueue pauses the queue on an idle add, which is exactly
-       when a responder writes, so going that way would hold the queue every
-       time. This is the same push the composer ends in, without that.
-
-       off:true parks it as skipped - present, editable, one click from being
-       sent - which is what a responder set to ask before sending needs. */
-    add: function (text, opts) {
-      if (!text || !String(text).trim()) return false;
-      opts = opts || {};
-      enqueue(String(text), [], true);
-      if (opts.off) Q[Q.length - 1].off = true;
-      render();
-      return true;
-    }
+    busy: function () { return isBusy() || flushing; }
   };
 

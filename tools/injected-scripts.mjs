@@ -40,13 +40,7 @@ export const SCRIPTS = {
   },
   "input-usage": {
     dir: "patches/input-usage/usage/",
-    /* Read, not repeated, like auto-followup's. */
+    /* Read, not repeated, like prompt-queue's. */
     order: JSON.parse(read("patches/input-usage/usage/order.json"))
-  },
-  "auto-followup": {
-    dir: "patches/auto-followup/af/",
-    /* Read, not repeated. This list lived in five places; once.js was added to
-       four of them and this one kept scanning a bundle the patch no longer ships. */
-    order: JSON.parse(read("patches/auto-followup/af/order.json"))
   }
 };

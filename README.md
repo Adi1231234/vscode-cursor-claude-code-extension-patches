@@ -60,23 +60,15 @@ Each feature / bug fix is a **self-contained folder** under `patches/`; the shar
 - **`tools/which-build.mjs`** — which windows are running the bundle that is on
   disk and which need a reload. `Developer: Reload Window` restarts **one**
   window's extension host; every other window keeps the code it loaded when it
-  started, and nothing says so. Every patched bundle now carries a stamp
-  (`ccAfStamp:"<utc> <sha>"`), the panel compares the one it is running with the
-  one in the file and puts *a newer build is installed, reload this window* on the
-  button, and this tool answers the same question from outside - including for a
-  window patched before the stamp existed, which cannot answer for itself.
+  started, and nothing says so. This tool answers it from outside: an extension
+  host that started before the bundle was last written is running the code that
+  was there before it.
 
 *Add a patch* = drop `patches/<name>/patch.ps1` defining `Invoke-Patch`, add its name to the list in `apply.ps1`. Nothing else.
 
 ## ✨ Features
 
-🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on your own messages](patches/copy-message) · 🔓 Bypass permission mode · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 🔁 [Auto follow-up](patches/auto-followup) · 📊 [Usage left, inside the composer](patches/input-usage) · 🕒 [Message times under every row, tool calls too](patches/message-time).
-
-🔁 **Auto follow-up** — a second model reads what Claude just wrote and types
-your next message. You write one file that says how to answer for you
-(`~/.claude/responders/*.md`), arm it with one click in the composer footer, and
-it keeps going until its stop condition is met or you press stop. See
-[patches/auto-followup](patches/auto-followup).
+🌐 RTL text · ⌨️ Input RTL · 🔍 Zoom (Ctrl+Scroll) · 📥 Codex-style Prompt Queue · 📋 [Copy icon on your own messages](patches/copy-message) · 🔓 Bypass permission mode · 🗣️ [Subagent text on the stream](patches/subagent-stream-flags) · 🔄 [Restart one panel](patches/panel-restart-button) · 📊 [Usage left, inside the composer](patches/input-usage) · 🕒 [Message times under every row, tool calls too](patches/message-time).
 
 🔄 **Restart Claude** — an icon in the panel header, next to Session history. It
 reloads **that one panel** and the CLI process behind it, then comes back on the

@@ -46,7 +46,7 @@
   function queueItemOf(o) {
     var it = {
       id: ++idc, text: o.t || "", off: !!o.o, files: [],
-      mode: "queue", at: null, start: null, dur: null, hold: false, missed: false, rearm: false, auto: false
+      mode: "queue", at: null, start: null, dur: null, hold: false, missed: false, rearm: false
     };
     if (o.md === "timer") { it.mode = "timer"; it.dur = o.du || 0; it.rearm = true; it.hold = ("h" in o) ? !!o.h : true; }
     else if (o.md === "after") { it.mode = "after"; it.dur = o.du || 0; }

@@ -4,8 +4,8 @@
    from stage 0 and climbing one stage per render while the row does not fit:
    stage 1 turns the Remote Control and agents pills into glyphs, stage 2 moves
    the model pill onto a row of its own. Stage 2 was the top, because upstream's
-   own buttons always fit by then. Ours do not - the gear, auto follow-up, saved
-   queues and add-to-queue are another 118px - so at stage 2 the row kept
+   own buttons always fit by then. Ours do not - the gear, saved queues and
+   add-to-queue take width no stage gives back - so at stage 2 the row kept
    overflowing: the permission-mode selector (flex-shrink 1, min-width 0) was
    squeezed to nothing and the send button was pushed out of the frame.
 

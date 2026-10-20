@@ -109,7 +109,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
    - `Add-ScriptAfterRegex $Ctx <script> '<pattern>' '<guard>' '<label>'` - inject after a regex-matched tag.
    - `Get-LibJsPath '<name>.js'` - the path to a shared runtime in `lib/js/`, to drop into a patch's ordered fragment list (see `copy-message` / `inline-code-copy` pulling in `ccCopyText.js`). Never copy a shared runtime into a patch folder.
    - `Set-MatchText $text $match $new` - replace exactly the span a regex match covered with plain text, for a replacement assembled from captures of more than one match, where `[regex]::Replace` would read a captured `$` name as a substitution (`footer-fit`).
-   - `Add-WebviewMessageHook $js <hookPath>` - put a returning guard at the top of **every** chat surface's `onDidReceiveMessage` in `extension.js`, so a patch can answer messages of its own before the app's protocol switch logs them as unknown. The hook's `__WV__` / `__MSG__` / `__COMMS__` placeholders are filled for you; returns the new text, or `$null` when the shape is gone (then `Write-Miss` and write nothing). Several patches hook the same listener - what is already there is carried through, so their order does not matter (`panel-settings`, `panel-restart-button`, `auto-followup`).
+   - `Add-WebviewMessageHook $js <hookPath>` - put a returning guard at the top of **every** chat surface's `onDidReceiveMessage` in `extension.js`, so a patch can answer messages of its own before the app's protocol switch logs them as unknown. The hook's `__WV__` / `__MSG__` / `__COMMS__` placeholders are filled for you; returns the new text, or `$null` when the shape is gone (then `Write-Miss` and write nothing). Several patches hook the same listener - what is already there is carried through, so their order does not matter (`panel-settings`, `panel-restart-button`).
 
 ## Non-negotiable conventions
 
@@ -394,9 +394,10 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   host raised a Claude-finished toast on every run while its own "Stay quiet
   while this window is focused" switch was on, because the gate is applied in
   the host and arrived hours after that host did - and the switch is a shared
-  `localStorage` key, so it read as on in every window. Ask the panel which host
-  is behind it (`window.__ccBuild` from `auto-followup`'s stamp says `running` /
-  `onDisk` / `stale`), and for anything a user can *toggle*, have the host
+  `localStorage` key, so it read as on in every window. Ask which windows are
+  behind the bundle on disk (`node tools/which-build.mjs` compares each
+  extension host's start with the bundle's write time), and for anything a user
+  can *toggle*, have the host
   **answer** its messages so the panel can feature-detect it and say so
   (`patches/panel-settings`: `done` -> `{op:"decided",shown,focused}`, `ping` ->
   `{op:"pong"}`, a warning box in the dialog when nothing comes back). A version
@@ -502,22 +503,20 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   own `endTurn()` on the `result` frame, so it does **not** flap between tool
   calls and one rising-then-falling pair is one run. Signals carry
   `.subscribe()`, so the edge is a push - do not add a poll loop for it; take it
-  from `__ccSession.on('busy', ...)` (the queue and auto-followup both do; the
-  *settled reply* auto-followup waits for is a one-shot timer armed on the
-  fall). Two traps: `.subscribe()` fires immediately with the
+  from `__ccSession.on('busy', ...)` (the queue does). Two traps: `.subscribe()` fires immediately with the
   **current** value, so the first callback must only prime the edge detector or
   opening a panel mid-run reads as a finish (`__ccSession` passes `initial` for
   exactly this); and **Stop is indistinguishable
   from a finish** on this signal, so decorate the store's `interrupt()` - which
   runs synchronously with the click, before the signal flips - the way
-  `prompt-queue`, `auto-followup` and `panel-settings` all do. The store object
+  `prompt-queue` and `panel-settings` both do. The store object
   is replaced when the conversation changes; `__ccSession` follows the app's
   `sessions.activeSession` signal and moves every subscription across, so
   subscribe through it rather than to one store once at load. And "is more work lined up behind
   this run?" has an answer already published: the queue exports `window.__qAuto`
-  with `count()` (parked items already excluded), `paused()` and `add()` - read
-  that rather than reaching into the queue's own state, the way `auto-followup`
-  and `panel-settings` both do. Treat a **paused** queue as nothing pending: it
+  with `count()` (parked items already excluded), `paused()` and `busy()` - read
+  that rather than reaching into the queue's own state, the way `panel-settings`
+  does. Treat a **paused** queue as nothing pending: it
   will not send anything, so the run that just ended was the last one.
 - **A turn refused by a usage limit ends exactly like a finished one.** `busy`
   falls, and the only row it leaves is `<synthetic>` text ("You've hit your
@@ -529,7 +528,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   reset brings none - so act on the result, not on the state. The store keeps
   neither readable; read both on their way in through the store's
   `processIncomingMessage`, the way `patches/prompt-queue/queue/usage-limit.js`
-  does. Anything that sends on a turn's end (the queue, a responder) has to ask
+  does. Anything that sends on a turn's end (the queue) has to ask
   this first, or it drains itself into the limit. And never read an `allowed`
   frame as "a run went through": a side call (a cheap model, a title) can come
   back allowed while the main call is refused - ask the run
@@ -545,8 +544,7 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   The queue patch owns the only in-panel log (`Ctrl+Alt+L` opens the viewer,
   `window.__ccLogs()` reads the ring programmatically), and it now hands the
   writer out as `window.__ccLog(tag, ...)`, so any patch can leave a trace under
-  its own tag instead of borrowing `__qAuto.log` and being filed as
-  "autofollowup". Log the *decision*, not just the event, and where the decision
+  its own tag. Log the *decision*, not just the event, and where the decision
   is taken somewhere else - `panel-settings` sends the message but the **host**
   applies the focus gate - say so in the line, or a reader chasing a silence
   reads `sent` and concludes the message was lost.

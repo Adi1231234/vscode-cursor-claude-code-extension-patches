@@ -22,7 +22,6 @@ class HTMLElement {
   hasAttribute(k) { return k in this.attrs; }
   querySelector() { return null; }
   querySelectorAll() { return this.all || []; }
-  getClientRects() { return this.shown === false ? [] : [{}]; }
   matches(sel) { return !!this.cls && sel === "." + this.cls; }
 }
 
@@ -92,23 +91,15 @@ function node(cls, attrs) {
     get previousElementSibling() { const k = this.parentNode.children; const i = k.indexOf(this); return i > 0 ? k[i - 1] : null; } };
 }
 const R = load(["lib/js/ccRow.js"]).__ccRow;
-R.rank("__afBtn", 10); R.rank("__qAdd", 40);
+R.rank("__qLog", 20); R.rank("__qAdd", 40);
 const parent = { children: [], insertBefore(n, ref) {
   const k = this.children.filter((x) => x !== n); k.splice(k.indexOf(ref), 0, n); this.children = k; n.parentNode = this; } };
 const send = node("sendButton"), more = node("cc-more", { "data-cc-tail": "" });
-const qAdd = node("__qAdd"), af = node("__afBtn");
-for (const n of [qAdd, more, af, send]) { n.parentNode = parent; parent.children.push(n); }
+const qAdd = node("__qAdd"), qLog = node("__qLog");
+for (const n of [qAdd, more, qLog, send]) { n.parentNode = parent; parent.children.push(n); }
 R.place(parent, send);
-ok(parent.children.map((n) => n.className).join(" ") === "__afBtn __qAdd cc-more sendButton",
+ok(parent.children.map((n) => n.className).join(" ") === "__qLog __qAdd cc-more sendButton",
   "ranked buttons land before the overflow button, not between it and send - got " + parent.children.map((n) => n.className).join(" "));
-
-/* ---- the stand-in for a folded button's own popup ---- */
-const M = load([rt + "cut.js", rt + "fold.js", rt + "menu-items.js", rt + "menu.js", rt + "more.js"]).__ccFold;
-const moreBtn = new HTMLElement({});
-const folded = new HTMLElement({ shown: false, closest: () => ({ querySelector: () => moreBtn }) });
-const shown = new HTMLElement({});
-ok(M.standIn(folded) === moreBtn, "a folded button's popup hangs from the overflow button");
-ok(M.standIn(shown) === shown, "a button on screen keeps its own anchor");
 
 console.log(failed ? failed + " failed, " + passed + " passed" : passed + " passed");
 process.exit(failed ? 1 : 0);

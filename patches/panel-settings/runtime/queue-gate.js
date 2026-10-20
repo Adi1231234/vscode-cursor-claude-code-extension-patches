@@ -4,7 +4,7 @@
    announcing is the end of it. The prompt-queue patch publishes exactly what is
    needed on `window.__qAuto`: `count()`, which already excludes parked items,
    and `paused()`. Nothing is reached into - that surface is the queue's own
-   export, the one auto-followup reads too.
+   export.
 
    Paused counts as nothing pending on purpose: a held queue will not send
    anything, so this run really was the last one and staying silent would mean

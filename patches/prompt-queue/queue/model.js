@@ -1,10 +1,6 @@
   /* ---------- Queue model ---------- */
-  /* "auto" marks an item a responder wrote rather than the user. It changes
-     nothing about how the item behaves - same position, same menu, same
-     everything - and only puts a mark on the row, because where a line came
-     from is worth knowing and is not worth a second kind of item. */
-  function enqueue(text, files, auto) {
-    Q.push({ id: ++idc, text: text, files: files, auto: !!auto });
+  function enqueue(text, files) {
+    Q.push({ id: ++idc, text: text, files: files });
   }
 
   /* Identity-based, not index-based: the row menu can outlive a queue shift
@@ -34,8 +30,7 @@
       dur: it.dur || null,
       hold: !!it.hold,       /* a copy holds the queue exactly as its source does */
       missed: !!it.missed,
-      rearm: !!it.rearm,
-      auto: !!it.auto        /* a copy of a written line was still written */
+      rearm: !!it.rearm
     });
     render();
   }
@@ -93,13 +88,12 @@
      missed / rearm / skipped items are parked: inactive, and never a gate -
      a skipped gate would be a deadlock nobody could see. */
   /* Parked: present in the list, and not something the queue will ever send
-     on its own. off is set aside by hand or by a responder asking first,
-     missed is a moment that passed while the window was closed, rearm is a
-     countdown that lost its origin. Named once because three places have to
-     agree: what flushes, what counts as the user driving, and what a restore
-     holds the queue for. They did not agree, and a single parked item stopped
-     the follow-up loop for good - it can never be sent, so the count it made
-     non-zero could never fall. */
+     on its own. off is set aside by hand, missed is a moment that passed
+     while the window was closed, rearm is a countdown that lost its origin.
+     Named once because three places have to agree: what flushes, what count()
+     reports as still to send, and what a restore holds the queue for. A parked
+     item counted there can never be sent, so a count it made non-zero would
+     never fall. */
   function isParked(it) { return !!(it.off || it.missed || it.rearm); }
 
   function firstSendableIndex() {
