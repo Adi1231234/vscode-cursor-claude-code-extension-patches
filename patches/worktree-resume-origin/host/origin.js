@@ -58,7 +58,7 @@ globalThis.__ccResumeOrigin = globalThis.__ccResumeOrigin || (function () {
                 say(logger, sessionId + ": no transcript found, launching in " + here);
                 return here;
             }
-            var rec = await globalThis.__ccTranscript.worktreeOrigin(file);
+            var rec = await globalThis.__ccWorktreeOrigin(file);
             if (!rec.seen) {
                 say(logger, sessionId + ": started inside " + cwd + (here === cwd
                     ? ", launching it there" : ", which is gone, launching it from " + here));

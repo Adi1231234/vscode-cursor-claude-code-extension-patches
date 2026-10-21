@@ -46,6 +46,10 @@ in place. Read this before changing anything so the structure stays clean.
     a mark is a set of rows (uuid, or the row itself when it has none - a reply
     stopped mid-thought leaves one), never a position, because the store trims
     its list.
+    Host runtimes (prepended to `extension.js`, not the webview):
+    `ccProjects.js` (where transcripts live) and `ccTranscript.js`
+    (`__ccTranscript`: a session's transcript found by id, and its records of
+    one type read newest first without loading a tens-of-MB file).
   - `css/` - the shared stylesheets, `Get-LibCssPath`: `ccScroll.css` (the
     scrollbar) and `ccModal.css` (the dialog chrome that goes with
     `lib/js/ccModal.js`). Whichever patch runs first appends them; the guard in
@@ -556,6 +560,14 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   rewrites, its band above the prompt and its status line never appear. Its
   hooks and slash commands do run (`patches/phone-queue` relies on that).
   `patches/input-usage` is the worked example of doing it as a patch instead.
+- **The name other sessions see is not the tab title.** `ListAgents` and
+  `SendMessage` read the CLI's registry (`~/.claude/sessions/<pid>.json`,
+  `name` + `nameSource`); the tab shows the transcript's newest `custom-title`.
+  The registry only learns a title from a `rename_session` sent to a CLI
+  already running that session, and a CLI the panel starts never restores it
+  from the transcript (the SDK resume path skips that step). Measured
+  2026-10-21; `patches/session-name-sync` sends the title at each channel's
+  start.
 
 ## Testing a change (without touching your real install)
 

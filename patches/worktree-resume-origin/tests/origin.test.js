@@ -18,8 +18,10 @@ fs.mkdirSync(wt, { recursive: true });
 fs.writeFileSync(path.join(wt, '.git'), 'gitdir: x');   // a live worktree carries git's link file
 
 const host = (f) => path.resolve(__dirname, '..', 'host', f);
-eval(fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'lib', 'js', 'ccProjects.js'), 'utf8'));
-eval(fs.readFileSync(host('transcript.js'), 'utf8'));
+const lib = (f) => path.resolve(__dirname, '..', '..', '..', 'lib', 'js', f);
+eval(fs.readFileSync(lib('ccProjects.js'), 'utf8'));
+eval(fs.readFileSync(lib('ccTranscript.js'), 'utf8'));
+eval(fs.readFileSync(host('worktree-record.js'), 'utf8'));
 eval(fs.readFileSync(host('origin.js'), 'utf8'));
 const pick = globalThis.__ccResumeOrigin;
 
