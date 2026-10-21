@@ -47,6 +47,7 @@ $order = @(
     'cwd-drive-case'
     'worktree-resume-origin'
     'worktree-gone-history'
+    'session-name-sync'
     'reload-restore'
     'restore-breaker-frames'
     'remote-control-pill-icon'
