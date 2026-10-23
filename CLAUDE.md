@@ -434,7 +434,11 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `patches/worktree-gone-history` keeps a session findable when its worktree is
   deleted with the session still inside; every session lookup goes through
   `git worktree list`, and only the security check that trusts a worktree path
-  must keep git's answer as is.
+  must keep git's answer as is. When that call fails (it gets 5 s, and an editor
+  starting many panels at once can exceed that) the lister used to answer "no
+  worktrees" and the tab opened an empty chat; `patches/worktree-list-fallback`
+  reads the same list from `.git/worktrees/*/gitdir` instead. Never raise the
+  timeout for it - that only moves where the same failure happens.
 - **An OS notification has to leave the editor, and only the host can send it.**
   Upstream already has a `show_notification` request the webview calls in a
   dozen places - message, severity, buttons, even an `onlyIfNotVisible` gate -
