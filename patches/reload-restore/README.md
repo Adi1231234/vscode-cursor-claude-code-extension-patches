@@ -5,18 +5,15 @@
 **Guard marker:** `/* RELOADFIX */`
 
 Blank / new-chat tabs after "Reload Window". This started as four sub-fixes; the
-app has since grown a restore of its own, so two of them are gone. What is left:
+app has since grown a restore of its own, and a third was replaced by a root-cause
+fix, so one is left:
 
 1. **Recovery: re-load a webview whose iframe never ran.**
-2. **`git worktree list` timeout 5s -> 20s** - a timeout there drops worktree
-   sessions from the list, and since 2.1.278 it also drops their transcripts (the
-   app resolves a session file by walking the worktrees that command reports).
 
-Both injected pieces are JS files under `js/`, filled via `Get-InjectedJs`:
-`blank-iframe-recovery.js` (1, `__PE__` and `__HTML_ARGS__`) and `timeout.js`
-(2, the value `20000`). `patch.ps1` only anchors, fills the `__TOKEN__`
+The injected piece is `js/blank-iframe-recovery.js`, filled via `Get-InjectedJs`
+(`__PE__` and `__HTML_ARGS__`). `patch.ps1` only anchors, fills the `__TOKEN__`
 placeholders, and writes. Idempotent and fail-safe: an anchor that does not match
-skips that sub-fix and leaves the file untouched.
+leaves the file untouched.
 
 ## What the app now does by itself
 
@@ -28,6 +25,14 @@ fields in `deserializeWebviewPanel` and binds the panel with
 `fresh_after_missing_saved` / `fresh_with_prompt` / `blank`.
 
 ## What was removed
+
+**The `git worktree list` timeout bump, 5s -> 20s** (2.1.309). A timeout there
+makes the lister answer "no worktrees", so a worktree session is not found and
+its tab opens a new empty chat. The bump only moved that point: on 2026-10-23 a
+restart with five windows lost four tabs this way while the bump was not yet
+in the bundle, and under that load a slower git would cross 20 s just as well.
+`patches/worktree-list-fallback` answers a failed list from git's own files
+instead, so the timeout is upstream's again and a tab waits at most 5 s.
 
 **The webview half** (2.1.278). It replaced the branch that called
 `activateSessionFromServer` once and silently opened a new chat if it returned

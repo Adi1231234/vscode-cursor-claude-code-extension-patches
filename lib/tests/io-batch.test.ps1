@@ -9,6 +9,7 @@
 #   3. the save writes what changed, once, and leaves the rest untouched
 #   4. once saved, nothing is held: a write goes straight to disk again
 #   5. a file that cannot be written is reported, and the others still are
+#   6. a file patched back to exactly what was on disk is not written
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\Ui.ps1')
 . (Join-Path $PSScriptRoot '..\Io.ps1')
@@ -50,6 +51,15 @@ try {
     Check 'a file that cannot be written is reported, the rest still are' (
         $bad.Count -eq 1 -and $bad[0] -like "$js*" -and (& $disk $js) -eq 'three' -and (& $disk $css) -eq 'p{}')
     Set-ItemProperty $js IsReadOnly $false
+
+    $stamp = (Get-Item $css).LastWriteTimeUtc
+    Open-TextBatch @($css)
+    Write-Text $css 'h1{}'
+    Add-Text $css ' x'
+    Write-Text $css 'p{}'
+    $bad = @(Save-TextBatch)
+    Check 'a file patched back to what was on disk is not written' (
+        -not $bad.Count -and (Get-Item $css).LastWriteTimeUtc -eq $stamp -and (& $disk $css) -eq 'p{}')
 }
 finally {
     Remove-Item -Recurse -Force $dir -ErrorAction SilentlyContinue
