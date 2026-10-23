@@ -49,21 +49,26 @@ function Open-TextBatch {
     foreach ($p in $Paths) {
         if (-not $p -or -not (Test-Path $p)) { continue }
         $key = [System.IO.Path]::GetFullPath($p)
-        $script:Held[$key] = @{ Text = (Invoke-FileIo { [System.IO.File]::ReadAllText($key) }); Changed = $false }
+        $text = Invoke-FileIo { [System.IO.File]::ReadAllText($key) }
+        $script:Held[$key] = @{ Text = $text; Original = $text }
     }
 }
 
 # Lets go of every held file without writing any: the disk keeps what it had.
 function Close-TextBatch { $script:Held.Clear() }
 
-# Writes every held file a patch changed and lets go of them all. Returns what
-# could not be written; one failure does not keep the others from being tried.
+# Writes every held file whose text differs from what was on disk, and lets go of
+# them all. Returns what could not be written; one failure does not keep the
+# others from being tried. A run that ends where the install already was writes
+# nothing: every write is an anti-virus scan and a new mtime, and a folder
+# watcher that re-runs apply.ps1 on a change (adi-tools watches the extensions
+# folders) would otherwise set itself off again after every run, for ever.
 function Save-TextBatch {
     $failed = @()
     foreach ($key in @($script:Held.Keys)) {
         $h = $script:Held[$key]
         $script:Held.Remove($key)
-        if (-not $h.Changed) { continue }
+        if ([string]::Equals($h.Text, $h.Original, [StringComparison]::Ordinal)) { continue }
         try { Write-Text $key $h.Text } catch { $failed += "$key : $($_.Exception.Message)" }
     }
     $failed
@@ -79,13 +84,13 @@ function Read-Text {
 function Write-Text {
     param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Text)
     $held = Get-HeldKey $Path
-    if ($held) { $script:Held[$held] = @{ Text = $Text; Changed = $true }; return }
+    if ($held) { $script:Held[$held].Text = $Text; return }
     Invoke-FileIo { [System.IO.File]::WriteAllText($Path, $Text, $script:Utf8NoBom) }
 }
 
 function Add-Text {
     param([Parameter(Mandatory)][string]$Path, [Parameter(Mandatory)][string]$Text)
     $held = Get-HeldKey $Path
-    if ($held) { $script:Held[$held] = @{ Text = $script:Held[$held].Text + $Text; Changed = $true }; return }
+    if ($held) { $script:Held[$held].Text += $Text; return }
     Invoke-FileIo { [System.IO.File]::AppendAllText($Path, $Text, $script:Utf8NoBom) }
 }
