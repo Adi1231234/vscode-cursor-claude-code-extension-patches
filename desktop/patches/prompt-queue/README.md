@@ -30,9 +30,10 @@ what the desktop Code tab loads (`claude.ai/epitaxy`).
 - `drive.js` - on each finish, if not paused and the composer is clear, send the
   next item; an item is dropped only once its send is confirmed by the next
   start, else retried.
-- `panel-style.js` / `panel.js` - the list above the composer with reorder,
-  edit (pulls the item back into the composer) and remove, plus pause/resume and
-  clear in the header. All nodes owned; re-attaches if the composer remounts.
+- `panel.js` - the list above the composer with reorder, edit (pulls the item
+  back into the composer) and remove, plus pause/resume and clear in the header.
+  Its style is injected on init, never at eval (an eval-time node is wiped by the
+  app's first render). All nodes owned; re-attaches if the composer remounts.
 
 ## Status
 
