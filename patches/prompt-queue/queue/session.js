@@ -7,7 +7,7 @@
   }
 
   function getSession() {
-    return globalThis.__ccStore();
+    return sessionStore();   /* env-*.js */
   }
 
   /* Run fn(args) just before one of the session store's own methods, once per

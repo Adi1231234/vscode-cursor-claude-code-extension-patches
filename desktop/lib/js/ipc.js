@@ -12,10 +12,13 @@
 
    The channel prefix carries a per-build uuid, so the build reads it out of the
    archive's own mainView.js and fills __CCD_WEB_CHANNEL__ in
-   (desktop/tools/build-renderer.cjs). A build that could not find it leaves the
+   (desktop/lib/build.cjs). A build that could not find it leaves the
    token as is, and then nothing is wired: `ready` is false and every reader
    keeps its DOM-only behaviour. Adding a listener never changes what the page
-   receives. */
+   receives.
+
+   invoke() makes the app's own LocalSessions calls the page makes - the
+   queue of a conversation that is not on screen sends through sendMessage. */
 window.__ccdIpc = window.__ccdIpc || (function () {
     var PREFIX = "__CCD_WEB_CHANNEL__";
     var subs = [];
@@ -34,6 +37,14 @@ window.__ccdIpc = window.__ccdIpc || (function () {
 
     if (ipc) ipc.on(PREFIX + "LocalSessions_$_onEvent", deliver);
 
+    /* One of the app's own LocalSessions calls, as the page makes them
+       (getSession, sendMessage ...): a promise of its answer. */
+    function invoke(name) {
+        if (!ipc) return Promise.reject(new Error("the app's session channel is not wired"));
+        var args = [PREFIX + "LocalSessions_$_" + name].concat([].slice.call(arguments, 1));
+        return ipc.invoke.apply(ipc, args);
+    }
+
     /* fn(event) for every local-session event; returns an unsubscribe. */
     function on(fn) {
         subs.push(fn);
@@ -43,5 +54,5 @@ window.__ccdIpc = window.__ccdIpc || (function () {
         };
     }
 
-    return { ready: !!ipc, on: on };
+    return { ready: !!ipc, on: on, invoke: invoke };
 })();

@@ -4,10 +4,18 @@
      attachment chips are - is here and nowhere else, so the same queue runs in
      another surface by swapping this one file
      (desktop/patches/prompt-queue/host/env-desktop.js is the Claude Desktop
-     app's). The composer element itself comes from __ccInput
-     (lib/js/ccStore.js), the session from __ccStore. */
+     app's). */
   var BUSY = "Queue another message";   /* the composer's placeholder mid-turn */
   var PVH = "__PVHASH__";               /* the app's image-preview module hash */
+
+  /* This panel's composer, session store and session pushes, and where the
+     queue publishes its surfaces for other patches: one panel, one queue, so
+     the shared runtimes (lib/js/ccStore.js, ccSession.js) and window. The
+     desktop app runs a queue per conversation and answers these per queue. */
+  function composerEl() { return globalThis.__ccInput(); }
+  function sessionStore() { return globalThis.__ccStore(); }
+  function sessionPush() { return window.__ccSession; }
+  function expose(name, api) { window[name] = window[name] || api; return window[name]; }
 
   /* The draft as plain text. */
   function composerText(e) {

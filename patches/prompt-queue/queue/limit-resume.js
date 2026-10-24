@@ -87,7 +87,7 @@
      whether it went through instead. */
   var resumeRunMark = null;
   function watchUsageLimit() {
-    var S = window.__ccSession;
+    var S = sessionPush();   /* env-*.js */
     if (watchUsageLimit.on || !S) return;
     watchUsageLimit.on = 1;
     S.on("busy", function (busy, store, initial) {

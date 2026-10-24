@@ -3,7 +3,7 @@
   document.addEventListener("keydown", onComposerKeydown, true);
   /* Ctrl+Alt+L opens the log viewer on demand (the button itself is hidden). */
   document.addEventListener("keydown", function (ev) {
-    if (ev.ctrlKey && ev.altKey && (ev.key === "l" || ev.key === "L")) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); }
+    if (ev.ctrlKey && ev.altKey && (ev.key === "l" || ev.key === "L") && inp()) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); }
   }, true);
   try {
     window.__ccLogs = function () { return _ccLogs.slice(); };            /* read logs programmatically */

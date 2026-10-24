@@ -32,6 +32,7 @@ const RUNTIME = [
     "lib/js/ccWatch.js",
     "desktop/lib/js/ipc.js",
     "desktop/lib/js/rows.js",
+    "desktop/lib/js/store.js",
     "desktop/lib/js/session.js",
 ];
 

@@ -29,6 +29,7 @@ function queueWith(items) {
   let store0 = null;
   const getSession = () => store0, isBusy = () => false;
   const win = { __ccReply: R, __ccSession: { on: (name, fn) => { if (name === 'busy') busyFns.push(fn); } } };
+  const sessionPush = () => win.__ccSession;   /* env-vscode.js */
   const src = fs.readFileSync(path.join(__dirname, '..', 'queue', 'stop-pause.js'), 'utf8').replace(/window\./g, 'win.');
   eval(src + ';watchStopsElsewhere();');
   return {

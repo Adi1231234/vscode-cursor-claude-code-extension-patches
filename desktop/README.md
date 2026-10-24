@@ -84,9 +84,10 @@ inject / launch / boot path.
   each patch in `patches/order.json`; each `.css` file becomes one
   `__ccd.style()` call; the preload's channel prefix is read out of the archive.
 - `lib/js/` - the runtime loaded before every patch: `boot.js` (`__ccd.patch`,
-  `__ccd.style`), `ipc.js` (the app's local-session event stream), `rows.js` and
-  `session.js` (a session store of the VS Code panel's shape, so webview code
-  runs unchanged). The parent's `lib/js/ccDom.js` and `ccWatch.js` come with it.
+  `__ccd.style`), `ipc.js` (the app's local-session event stream and calls),
+  `rows.js` and `store.js` (one session store per conversation, of the VS Code
+  panel's shape, so webview code runs unchanged) and `session.js` (which one
+  is on screen). The parent's `lib/js/ccDom.js` and `ccWatch.js` come with it.
 - `patches/<name>/` - one folder per feature. `renderer.json` runs a parent
   patch as is with named fragments swapped (`prompt-queue`); `renderer.order` or
   `renderer.js` is desktop-only code.
@@ -98,8 +99,9 @@ inject / launch / boot path.
 
 - [x] ASAR injector + integrity, proven on the real archive.
 - [x] `message-bidi`, `input-usage`, `zoom` - verified live on claude.ai/code.
-- [x] `prompt-queue` - the full VS Code queue, verified live on claude.ai/code
-      (its README lists what was measured and what only the app can show).
+- [x] `prompt-queue` - the full VS Code queue, one per conversation, running
+      off screen too; verified live on claude.ai/code (its README lists what
+      was measured and what only the app can show).
 
 - [x] `phone-queue` - `/queue` from the phone, the parent's mod unchanged;
       main side tested in Node and end to end with a real CLI, page side live

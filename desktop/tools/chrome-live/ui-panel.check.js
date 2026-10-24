@@ -2,7 +2,7 @@
 // panel as it looks on the Code tab.
 (async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const R = window.__qRemote;
+    const R = window.__ccdQueues.shown().api.__qRemote;
     R.run({ op: "pause" });
     R.run({ op: "add", text: "QTEST first item in the lane" });
     R.run({ op: "add", text: "QTEST a much longer second item that should be cut off with an ellipsis when it runs past the width of the panel" });

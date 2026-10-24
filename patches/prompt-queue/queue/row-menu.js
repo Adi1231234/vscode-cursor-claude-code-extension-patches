@@ -26,9 +26,9 @@
     if (it.off) return "Skipped - enable it first";
     if (flushing) return "Another send in progress";
     if (editing) return "An item is being edited";
-    var e = inp(), s = getSession();
-    if (!e) return "No message box";
-    if (!(s && typeof s.send === "function") && composerText(e).trim()) return "A draft is in the box";
+    var e = inp(), s = getSession(), canSend = !!(s && typeof s.send === "function");
+    if (!e && !canSend) return "No message box";
+    if (!canSend && composerText(e).trim()) return "A draft is in the box";
     return "";
   }
 

@@ -1,6 +1,8 @@
 /* The webview queue (patches/prompt-queue), run in the Desktop Code tab.
-   It is one script there - an IIFE inside a <script> - and the same fragments
-   run here inside this patch's init, which boot.js calls once the DOM exists.
-   Only this wrapper, the surface (env-desktop.js) and the store underneath
-   (desktop/lib/js/session.js) are the desktop's own. */
-window.__ccd.patch("prompt-queue", function () {
+   In the editor it is one script - an IIFE inside a <script> - for the one
+   panel. Here the same fragments are the body of a factory, called once per
+   conversation by engines.js with that conversation's host (env-engine.js):
+   every call is a queue with its own state. Only this wrapper, the surface
+   (env-engine.js, env-desktop.js, env-send.js) and the stores underneath
+   (desktop/lib/js/) are the desktop's own. */
+window.__ccdQueueEngine = function (host) {

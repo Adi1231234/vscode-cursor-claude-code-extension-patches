@@ -6,7 +6,7 @@
 (async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const SID = "local_00000000-0000-4000-8000-00000000c0de";
-    const R = window.__qRemote, out = { ipcWired: window.__ccdIpc.ready, channels: window.__fakeIpc.channels.map(c => c.name.slice(-25)) };
+    const R = { run: c => window.__ccdQueues.shown().api.__qRemote.run(c) }, out = { ipcWired: window.__ccdIpc.ready, channels: window.__fakeIpc.channels.map(c => c.name.slice(-25)) };
     const cell = document.querySelector('[data-testid="code-prompt-send-cell"]');
     let stop = null;
     const nudge = () => { const n = document.createElement("i"); document.body.appendChild(n); n.remove(); };
@@ -46,7 +46,7 @@
     frame({ type: "result", is_error: false });
     await busy(false);
     const timeline = [];
-    for (let i = 0; i < 30; i++) { await sleep(100); timeline.push(snap().lane.length + (window.__qAuto.busy() ? "b" : "i")); }
+    for (let i = 0; i < 30; i++) { await sleep(100); timeline.push(snap().lane.length + (window.__ccdQueues.shown().api.__qAuto.busy() ? "b" : "i")); }
     s = snap();
     out.finished = { lane: s.lane.map(i => i.text), sched: s.scheduled.map(i => i.text), paused: s.paused, timeline: timeline.join(" ") };
     R.run({ op: "pause" });

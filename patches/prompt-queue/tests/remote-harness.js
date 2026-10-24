@@ -18,6 +18,7 @@ function makeQueue(items) {
   let _curSid = null, syncs = 0;
   const syncSession = () => { syncs++; _curSid = 'sid-1'; };   /* persist.js: the id, read now */
   const window = {};
+  const expose = (name, api) => (window[name] = window[name] || api);   /* env-vscode.js */
   const sendBlocked = (it) => (it.off ? 'Skipped - enable it first' : '');
   const sendNow = (it) => { sentNow.push(it); Q.splice(Q.indexOf(it), 1); };
   const restartRunMark = () => {};   /* stop-pause.js, pinned in stops.test.js */

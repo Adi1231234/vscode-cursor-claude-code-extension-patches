@@ -5,10 +5,10 @@
     const q = s => document.querySelector(s), sleep = ms => new Promise(r => setTimeout(r, ms));
     const out = {};
     const store = window.__ccStore && window.__ccStore();
-    out.booted = { ccd: !!window.__ccd, remote: !!window.__qRemote, auto: !!window.__qAuto,
+    out.booted = { ccd: !!window.__ccd, remote: !!window.__ccdQueues.shown().api.__qRemote, auto: !!window.__ccdQueues.shown().api.__qAuto,
         sid: store && store.sessionId, styles: [...document.querySelectorAll("style[id^=ccd-css-]")].map(s => s.id) };
-    if (!window.__qRemote) return JSON.stringify(out, null, 1);
-    out.busy = window.__qAuto.busy();
+    if (!window.__ccdQueues.shown().api.__qRemote) return JSON.stringify(out, null, 1);
+    out.busy = window.__ccdQueues.shown().api.__qAuto.busy();
     if (out.busy) return JSON.stringify(out);          // never test on a running session
 
     const inp = q('[data-testid="code-prompt-input"]');
@@ -21,7 +21,7 @@
     const ev = new KeyboardEvent("keydown", { key: "Enter", altKey: true, bubbles: true, cancelable: true });
     inp.dispatchEvent(ev);
     await sleep(400);
-    let snap = window.__qRemote.run({ op: "list" }).queue;
+    let snap = window.__ccdQueues.shown().api.__qRemote.run({ op: "list" }).queue;
     out.altEnter = { prevented: ev.defaultPrevented, lane: snap.lane.map(i => i.text), paused: snap.paused,
         cleared: inp.innerText.trim() === "" };
 
@@ -29,7 +29,7 @@
     const add = q(".__qAdd");
     if (add) add.click();
     await sleep(400);
-    snap = window.__qRemote.run({ op: "list" }).queue;
+    snap = window.__ccdQueues.shown().api.__qRemote.run({ op: "list" }).queue;
     out.addButton = { present: !!add, lane: snap.lane.length, cleared: inp.innerText.trim() === "" };
 
     const row = q('[data-testid="code-prompt-trailing-controls"]');

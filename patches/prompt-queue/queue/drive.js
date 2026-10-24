@@ -92,7 +92,7 @@
   }
 
   function wireQueue() {
-    var S = window.__ccSession;
+    var S = sessionPush();   /* env-*.js */
     if (S) {
       watchStopsElsewhere();       /* stop-pause.js: before the pass that would flush */
       watchUsageLimit();           /* usage-limit.js: the same, for a turn a limit ended */

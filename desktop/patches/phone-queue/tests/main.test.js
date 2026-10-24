@@ -54,14 +54,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(/no Code tab open/.test(r.error), 'no page yet: says so');
 
     const seen = [];
-    page((m) => ({ id: m.id }));   /* shows another conversation */
+    page((m) => ({ id: m.id }));   /* does not know the conversation */
     page((m) => { seen.push(m); return m.sid === 'cli-1' ? { id: m.id, result: { error: '', queue: { lane: [] } } } : { id: m.id }; });
     r = await post(url, { panel: '', sid: 'cli-1', cmd: { op: 'list' } });
     ok(r.error === '' && r.queue, 'the page showing the conversation answers, and the CLI gets its answer');
     ok(seen[0] && seen[0].cmd.op === 'list', 'the command reaches the page as sent');
 
     r = await post(url, { panel: '', sid: 'cli-9', cmd: { op: 'list' } });
-    ok(/not on screen/.test(r.error), 'no page has it: the phone is told to open it in the app');
+    ok(/does not know this conversation/.test(r.error), 'no page has it: the phone is told to open it in the app');
 
     const stranger = new EventEmitter();
     const late = post(url, { panel: '', sid: 'cli-2', cmd: { op: 'pause' } });

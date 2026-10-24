@@ -2,9 +2,18 @@
   "fragments": "patches/prompt-queue/order.json",
   "styles": "patches/prompt-queue/styles.json",
   "swap": {
-    "patches/prompt-queue/queue/open.js": ["desktop/patches/prompt-queue/host/open.js"],
-    "patches/prompt-queue/queue/env-vscode.js": ["desktop/patches/prompt-queue/host/env-desktop.js"],
-    "patches/prompt-queue/queue/close.js": ["desktop/patches/prompt-queue/host/close.js"],
+    "patches/prompt-queue/queue/open.js": [
+      "desktop/patches/prompt-queue/host/open.js"
+    ],
+    "patches/prompt-queue/queue/env-vscode.js": [
+      "desktop/patches/prompt-queue/host/env-engine.js",
+      "desktop/patches/prompt-queue/host/env-desktop.js",
+      "desktop/patches/prompt-queue/host/env-send.js"
+    ],
+    "patches/prompt-queue/queue/close.js": [
+      "desktop/patches/prompt-queue/host/close.js",
+      "desktop/patches/prompt-queue/host/engines.js"
+    ],
     "lib/js/ccDom.js": [],
     "lib/js/ccWatch.js": []
   },

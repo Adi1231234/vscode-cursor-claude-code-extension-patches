@@ -3,8 +3,8 @@
    The editor posts a command to the panel that spawned the asking CLI. The app
    has one main process for every conversation and draws them in its Code tab,
    so a command goes to every Code tab page our preload runs in, and the one
-   showing that conversation answers (renderer/link.js); the others answer
-   with nothing, and when none had it the phone is told to open it. A page
+   that knows that conversation answers (renderer/link.js); the others answer
+   with nothing, and when none had it the phone is told to open it once. A page
    announces itself on load ("hello") and is dropped when it goes, so pages
    without our preload are never waited on.
 
@@ -14,7 +14,7 @@ function ccdPhoneRouter() {
     var ipcMain = require("electron").ipcMain;
     var CH = "ccd-phone", ANSWER = "ccd-phone-answer", HELLO = "ccd-phone-hello";
     var REPLY_MS = 5000;
-    var NOT_OPEN = "this conversation is not on screen in the Claude app - open it there to steer its queue";
+    var NOT_OPEN = "the Claude app does not know this conversation yet - open it there once";
     var pages = new Set();
     var waiting = new Map();
     var lastId = 0;

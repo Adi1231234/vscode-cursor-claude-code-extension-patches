@@ -51,7 +51,7 @@
   }
 
   function inp() {
-    return globalThis.__ccInput();                     /* cached in lib/js/ccStore.js */
+    return composerEl();   /* env-*.js */
   }
 
   function delay(ms) {

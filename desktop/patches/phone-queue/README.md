@@ -11,10 +11,10 @@ conversation open in the desktop app's Code tab - the parent's
 2. **The main process** listens there with the parent's own
    `host/listen.js`, and `main/router.js` hands the command to every Code tab
    page our preload runs in (each says "hello" on load).
-3. **The page** (`renderer/link.js`) runs it through `window.__qRemote` if the
-   CLI session belongs to the conversation on screen, and answers; otherwise it
-   answers nothing, and when no page had it the phone is told to open the
-   conversation in the app.
+3. **The page** (`renderer/link.js`) runs it through that conversation's own
+   queue (`__qRemote` of `prompt-queue/host/engines.js`), on screen or not,
+   and answers. A CLI session the page has never seen gets no answer from it,
+   and when no page knew it the phone is told to open the conversation once.
 
 ## Wiring without touching a spawn site
 
@@ -44,11 +44,11 @@ of a loaded transcript `sessionId`.
 - `tools/chrome-live/phone-link.check.js`: on claude.ai/code, a command for
   the CLI session behind the conversation on screen pauses, adds (the row
   appears in the panel) and deletes; one for another session is left alone.
+- `tools/chrome-live/background.check.js`: a command for a conversation that
+  is not on screen reaches its queue, and shows when it comes back.
 
 ## Limits
 
-- Only the conversation on screen answers: the others' queues are saved but
-  not running in the page.
 - `drop` (withdraw a menu nobody answered) needs the dialog's own reject(),
   which is in the page's world, out of the preload's reach: the menu stays
   open, to be answered from the phone or in the app.

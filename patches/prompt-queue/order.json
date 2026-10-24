@@ -28,6 +28,7 @@
   "patches/prompt-queue/queue/schedule-modal.js",
   "patches/prompt-queue/queue/render-panel.js",
   "patches/prompt-queue/queue/row-menu.js",
+  "patches/prompt-queue/queue/detach.js",
   "patches/prompt-queue/saved/store.js",
   "patches/prompt-queue/saved/modal.js",
   "patches/prompt-queue/saved/list.js",
