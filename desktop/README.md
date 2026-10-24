@@ -8,17 +8,28 @@ anything here.
 
 ## What the app looks like on disk
 
-The supported install is the **regular (per-user) installer** from
-`claude.ai/download`, not the Microsoft Store / MSIX package. It lands at:
+Claude Desktop now ships as a **Microsoft Store / MSIX package**
+(`C:\Program Files\WindowsApps\Claude_<ver>_x64__pzs8sxrjxfjjc\app`). An MSIX
+package cannot be patched in place: Windows **Code Integrity Guard**
+(`MicrosoftSignedOnly`) kills the process the moment it loads a modified file
+from inside the package, and flips the package to "needs remediation". So we do
+**not** touch the installed app at all.
 
-- `%LOCALAPPDATA%\AnthropicClaude\app-<version>\` - one folder per version.
-- `...\app-<version>\resources\app.asar` - the archive that holds all the code.
-- `...\app-<version>\claude.exe` - the launcher.
+Instead we keep our own **patched copy**, outside the package, which CIG does
+not police:
+
+- `%LOCALAPPDATA%\claude-code-patches\app\` - the Electron app, extracted from
+  the release and patched. `claude.exe` + our `version.dll` beside it.
+- `%LOCALAPPDATA%\claude-code-patches\installed.json` - the version marker
+  (which release this copy was built from), so re-running is idempotent.
+- `%LOCALAPPDATA%\claude-code-patches\mods\queue\` - the `/queue` phone mod,
+  outside the app folder so an update does not drop it.
 - `%APPDATA%\Claude\` - user data (login, settings, session list). Shared with
-  every install type; patching never touches it.
+  the Store build, so chats and login carry over; patching never touches it.
 
-Each update downloads a new `app-<version>` folder and the old one lingers. Our
-changes live in the archive, so **every update drops them** (see "Re-apply").
+`desktop/install-desktop.ps1` builds and refreshes that copy (see "Install and
+update" below). The Store build keeps updating itself and is left alone; the
+patched copy is what the "Claude (patched)" shortcut launches.
 
 ## Injection model (confirmed by experiment, not guessed)
 
@@ -45,25 +56,43 @@ native modules - exactly as it found them. `tools/roundtrip.cjs` proves that on
 a real archive (623 files integrity-checked, 2 changed, 621 byte-identical, and
 the archive grows only by the payload bytes).
 
-## The launch barrier is left to Adi
+## The launch barrier (the fingerprint step), now in `fingerprint/`
 
-`claude.exe` stores app.asar's expected hash and refuses to launch when the
-archive no longer matches - exactly what happens after we inject. Making the
-launcher accept the patched archive (the **fingerprint** step) is deliberately
-**not implemented here**; Adi owns that piece. `apply.ps1` injects the payloads
-and stops, printing that the fingerprint step is still required. For in-sandbox
-testing only, a known-working `version.dll` shim is used as a launch aid; it is
-never part of what ships.
+`claude.exe` stores app.asar's expected SHA-256 and refuses to launch when the
+archive no longer matches - exactly what happens after we inject. The fix is a
+proxy **`version.dll`** placed beside `claude.exe` (the loader searches the
+exe's own folder first). Its `DllMain` recomputes the patched archive's header
+hash and overwrites the expected hash **in the running process's memory only**,
+so the exe's own check passes; nothing on disk changes, and every real
+`version.dll` export is forwarded to the system DLL. This only works from a
+normal directory, which is why we patch a copy, never the MSIX.
 
-## Re-apply after an update (via Adi Tools, not a new background service)
+The source is ours (`fingerprint/src/ccfingerprint.c`, ~120 lines), built by
+`fingerprint/build.ps1` (VS Build Tools). The repo also ships the prebuilt
+`fingerprint/version.dll`, so installing needs no compiler.
 
-Adi Tools is the scheduler. A **watch** trigger on
-`%LOCALAPPDATA%\AnthropicClaude\Squirrel-Update.log` runs our apply when a new
-version is staged. It must wait for the log's `Finished Squirrel Updater` line
-before patching: patching mid-update, or relaunching the app before the update
-settles, leaves the app unable to start (measured). One gap to close in Adi
-Tools: a watch whose path does not exist yet at startup never arms and says
-nothing - not a problem once the regular install is in place, but worth fixing.
+## Install and update
+
+One command does everything - fetch the latest release, extract its Electron
+app, patch it, place the fingerprint shim, make the shortcut:
+
+    & ([scriptblock]::Create((irm <raw>/install.ps1))) -Scope desktop
+
+`install.ps1` takes `-Scope` (`vscode` / `desktop` / `all`; default `all`, so a
+plain `irm | iex` still does both). The desktop half is `desktop/install-desktop.ps1`:
+it reads `https://api.anthropic.com/api/desktop/win32/x64/msix/latest`
+(`{version,url}`), and when that version differs from `installed.json` it
+downloads the `.msix` (a plain ZIP), extracts its `app/` subtree into the
+patched copy, runs `apply.ps1` against it, and drops in `version.dll`. Already
+on the latest + patched: it does nothing.
+
+## Scheduling (an Adi Tools task, not a Windows scheduled task)
+
+The patched copy does not self-update (no Store identity), so an **Adi Tools
+task** runs the command above on a schedule. The task's script is the one-line
+bootstrap with `-Scope desktop`; its triggers (startup / login / daily) decide
+how often it checks for a new release. The sibling VS Code task runs the same
+bootstrap with `-Scope vscode`.
 
 ## Testing
 
@@ -93,7 +122,12 @@ inject / launch / boot path.
   `renderer.js` is desktop-only code.
 - `tools/inject-cli.cjs`, `tools/roundtrip.cjs` - inject; prove the injector safe.
 - `tools/chrome-live/` - the live checks described under Testing.
-- `apply.ps1` - find the install, build, inject.
+- `apply.ps1` - build + inject into a given install dir (`-InstallDir`).
+- `install-desktop.ps1` + `install/` - fetch the latest release, extract, patch
+  the copy, place the shim, make the shortcut. `install/Msix.ps1` (fetch +
+  extract `app/`), `install/Shortcut.ps1` (the launcher shortcut).
+- `fingerprint/` - the `version.dll` shim: `src/ccfingerprint.c`, `build.ps1`,
+  and the prebuilt `version.dll` that ships.
 
 ## Status
 
@@ -107,14 +141,19 @@ inject / launch / boot path.
       main side tested in Node and end to end with a real CLI, page side live
       on claude.ai/code.
 
-Not done yet:
-
-- [ ] A pass in the real app, after the fingerprint step.
+- [x] The fingerprint shim (`fingerprint/version.dll`, our own source), and the
+      patched copy launching with it - verified in the real app: the freshly
+      extracted + patched copy boots, the shim recomputes and accepts the new
+      hash, and no CIG remediation fires (it runs outside the MSIX).
+- [x] One-command install / auto-update (`install.ps1 -Scope`, `install-desktop.ps1`)
+      - fetch latest release, extract, patch, shim, shortcut; idempotent.
 
 `node desktop/tools/test.mjs` runs every offline check (the build, the phone
 main side); `tools/chrome-live/` holds the live ones.
-- [ ] Adi Tools re-apply trigger (watch `Squirrel-Update.log`, wait for
-      `Finished Squirrel Updater`, then re-run `apply.ps1`).
+
+Open:
+
+- [ ] Wire the Adi Tools task (bootstrap with `-Scope desktop`, startup/login/daily).
 
 Not applicable here:
 
