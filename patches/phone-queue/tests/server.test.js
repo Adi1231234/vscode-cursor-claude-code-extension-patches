@@ -1,4 +1,4 @@
-/* The host's end of /queue, against host/panels.js + host/server.js themselves.
+/* The host's end of /queue, against host/listen.js + panels.js + server.js themselves.
  *
  *     node patches/phone-queue/tests/server.test.js
  *
@@ -18,7 +18,7 @@ const ok = (c, m) => { c ? pass++ : (fail++, console.log('  FAIL: ' + m)); };
 
 const extDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ccphone-'));
 const host = (name) => fs.readFileSync(path.join(__dirname, '..', 'host', name), 'utf8');
-const src = [host('panels.js'), host('server.js')].join(String.fromCharCode(10))
+const src = [host('listen.js'), host('panels.js'), host('server.js')].join(String.fromCharCode(10))
   .replace('__MODDIR__', 'patches-mods/phone-queue')
   .replace('var REPLY_MS = 5000;', 'var REPLY_MS = 300;');
 const ctx = { require, __dirname: extDir, setTimeout, clearTimeout, console, WeakRef, Promise };

@@ -15,7 +15,8 @@ prompt queue (`patches/prompt-queue`). Sent alone it opens a menu of buttons;
 1. **The mod** (`mod/`, a Claude Code plugin with a hooks module) registers
    `/queue` and runs inside the CLI behind the panel. It has no way to the
    webview, so it POSTs the command to the host.
-2. **The host** (`host/server.js`) listens on `127.0.0.1` at a random path. The
+2. **The host** (`host/server.js`) listens on `127.0.0.1` at a random path
+   (`host/listen.js`, shared with the desktop app's `desktop/patches/phone-queue`). The
    CLI learns the address, and a token for **the panel that spawned it**, from
    its environment: `host/env.js` sits in `spawnClaude`, where `this` is that
    panel's comms object and `this.webview` the webview its messages come from.

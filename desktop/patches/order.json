@@ -2,5 +2,6 @@
   "zoom",
   "message-bidi",
   "input-usage",
-  "prompt-queue"
+  "prompt-queue",
+  "phone-queue"
 ]

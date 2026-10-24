@@ -62,7 +62,22 @@
         return stores[id];
     }
 
+    /* The app names a conversation local_<uuid>; the CLI behind it has its
+       own session id, on every frame (session_id) and every transcript row
+       (sessionId). A /queue from the phone carries the CLI's, so each one
+       seen is remembered against the app's (a /clear starts a new one). */
+    var cliToLocal = {};
+
+    function noteCliIds(ev) {
+        var rows = ev.type === "message" ? [ev.message] : ev.type === "transcript_loaded" ? ev.messages : null;
+        for (var i = 0; rows && i < rows.length; i++) {
+            var id = rows[i] && (rows[i].session_id || rows[i].sessionId);
+            if (typeof id === "string" && id) cliToLocal[id] = ev.sessionId;
+        }
+    }
+
     function onFrame(ev) {
+        if (ev && typeof ev.sessionId === "string") noteCliIds(ev);
         if (!ev || ev.type !== "message" || !ev.message || !stores[ev.sessionId]) return;
         var s = stores[ev.sessionId];
         try { s.processIncomingMessage(ev.message); } catch (e) {}
@@ -97,6 +112,12 @@
     window.__ccInput = window.__ccInput || input;
     window.__ccFiber = window.__ccFiber || function () { return null; };
     window.__ccStore = window.__ccStore || function () { sync(); return current; };
+    /* For desktop/patches/phone-queue: which app conversation a CLI session
+       id belongs to, and which one is on screen. */
+    window.__ccdSessions = {
+        localOf: function (cliSid) { return cliToLocal[cliSid] || null; },
+        current: function () { sync(); return current ? current.sessionId : null; }
+    };
     window.__ccSessionSource = function (bind) {
         bindFn = bind;
         if (current) bind(current);

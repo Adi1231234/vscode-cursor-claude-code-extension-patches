@@ -15,7 +15,7 @@
         if (!on && stop) { stop.remove(); stop = null; }
         nudge(); await sleep(150);
     };
-    const frame = message => window.__fakeIpc.emit({ type: "message", sessionId: SID, message });
+    const frame = message => window.__fakeIpc.emit("LocalSessions_$_onEvent", { type: "message", sessionId: SID, message });
     const user = (t, uuid) => frame({ type: "user", uuid, message: { role: "user", content: [{ type: "text", text: t }] } });
     const said = (t, uuid, model) => frame({ type: "assistant", uuid, message: { model, content: [{ type: "text", text: t }] } });
     const snap = () => R.run({ op: "list" }).queue;

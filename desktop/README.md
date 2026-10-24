@@ -101,10 +101,16 @@ inject / launch / boot path.
 - [x] `prompt-queue` - the full VS Code queue, verified live on claude.ai/code
       (its README lists what was measured and what only the app can show).
 
+- [x] `phone-queue` - `/queue` from the phone, the parent's mod unchanged;
+      main side tested in Node and end to end with a real CLI, page side live
+      on claude.ai/code.
+
 Not done yet:
 
-- [ ] `phone-queue`: `/queue` from the phone.
 - [ ] A pass in the real app, after the fingerprint step.
+
+`node desktop/tools/test.mjs` runs every offline check (the build, the phone
+main side); `tools/chrome-live/` holds the live ones.
 - [ ] Adi Tools re-apply trigger (watch `Squirrel-Update.log`, wait for
       `Finished Squirrel Updater`, then re-run `apply.ps1`).
 

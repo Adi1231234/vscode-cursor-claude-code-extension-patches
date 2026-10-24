@@ -3,7 +3,7 @@
 # written - a /queue command with no host behind it answers nothing:
 #
 #   <ext>/<ModDir>   the Claude Code mod (mod/), copied beside extension.js
-#   extension.js     the host runtime (host/panels.js + host/server.js)
+#   extension.js     the host runtime (host/listen.js + panels.js + server.js)
 #                    prepended, a __ccphone hook on every chat webview, and two
 #                    edits to the CLI spawn: --plugin-dir for the mod
 #                    (extraArgs) and the server's address (env, last, so it
@@ -79,7 +79,8 @@ function Invoke-Patch {
     if (-not $js) { Write-Miss 'webview message listener not found'; return }
 
     Copy-ModTree (Join-Path $PSScriptRoot 'mod') (Join-Path $Ctx.Dir $ModDir)
-    $hostJs = (Read-Text (Join-Path $PSScriptRoot 'host/panels.js')).Trim() + "`n" +
+    $hostJs = (Read-Text (Join-Path $PSScriptRoot 'host/listen.js')).Trim() + "`n" +
+              (Read-Text (Join-Path $PSScriptRoot 'host/panels.js')).Trim() + "`n" +
               (Get-InjectedJs (Join-Path $PSScriptRoot 'host/server.js') @{ '__MODDIR__' = $ModDir }).Trim()
     Write-Text $Ctx.Js ("/* PHONEQUEUEHOST */`n" + $hostJs + "`n" + $js)
     Write-Ok "/queue host + mod ($ModDir)"

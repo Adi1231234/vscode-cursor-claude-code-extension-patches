@@ -40,6 +40,18 @@ $mf = Join-Path $tmp "main.js"
 if (-not (Test-Path $mf)) { $mf = "-" }
 
 & $node (Join-Path $root "tools\inject-cli.cjs") $asar $rf $mf $Marker
+if ($LASTEXITCODE -ne 0) { Write-Error "injection failed"; exit 1 }
+
+# phone-queue: the /queue mod (the parent's patches/phone-queue/mod, unchanged)
+# goes where main/start.js loads it from, outside the app folder, so an app
+# update does not take it along. Replaced whole, so a removed file goes too.
+if ($Skip -notcontains "phone-queue") {
+    $mod = Join-Path $env:LOCALAPPDATA "claude-code-patches\mods\queue"
+    if (Test-Path $mod) { Remove-Item -Recurse -Force $mod }
+    New-Item -ItemType Directory -Force $mod | Out-Null
+    Copy-Item (Join-Path $root "..\patches\phone-queue\mod\*") $mod -Recurse -Force
+    Write-Host "  /queue mod -> $mod"
+}
 Write-Host ""
 Write-Host "Payloads injected. The fingerprint/launch step is left to you: app.asar no longer"
 Write-Host "matches the hash in claude.exe, so the app refuses to launch until that is applied."

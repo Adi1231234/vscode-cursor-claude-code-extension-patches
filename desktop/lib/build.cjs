@@ -6,9 +6,10 @@
 // __ccd.style() call, and fills the build-time tokens.
 //
 // A patch folder gives its pieces one of three ways:
-//   renderer.json  - run a webview patch from the parent repo as is: its
-//                    fragment list and stylesheet list are read from there,
-//                    with named fragments swapped for desktop ones
+//   renderer.json  - files from anywhere in the repo: { files: [...] }, or a
+//                    webview patch from the parent repo run as is - its
+//                    fragment list and stylesheet list read from there, with
+//                    named fragments swapped for desktop ones
 //   renderer.order - an ordered list of this folder's own fragments
 //   renderer.js    - a single file
 // (main.order / main.js the same, for the main process.)
@@ -43,6 +44,7 @@ function styleCall(rel) {
 // its stylesheets. A swap naming a fragment the list no longer has is a stale
 // config, and it stops the build rather than ship the VS Code piece.
 function sharedPatch(cfg) {
+    if (cfg.files) return cfg.files.map(fromRepo);
     const base = JSON.parse(fromRepo(cfg.fragments));
     for (const key of Object.keys(cfg.swap || {})) {
         if (!base.includes(key)) throw new Error("renderer.json swaps " + key + ", which " + cfg.fragments + " no longer lists");

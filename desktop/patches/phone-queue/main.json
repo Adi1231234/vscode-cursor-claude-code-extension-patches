@@ -1,0 +1,7 @@
+{
+  "files": [
+    "patches/phone-queue/host/listen.js",
+    "desktop/patches/phone-queue/main/router.js",
+    "desktop/patches/phone-queue/main/start.js"
+  ]
+}
