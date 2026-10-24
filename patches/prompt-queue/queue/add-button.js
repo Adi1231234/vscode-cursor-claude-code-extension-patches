@@ -29,10 +29,9 @@
   function ensureAddButton() {
     var e = inp();
     if (!e) return;
-    var form = e.closest("form");
-    if (!form) return;
-    var send = form.querySelector('[class*="sendButton"]');
-    if (!send || !send.parentNode) return;
+    var ft = footerOf(e);   /* env-*.js: where this surface's footer is */
+    if (!ft) return;
+    var form = ft.root, send = ft.send;
     var b = form.querySelector(".__qAdd");
     if (!b) {
       b = btn("__qAdd");                                       /* no native title - styled tooltip instead */

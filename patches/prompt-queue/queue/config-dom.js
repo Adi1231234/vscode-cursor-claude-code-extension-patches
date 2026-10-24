@@ -1,12 +1,9 @@
-<script nonce="${__NONCE__}">/* QUEUE */(function(){
   /* Codex-style prompt queue for the Claude Code composer.
      Sections: config/state, DOM utils, session discovery, busy detection,
      file attachments, composer chips, image preview, queue model,
      rendering, panel resize, composer interception, flushing, init. */
 
   /* ---------- Config and state ---------- */
-  var BUSY = "Queue another message";
-  var PVH = "__PVHASH__";
   var Q = [];             /* queued items: {id, text, files, off} */
   var idc = 0;            /* id counter */
   var flushing = false;   /* a flush is in progress */
@@ -57,16 +54,7 @@
     return globalThis.__ccInput();                     /* cached in lib/js/ccStore.js */
   }
 
-  function setText(e, t) {
-    e.textContent = t;
-    e.dispatchEvent(new InputEvent("input", { bubbles: true }));
-  }
-
   function delay(ms) {
     return new Promise(function (r) { setTimeout(r, ms); });
-  }
-
-  function suggestionsOpen() {
-    return !!qs('[class*="popupVisible"],[class*="suggestions_"]');
   }
 

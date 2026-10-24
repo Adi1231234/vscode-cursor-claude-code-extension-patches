@@ -28,7 +28,7 @@
     if (editing) return "An item is being edited";
     var e = inp(), s = getSession();
     if (!e) return "No message box";
-    if (!(s && typeof s.send === "function") && (e.textContent || "").trim()) return "A draft is in the box";
+    if (!(s && typeof s.send === "function") && composerText(e).trim()) return "A draft is in the box";
     return "";
   }
 

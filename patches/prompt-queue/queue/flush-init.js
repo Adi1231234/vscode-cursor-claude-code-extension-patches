@@ -7,9 +7,7 @@
     e.focus();
     setText(e, it.text);
     if (files.length) await reattachToComposer(files);
-    var f = e.closest("form");
-    if (f && f.requestSubmit) f.requestSubmit();
-    else e.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
+    await submitComposer(e);   /* env-*.js: throws when the surface can tell it was not sent */
   }
 
   async function flush() {
@@ -22,7 +20,7 @@
     if (!e) return;
     var s = getSession();
     var canSend = !!(s && typeof s.send === "function");
-    var hasDraft = (e.textContent || "").trim().length > 0;
+    var hasDraft = composerText(e).trim().length > 0;
     /* Root protection: a DOM flush types the item into the box. With no session AND
        an unsent draft present, never type over it - wait until it is sent/cleared. */
     if (!canSend && hasDraft) return;

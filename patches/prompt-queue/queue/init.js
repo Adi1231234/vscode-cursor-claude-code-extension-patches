@@ -1,5 +1,5 @@
   /* ---------- Init ---------- */
-  hookFileReader();
+  hookAttachments();   /* env-*.js */
   document.addEventListener("keydown", onComposerKeydown, true);
   /* Ctrl+Alt+L opens the log viewer on demand (the button itself is hidden). */
   document.addEventListener("keydown", function (ev) {
@@ -13,4 +13,3 @@
   ensureAddButton();
   /* No timer: drive.js runs the pass on pushes. */
   wireQueue();
-})();</script>

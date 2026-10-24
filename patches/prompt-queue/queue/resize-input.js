@@ -25,7 +25,7 @@
      the panel's play button releases it. Returns false (event untouched)
      when there is nothing safe to queue. */
   function commitComposerToQueue(ev, e, hold) {
-    var t = (e.textContent || "").trim();
+    var t = composerText(e).trim();
     if (!t || hasUnmanagedChips()) return false;
     var files = readChips();
     ev.preventDefault();

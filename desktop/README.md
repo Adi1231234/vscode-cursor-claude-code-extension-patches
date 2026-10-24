@@ -67,43 +67,44 @@ nothing - not a problem once the regular install is in place, but worth fixing.
 
 ## Testing
 
-Everything is tested in a **Windows Sandbox** kept alive across the whole build,
-so login happens once. The harness installs the regular build, injects, and
-relaunches the app in place; it reaches the panel over a CDP port the same way
-the VS Code lab does. The renderer-side logic is also checkable in plain Chrome
-against `claude.ai/code`.
+The renderer side runs in a real Chrome against `claude.ai/code`, which renders
+the same Code tab: `tools/chrome-live/run.mjs` loads the built payload into an
+isolated world (as the preload runs) and answers every write request itself,
+so a check can press Send and read the request without anything reaching
+Claude. A Windows Sandbox cannot hold a Claude login (each boot is a new
+Windows identity, so the saved login cannot be decrypted); it only proves the
+inject / launch / boot path.
 
 ## Layout
 
 - `lib/asar-container.cjs` - read an ASAR archive: header, file list, file bytes.
 - `lib/asar-integrity.cjs` - Electron's SHA-256 block integrity format.
 - `lib/asar-inject.cjs` - the in-place patcher (`patchAsar`).
-- `tools/roundtrip.cjs` - proof the patcher is safe and reversible.
-- `apply.ps1` - locate the install, build the payloads, inject (to come).
-- `patches/<name>/` - one folder per feature, mirroring the parent repo (to come).
+- `lib/build.cjs` + `tools/build.cjs` - assemble the payloads: the runtime, then
+  each patch in `patches/order.json`; each `.css` file becomes one
+  `__ccd.style()` call; the preload's channel prefix is read out of the archive.
+- `lib/js/` - the runtime loaded before every patch: `boot.js` (`__ccd.patch`,
+  `__ccd.style`), `ipc.js` (the app's local-session event stream), `rows.js` and
+  `session.js` (a session store of the VS Code panel's shape, so webview code
+  runs unchanged). The parent's `lib/js/ccDom.js` and `ccWatch.js` come with it.
+- `patches/<name>/` - one folder per feature. `renderer.json` runs a parent
+  patch as is with named fragments swapped (`prompt-queue`); `renderer.order` or
+  `renderer.js` is desktop-only code.
+- `tools/inject-cli.cjs`, `tools/roundtrip.cjs` - inject; prove the injector safe.
+- `tools/chrome-live/` - the live checks described under Testing.
+- `apply.ps1` - find the install, build, inject.
 
 ## Status
 
-Built and checked offline (integrity + parse on the real archive), with the DOM
-anchors each one needs confirmed live on `claude.ai/code`:
-
 - [x] ASAR injector + integrity, proven on the real archive.
-- [x] `apply.ps1` + renderer bootstrap + inject CLI (reuses the parent's
-      `ccDom` / `ccWatch`).
-- [x] `message-bidi` - verified live (RTL decided per message).
-- [x] `input-usage` - verified live (thin usage line in the composer).
-- [x] `zoom` (Ctrl+wheel) - written; live check in the sandbox pass.
-- [x] `prompt-queue` core - store + panel verified live (add / reorder / edit /
-      remove / pause); Enter-to-enqueue and the real send are the sandbox pass.
+- [x] `message-bidi`, `input-usage`, `zoom` - verified live on claude.ai/code.
+- [x] `prompt-queue` - the full VS Code queue, verified live on claude.ai/code
+      (its README lists what was measured and what only the app can show).
 
 Not done yet:
 
-- [ ] Live sandbox pass: confirm our boot runs in the `epitaxy` preload after a
-      real patched launch, and verify enqueue-interception, send, and zoom.
-- [ ] `prompt-queue` advanced: schedule, saved queues, continue-after-usage-limit,
-      in-panel log (pure-logic modules to port from the webview queue).
-- [ ] `phone-queue`: a `/queue` CLI mod steering this queue over Remote Control
-      (depends on the live queue and a mod-to-preload channel).
+- [ ] `phone-queue`: `/queue` from the phone.
+- [ ] A pass in the real app, after the fingerprint step.
 - [ ] Adi Tools re-apply trigger (watch `Squirrel-Update.log`, wait for
       `Finished Squirrel Updater`, then re-run `apply.ps1`).
 

@@ -1,0 +1,42 @@
+/* CCDPREVIEW - the queued image preview. In VS Code it wears the app's own
+   preview classes; the Code tab has none we can name, so it is drawn here, in
+   the same shape: a scrim over the whole page, the image centred and fitted,
+   a round close button at its corner. */
+.__qPvOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-modal-background);
+}
+.__qPvBox {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+.__qPvImage {
+  display: block;
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--corner-radius-large);
+}
+.__qPvClose {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--app-widget-border);
+  border-radius: 50%;
+  background: var(--app-menu-background);
+  color: var(--app-primary-foreground);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+.__qPvClose:hover {
+  background: var(--app-ghost-button-hover-background);
+}
