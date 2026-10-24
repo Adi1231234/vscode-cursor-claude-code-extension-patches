@@ -84,9 +84,31 @@ against `claude.ai/code`.
 
 ## Status
 
+Built and checked offline (integrity + parse on the real archive), with the DOM
+anchors each one needs confirmed live on `claude.ai/code`:
+
 - [x] ASAR injector + integrity, proven on the real archive.
-- [ ] `apply.ps1` + payload bootstrap that loads enabled patches.
-- [ ] Sandbox harness kept alive across the build.
-- [ ] Patches: prompt-queue, phone-queue, message-bidi, input-usage,
-      mcp-reconnect-all, zoom (wheel).
-- [ ] Adi Tools re-apply trigger.
+- [x] `apply.ps1` + renderer bootstrap + inject CLI (reuses the parent's
+      `ccDom` / `ccWatch`).
+- [x] `message-bidi` - verified live (RTL decided per message).
+- [x] `input-usage` - verified live (thin usage line in the composer).
+- [x] `zoom` (Ctrl+wheel) - written; live check in the sandbox pass.
+- [x] `prompt-queue` core - store + panel verified live (add / reorder / edit /
+      remove / pause); Enter-to-enqueue and the real send are the sandbox pass.
+
+Not done yet:
+
+- [ ] Live sandbox pass: confirm our boot runs in the `epitaxy` preload after a
+      real patched launch, and verify enqueue-interception, send, and zoom.
+- [ ] `prompt-queue` advanced: schedule, saved queues, continue-after-usage-limit,
+      in-panel log (pure-logic modules to port from the webview queue).
+- [ ] `phone-queue`: a `/queue` CLI mod steering this queue over Remote Control
+      (depends on the live queue and a mod-to-preload channel).
+- [ ] Adi Tools re-apply trigger (watch `Squirrel-Update.log`, wait for
+      `Finished Squirrel Updater`, then re-run `apply.ps1`).
+
+Not applicable here:
+
+- `mcp-reconnect-all` - the Code tab has no MCP-servers dialog (0 MCP UI found
+  live); the parent patch targets the VS Code `/mcp` dialog, which this surface
+  does not have. Nothing to reconnect, so there is nothing to add.
