@@ -1,0 +1,4 @@
+# build artifacts (the prebuilt version.dll IS committed; these are not)
+*.obj
+*.exp
+*.lib
