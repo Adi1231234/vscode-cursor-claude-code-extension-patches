@@ -13,11 +13,22 @@ Ctrl +/- / 0 menu items already; this adds the wheel gesture (the parent repo's
   apply here.
 - A capturing, non-passive `wheel` listener handles `ctrlKey` wheel events
   (pinch arrives the same way), one `0.5` level step per notch, clamped.
-- The level is saved to `localStorage` best-effort and re-applied on load; if
-  `webFrame` is ever missing it falls back to CSS `body.zoom`.
+- If `webFrame` is ever missing it falls back to CSS `body.zoom`.
+
+## Per conversation, not per app
+
+The app's native zoom is one level for the whole app - Chromium keeps it per
+origin, so every Claude window zooms together. The level is instead stored per
+session id (`ccd.zoom.<sid>`) and re-applied whenever the conversation on
+screen changes (`desktop/lib/js/session.js`'s `__ccdSessions.onCurrent`): switch
+to a conversation and its own zoom comes back, Ctrl+wheel changes only that one.
+A conversation with no saved level sits at the base (0 = 1x). This matches what
+the VS Code panel already does (one zoom per panel), which is what the person
+asked for.
 
 ## Status
 
-Written against the confirmed preload injection model; the live check (native
-zoom + that Ctrl+wheel is otherwise unbound in the app) is done in the sandbox
-integration pass, since it depends on Electron, not on the web DOM.
+Verified in the real app (Windows Sandbox, `tools/sandbox`): zooming conversation
+A to level 1.5 then switching to B shows B at its own base; switching back to A
+restores 1.5, back to B restores B's level; each persisted under its own key.
+The zoom is visible (level 4 clearly enlarged the whole UI).

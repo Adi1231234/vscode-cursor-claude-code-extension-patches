@@ -53,6 +53,12 @@ window.__ccd.patch("sandbox-probe-actions", function () {
             return true;
         }
         if (a.action === "stop") { var b = document.querySelector('[data-testid="code-prompt-stop"]'); if (b) { b.click(); return "stopped"; } return "no stop button"; }
+        if (a.action === "zoomwheel") {
+            var n = a.times || 1, dy = a.dir === "out" ? 120 : -120;
+            for (var i = 0; i < n; i++) window.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: dy, bubbles: true, cancelable: true }));
+            try { return require("electron").webFrame.getZoomLevel(); } catch (e) { return "no webFrame"; }
+        }
+        if (a.action === "zoomtest") return zoomTest();
         if (a.action === "hook") return hookPage();
         if (a.action === "myws") return myWs(a.sid, a.org);
         return "unknown action";
@@ -74,6 +80,42 @@ window.__ccd.patch("sandbox-probe-actions", function () {
             catch (x) { P.myws.push("raw " + String(e.data).slice(0, 80)); }
         };
         return "opened";
+    }
+
+    /* Per-session zoom: switch between two conversation ids and report each
+       one's webFrame zoom level, to prove each keeps its own. Test only. */
+    function zoomTest() {
+        var wf; try { wf = require("electron").webFrame; } catch (e) { return "no webFrame"; }
+        var A = "session_zoomtestAAAA", B = "session_zoomtestBBBB", out = {};
+        function nudge() { var n = document.createElement("i"); document.body.appendChild(n); n.remove(); }
+        function go(id) { history.pushState({}, "", "/code/" + id); nudge(); }
+        function wheel(dir, n) { for (var i = 0; i < n; i++) window.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: dir === "in" ? -120 : 120, bubbles: true, cancelable: true })); }
+        try { localStorage.removeItem("ccd.zoom." + A); localStorage.removeItem("ccd.zoom." + B); } catch (e) {}
+        return new Promise(function (resolve) {
+            go(A); setTimeout(function () {
+                out.A_start = wf.getZoomLevel(); wheel("in", 3);
+                setTimeout(function () {
+                    out.A_after3in = wf.getZoomLevel(); go(B);
+                    setTimeout(function () {
+                        out.B_onSwitch = wf.getZoomLevel(); wheel("out", 2);
+                        setTimeout(function () {
+                            out.B_after2out = wf.getZoomLevel(); go(A);
+                            setTimeout(function () {
+                                out.A_back = wf.getZoomLevel(); go(B);
+                                setTimeout(function () {
+                                    out.B_back = wf.getZoomLevel();
+                                    out.stored = { A: localStorage.getItem("ccd.zoom." + A), B: localStorage.getItem("ccd.zoom." + B) };
+                                    try { localStorage.removeItem("ccd.zoom." + A); localStorage.removeItem("ccd.zoom." + B); } catch (e) {}
+                                    wf.setZoomLevel(0);
+                                    history.pushState({}, "", "/code/session_01CoCw94CcD3e6yLVptG85jQ"); nudge();
+                                    resolve(out);
+                                }, 300);
+                            }, 300);
+                        }, 300);
+                    }, 300);
+                }, 300);
+            }, 300);
+        });
     }
 
     /* Learn how the page talks to a remote conversation: in the page's own
@@ -101,7 +143,10 @@ window.__ccd.patch("sandbox-probe-actions", function () {
 
     ipc.on("ccd-probe-cmd", function (_e, a) {
         var out;
-        try { out = run(a); } catch (err) { out = "threw: " + err.message; }
+        try {
+            out = run(a);
+            if (out && typeof out.then === "function") { out.then(function (v) { P.last = { id: a.id, action: a.action, out: v }; }); return; }
+        } catch (err) { out = "threw: " + err.message; }
         P.last = { id: a.id, action: a.action, out: out };
     });
 });

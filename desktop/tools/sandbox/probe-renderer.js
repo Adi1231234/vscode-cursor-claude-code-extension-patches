@@ -47,7 +47,8 @@ window.__ccd.patch("sandbox-probe", function () {
             composer: !!document.querySelector('[data-testid="code-prompt-input"]'),
             seen: seen, extra: extra,
             queue: shown ? shown.api.__qRemote.run({ op: "list" }).queue : null,
-            probe: window.__ccdProbe || null, remoteSubs: window.__ccdRemote.debug()
+            probe: window.__ccdProbe || null, remoteSubs: window.__ccdRemote.debug(),
+            zoomLevel: (function () { try { return require("electron").webFrame.getZoomLevel(); } catch (e) { return null; } })()
         };
         stash("ccd-probe", data);
         if (ipc) ipc.send("ccd-probe", data);
