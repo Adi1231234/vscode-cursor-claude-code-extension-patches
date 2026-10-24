@@ -1,0 +1,67 @@
+/* CCDTOKENS - the VS Code panel's design tokens, answered from the Code tab's own.
+   The queue's stylesheets (patches/prompt-queue/queue.css, saved/saved.css,
+   lib/css/ccModal.css, lib/css/ccScroll.css) are written against the --app-*
+   and --vscode-* tokens the extension's panel defines. The Code tab defines
+   --cds-* instead (measured live: --cds-text-primary/secondary/muted,
+   --cds-surface-3, --cds-clay, --cds-radius, the composer ring), so each token
+   the queue reads is given the Code tab's value for the same role. Only on our
+   own nodes ([data-cc], every node the queue draws), never on the page's.
+   Colours come from the page's tokens or are mixed from them, so the light and
+   dark themes both follow; spacing and radii keep the panel's own scale. */
+[data-cc] {
+  --app-primary-foreground: var(--cds-text-primary);
+  --app-secondary-foreground: var(--cds-text-secondary);
+  --app-disabled-foreground: var(--cds-text-muted);
+  --app-input-foreground: var(--cds-text-primary);
+  --app-input-placeholder-foreground: var(--cds-text-muted);
+  --app-menu-foreground: var(--cds-text-primary);
+  --app-list-active-foreground: var(--cds-text-primary);
+  --vscode-foreground: var(--cds-text-primary);
+  --vscode-menu-foreground: var(--cds-text-primary);
+  --vscode-descriptionForeground: var(--cds-text-secondary);
+
+  --app-primary-background: var(--cds-surface-3);
+  --app-input-background: var(--cds-surface-3);
+  --app-input-secondary-background: var(--cds-surface-1);
+  --app-menu-background: var(--cds-surface-3);
+  --vscode-menu-background: var(--cds-surface-3);
+  --vscode-input-background: var(--cds-surface-3);
+  --app-modal-background: #000000bf;
+
+  --app-widget-border: var(--cds-fizzy-lake-color-composer-ring);
+  --app-input-border: var(--cds-fizzy-lake-color-composer-ring);
+  --app-menu-border: var(--cds-fizzy-lake-color-composer-ring);
+  --app-transparent-inner-border: var(--cds-border);
+  --vscode-menu-border: var(--cds-fizzy-lake-color-composer-ring);
+  --vscode-input-border: var(--cds-fizzy-lake-color-composer-ring);
+
+  --app-list-hover-background: color-mix(in srgb, var(--cds-text-primary) 7%, transparent);
+  --app-ghost-button-hover-background: color-mix(in srgb, var(--cds-text-primary) 9%, transparent);
+  --app-list-active-background: color-mix(in srgb, var(--cds-text-primary) 12%, transparent);
+  --vscode-scrollbarSlider-background: color-mix(in srgb, var(--cds-text-primary) 14%, transparent);
+  --vscode-scrollbarSlider-hoverBackground: color-mix(in srgb, var(--cds-text-primary) 24%, transparent);
+  --vscode-scrollbarSlider-activeBackground: color-mix(in srgb, var(--cds-text-primary) 32%, transparent);
+
+  --app-accent-color: hsl(var(--cds-hsl-blue-350));
+  --app-claude-orange: var(--cds-clay);
+  --app-claude-clay-button-orange: var(--cds-clay);
+  --app-claude-ivory: hsl(var(--cds-hsl-gray-10));
+  --app-claude-slate: hsl(var(--cds-hsl-gray-850));
+  --app-error-foreground: hsl(var(--cds-hsl-red-350));
+  --app-warning-accent: hsl(var(--cds-hsl-yellow-200));
+  --vscode-editorWarning-foreground: hsl(var(--cds-hsl-yellow-200));
+
+  --app-monospace-font-family: var(--font-anthropic-mono);
+  --vscode-editor-font-family: var(--font-anthropic-mono);
+  --vscode-chat-font-size: 13px;
+
+  --app-spacing-small: 4px;
+  --app-spacing-medium: 8px;
+  --app-spacing-large: 12px;
+  --app-spacing-xlarge: 16px;
+  --corner-radius-small: 4px;
+  --corner-radius-medium: 6px;
+  --corner-radius-large: var(--cds-radius);
+  --app-list-gap: 2px;
+  --app-list-border-radius: 4px;
+}

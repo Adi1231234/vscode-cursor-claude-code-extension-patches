@@ -4,31 +4,13 @@
     if (s && s.busy && typeof s.busy.value === "boolean") return s.busy.value;
     var e = inp();
     if (!e) return false;
-    return (e.getAttribute("data-placeholder") || "").indexOf(BUSY) === 0;
+    return composerBusy(e);   /* env-*.js */
   }
 
-  /* ---------- File attachments ---------- */
+  /* ---------- File attachments ----------
+     fileStore maps a chip's file name to the file the app attached; the
+     surface fills it (hookAttachments, env-*.js). */
   var fileStore = {};
-
-  function hookFileReader() {
-    try {
-      var FR = window.FileReader;
-      if (!FR || !FR.prototype || FR.prototype.__qHook) return;
-      var orig = FR.prototype.readAsDataURL;
-      FR.prototype.readAsDataURL = function (blob) {
-        try {
-          if (blob && blob.name) {
-            var self = this;
-            this.addEventListener("load", function () {
-              try { fileStore[blob.name] = { file: blob, dataUrl: self.result }; } catch (e) {}
-            }, { once: true });
-          }
-        } catch (e) {}
-        return orig.apply(this, arguments);
-      };
-      FR.prototype.__qHook = 1;
-    } catch (e) {}
-  }
 
   function fileToDataUrl(f) {
     return new Promise(function (res, rej) {
@@ -66,7 +48,7 @@
     e.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dt }));
     var g = 0;
     while (g < 50) {
-      var c = qs('[class*="attachedFilesContainer"]');
+      var c = chipBox();
       if (c && c.children.length >= files.length) break;
       await delay(15);
       g++;

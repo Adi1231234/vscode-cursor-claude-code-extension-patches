@@ -1,12 +1,7 @@
   /* ---------- Composer chips (live attachments in the box) ---------- */
   function chipEls() {
-    var c = qs('[class*="attachedFilesContainer"]');
+    var c = chipBox();   /* env-*.js: where this surface draws its chips */
     return c ? [].slice.call(c.children) : [];
-  }
-
-  function chipName(chip) {
-    var lbl = chip.querySelector('[class*="label"]');
-    return (lbl && (lbl.getAttribute("title") || lbl.textContent)) || "file";
   }
 
   function readChips() {
@@ -27,7 +22,7 @@
   async function clearChips() {
     var g = 0;
     while (g < 25) {
-      var b = qs('[class*="attachedFilesContainer"] [class*="removeButton"]');
+      var b = chipRemoveButton();
       if (!b) break;
       b.click();
       await delay(20);
@@ -35,17 +30,17 @@
     }
   }
 
-  /* ---------- Image preview overlay (reuses the app's preview styles) ---------- */
+  /* ---------- Image preview overlay (in the surface's preview styles) ---------- */
   var pvClose = null;
 
   function openPreview(url, name) {
     if (pvClose) { pvClose(); pvClose = null; }
-    var ov = el("div", "previewOverlay_" + PVH);
-    var cont = el("div", "previewContainer_" + PVH);
-    var img = el("img", "previewImage_" + PVH);
+    var ov = el("div", PREVIEW.overlay);   /* env-*.js: this surface's preview classes */
+    var cont = el("div", PREVIEW.box);
+    var img = el("img", PREVIEW.image);
     img.src = url;
     img.alt = name || "";
-    var x = btn("previewCloseButton_" + PVH, "Close preview (Esc)");
+    var x = btn(PREVIEW.close, "Close preview (Esc)");
     x.textContent = "\u2715";
     function close() {
       if (ov.parentNode) ov.parentNode.removeChild(ov);

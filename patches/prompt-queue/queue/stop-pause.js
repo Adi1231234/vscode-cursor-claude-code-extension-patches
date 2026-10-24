@@ -50,7 +50,7 @@
      conversation must not be read against the new one. */
   var runMark = null;
   function watchStopsElsewhere() {
-    var S = window.__ccSession;
+    var S = sessionPush();   /* env-*.js */
     if (watchStopsElsewhere.on || !S || !window.__ccReply) return;
     watchStopsElsewhere.on = 1;
     S.on("busy", function (busy, store, initial) {

@@ -105,7 +105,7 @@
     return _curSid || "";
   }
 
-  window.__qRemote = window.__qRemote || {
+  expose("__qRemote", {
     run: remoteRun,
     sid: remoteSid
-  };
+  });

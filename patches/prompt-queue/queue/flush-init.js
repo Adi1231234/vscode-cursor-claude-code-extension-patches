@@ -7,9 +7,7 @@
     e.focus();
     setText(e, it.text);
     if (files.length) await reattachToComposer(files);
-    var f = e.closest("form");
-    if (f && f.requestSubmit) f.requestSubmit();
-    else e.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", ctrlKey: true, bubbles: true, cancelable: true }));
+    await submitComposer(e);   /* env-*.js: throws when the surface can tell it was not sent */
   }
 
   async function flush() {
@@ -18,11 +16,13 @@
     if (flushing || editing || isBusy() || Date.now() < retryAt) return;
     var idx = firstSendableIndex();
     if (idx < 0 || holdForResume(Q[idx])) return;   /* limit-resume.js */
+    /* A session that sends by itself needs no composer: the desktop app's
+       queue for a conversation that is not on screen has none. */
     var e = inp();
-    if (!e) return;
     var s = getSession();
     var canSend = !!(s && typeof s.send === "function");
-    var hasDraft = (e.textContent || "").trim().length > 0;
+    if (!e && !canSend) return;
+    var hasDraft = !!e && composerText(e).trim().length > 0;
     /* Root protection: a DOM flush types the item into the box. With no session AND
        an unsent draft present, never type over it - wait until it is sent/cleared. */
     if (!canSend && hasDraft) return;
@@ -80,9 +80,9 @@
      panel-settings asks count() and paused() whether more work is lined up
      behind the run that just ended. Guarded so the first definition wins, like
      every other shared global here. */
-  window.__qAuto = window.__qAuto || {
+  expose("__qAuto", {
     count: function () { return Q.filter(function (it) { return !isParked(it); }).length; },
     paused: function () { return paused; },
     busy: function () { return isBusy() || flushing; }
-  };
+  });
 

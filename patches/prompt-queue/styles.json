@@ -1,0 +1,6 @@
+[
+  { "path": "lib/css/ccScroll.css", "guard": "/* CCSCROLL */", "label": "shared scrollbar CSS" },
+  { "path": "patches/prompt-queue/queue.css", "guard": "/* QUEUE */", "label": "queue CSS" },
+  { "path": "lib/css/ccModal.css", "guard": "/* QMODAL */", "label": "shared dialog CSS" },
+  { "path": "patches/prompt-queue/saved/saved.css", "guard": "/* QSAVED */", "label": "saved queues CSS" }
+]

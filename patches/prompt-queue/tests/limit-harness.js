@@ -45,6 +45,8 @@ function queueWith(items, settings) {
     __ccSession: { on: (name, fn) => { if (name === 'busy') busyFns.push(fn); } },
     __ccSettings: settings === undefined ? undefined : { get: (n) => settings[n] }
   };
+  const sessionPush = () => window.__ccSession;      /* env-vscode.js */
+  const sessionStore = () => globalThis.__ccStore();
   eval(REPLY);
   function runRows(rows, frames) {
     busyFns.forEach((f) => f(true, store, false));

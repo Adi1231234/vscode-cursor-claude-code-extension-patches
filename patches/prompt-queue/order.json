@@ -1,5 +1,7 @@
 [
+  "patches/prompt-queue/queue/open.js",
   "patches/prompt-queue/queue/config-dom.js",
+  "patches/prompt-queue/queue/env-vscode.js",
   "lib/js/ccStore.js",
   "lib/js/ccRow.js",
   "lib/js/ccDom.js",
@@ -14,6 +16,7 @@
   "patches/prompt-queue/queue/busy-files.js",
   "patches/prompt-queue/queue/chips-preview.js",
   "patches/prompt-queue/queue/persist.js",
+  "patches/prompt-queue/queue/session-id.js",
   "patches/prompt-queue/queue/debug.js",
   "patches/prompt-queue/queue/model.js",
   "patches/prompt-queue/queue/schedule-lib.js",
@@ -25,6 +28,7 @@
   "patches/prompt-queue/queue/schedule-modal.js",
   "patches/prompt-queue/queue/render-panel.js",
   "patches/prompt-queue/queue/row-menu.js",
+  "patches/prompt-queue/queue/detach.js",
   "patches/prompt-queue/saved/store.js",
   "patches/prompt-queue/saved/modal.js",
   "patches/prompt-queue/saved/list.js",
@@ -40,5 +44,6 @@
   "patches/prompt-queue/queue/remote-item.js",
   "patches/prompt-queue/queue/remote-api.js",
   "patches/prompt-queue/queue/drive.js",
-  "patches/prompt-queue/queue/init.js"
+  "patches/prompt-queue/queue/init.js",
+  "patches/prompt-queue/queue/close.js"
 ]

@@ -37,6 +37,9 @@ async function slimExtension(version, log) {
   const t = Date.now();
   const bytes = await fetchExtension(vsixUrl(version), part, NOT_FOR_A_PANEL);
   log(`fetched ${version} from OpenVSX: ${(bytes / 1e6).toFixed(1)} MB in ${Date.now() - t} ms`);
+  /* A folder without extension.js is a half copy an older run left (one was
+     found from 2026-10-16), and a rename onto a folder fails on Windows. */
+  rmSync(slim, { recursive: true, force: true });
   renameSync(part, slim);
   return slim;
 }

@@ -29,10 +29,9 @@
   function ensureAddButton() {
     var e = inp();
     if (!e) return;
-    var form = e.closest("form");
-    if (!form) return;
-    var send = form.querySelector('[class*="sendButton"]');
-    if (!send || !send.parentNode) return;
+    var ft = footerOf(e);   /* env-*.js: where this surface's footer is */
+    if (!ft) return;
+    var form = ft.root, send = ft.send;
     var b = form.querySelector(".__qAdd");
     if (!b) {
       b = btn("__qAdd");                                       /* no native title - styled tooltip instead */
@@ -41,6 +40,7 @@
       b.innerHTML = ADD_ICON + TIP_HTML;
       window.__ccDom.overlay(b.querySelector(".__qTip"));
       b.addEventListener("click", onAddClick);
+      uiNodes.push(b);   /* detach.js */
     }
     /* insertBefore an already-attached node just moves it: idempotent, never duplicates */
     if (b.parentNode !== send.parentNode) send.parentNode.insertBefore(b, send);
@@ -64,6 +64,7 @@
       sv.innerHTML = IC_BOOK + '<span class="__qTip" aria-hidden="true">Saved queues</span>';
       window.__ccDom.overlay(sv.querySelector(".__qTip"));
       sv.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openSavedModal(false); });
+      uiNodes.push(sv);
     }
     if (sv.parentNode !== send.parentNode) send.parentNode.insertBefore(sv, b);
   }
@@ -75,6 +76,7 @@
       lg.setAttribute("data-cc-fold", "1");            /* a debugging aid: the first to fold */
       lg.innerHTML = LOG_ICON;
       lg.addEventListener("click", function (ev) { ev.preventDefault(); ev.stopPropagation(); openLogModal(); });
+      uiNodes.push(lg);
     }
     if (lg.parentNode !== send.parentNode) send.parentNode.insertBefore(lg, b);
     if (window.__ccRow) window.__ccRow.place(send.parentNode, send);
