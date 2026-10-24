@@ -56,7 +56,7 @@ window.__ccd.patch("sandbox-probe-actions", function () {
         if (a.action === "zoomwheel") {
             var n = a.times || 1, dy = a.dir === "out" ? 120 : -120;
             for (var i = 0; i < n; i++) window.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: dy, bubbles: true, cancelable: true }));
-            try { return require("electron").webFrame.getZoomLevel(); } catch (e) { return "no webFrame"; }
+            var inp = document.querySelector('[data-testid="code-prompt-input"]'); for (var k = inp; k && k.parentElement; k = k.parentElement) if ((k.parentElement.className || "").indexOf("--titlebar-end-inset") >= 0) return k.style.zoom || "1"; return "no col";
         }
         if (a.action === "zoomtest") return zoomTest();
         if (a.action === "hook") return hookPage();
@@ -82,31 +82,38 @@ window.__ccd.patch("sandbox-probe-actions", function () {
         return "opened";
     }
 
-    /* Per-session zoom: switch between two conversation ids and report each
-       one's webFrame zoom level, to prove each keeps its own. Test only. */
+    /* Per-session zoom (CSS zoom on the content column): switch between two
+       conversation ids, report each one's column zoom, and the sidebar / title
+       bar rects before and after to prove only the content scales. Test only. */
     function zoomTest() {
-        var wf; try { wf = require("electron").webFrame; } catch (e) { return "no webFrame"; }
         var A = "session_zoomtestAAAA", B = "session_zoomtestBBBB", out = {};
         function nudge() { var n = document.createElement("i"); document.body.appendChild(n); n.remove(); }
         function go(id) { history.pushState({}, "", "/code/" + id); nudge(); }
         function wheel(dir, n) { for (var i = 0; i < n; i++) window.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: dir === "in" ? -120 : 120, bubbles: true, cancelable: true })); }
+        function col() { var inp = document.querySelector('[data-testid="code-prompt-input"]'); for (var n = inp; n && n.parentElement; n = n.parentElement) if ((n.parentElement.className || "").indexOf("--titlebar-end-inset") >= 0) return n; return null; }
+        function colZoom() { var c = col(); return c ? (c.style.zoom || "1") : "no col"; }
+        function rect(sel) { var e = document.querySelector(sel); if (!e) return null; var b = e.getBoundingClientRect(); return Math.round(b.left) + "," + Math.round(b.top) + " " + Math.round(b.width) + "x" + Math.round(b.height); }
+        var SIDEBAR = 'a[href="/code"], a[href*="/new"]';
         try { localStorage.removeItem("ccd.zoom." + A); localStorage.removeItem("ccd.zoom." + B); } catch (e) {}
         return new Promise(function (resolve) {
             go(A); setTimeout(function () {
-                out.A_start = wf.getZoomLevel(); wheel("in", 3);
+                out.sidebarBefore = rect('nav') || rect('[class*="sidebar"]');
+                out.titleBefore = rect('[data-testid="code-prompt-send-cell"]') ? null : null;
+                out.A_start = colZoom(); wheel("in", 3);
                 setTimeout(function () {
-                    out.A_after3in = wf.getZoomLevel(); go(B);
+                    out.A_after3in = colZoom();
+                    out.sidebarAfterZoom = rect('nav') || rect('[class*="sidebar"]');
+                    go(B);
                     setTimeout(function () {
-                        out.B_onSwitch = wf.getZoomLevel(); wheel("out", 2);
+                        out.B_onSwitch = colZoom(); wheel("out", 2);
                         setTimeout(function () {
-                            out.B_after2out = wf.getZoomLevel(); go(A);
+                            out.B_after2out = colZoom(); go(A);
                             setTimeout(function () {
-                                out.A_back = wf.getZoomLevel(); go(B);
+                                out.A_back = colZoom(); go(B);
                                 setTimeout(function () {
-                                    out.B_back = wf.getZoomLevel();
+                                    out.B_back = colZoom();
                                     out.stored = { A: localStorage.getItem("ccd.zoom." + A), B: localStorage.getItem("ccd.zoom." + B) };
                                     try { localStorage.removeItem("ccd.zoom." + A); localStorage.removeItem("ccd.zoom." + B); } catch (e) {}
-                                    wf.setZoomLevel(0);
                                     history.pushState({}, "", "/code/session_01CoCw94CcD3e6yLVptG85jQ"); nudge();
                                     resolve(out);
                                 }, 300);

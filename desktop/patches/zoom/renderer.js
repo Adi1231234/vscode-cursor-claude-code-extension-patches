@@ -1,67 +1,68 @@
 /* zoom (desktop): Ctrl + mouse-wheel (and trackpad pinch, which Chromium
-   delivers as ctrl+wheel) to zoom the Code tab.
+   delivers as ctrl+wheel) to zoom the conversation.
 
-   Per conversation, not per app. The app's own zoom (and Electron's webFrame
-   zoom, which the menu's Ctrl +/- uses) is one level for the whole app -
-   Chromium keeps it per origin, so every Claude window zooms together. The
-   person wants each conversation to keep its own zoom, the way the VS Code
-   panel already does. So the level is stored per session id and re-applied
-   whenever the conversation on screen changes (desktop/lib/js/session.js):
-   switch to a conversation and its own zoom comes back, Ctrl+wheel changes
-   only that one.
+   Only the session content - the conversation, the composer, and the line
+   below it (usage, mode) - grows. Not the sidebar, not the title bar. So this
+   does NOT use the app's native (webFrame) zoom, which scales the whole window
+   and is one level for the whole app (Chromium keeps it per origin). It sets
+   CSS `zoom` on the one element that wraps the conversation and the composer:
+   the scroll column just below the title bar. Measured on the live page - it
+   is the child of the element carrying the `--titlebar-end-inset` custom
+   property, and it holds the composer, the send cell and the usage line;
+   zooming it enlarges all of them and leaves the title bar and the sidebar
+   untouched, with no horizontal scroll (CSS `zoom` reflows, so the column's
+   own box stays and its content scales inside).
 
-   It drives Electron's webFrame zoom (captured at preload-eval time, when
-   require is available), the same level the menu uses - so, unlike CSS zoom,
-   it does not split the viewport from the layout coordinates. If webFrame is
-   unavailable it falls back to CSS body.zoom. A conversation with no saved
-   level sits at the base (0 = 1x). */
+   Per conversation: the level is stored per session id and re-applied when the
+   conversation on screen changes (desktop/lib/js/session.js) and whenever the
+   app rebuilds that column (ccWatch). A conversation with no saved level sits
+   at the base (0 = 1x). This matches what the VS Code panel already does. */
 (function () {
-    var webFrame = null;
-    try { webFrame = require("electron").webFrame; } catch (e) { webFrame = null; }
-
     var PREFIX = "ccd.zoom.", MIN = -3, MAX = 5, STEP = 0.5, BASE = 1.2;
 
     function keyFor(sid) { return PREFIX + (sid || "new"); }
+    function sid() { return window.__ccdSessions ? window.__ccdSessions.current() : null; }
 
-    function getLevel() {
-        if (webFrame) return webFrame.getZoomLevel();
-        var z = parseFloat(document.body && document.body.style.zoom) || 1;
-        return Math.round(Math.log(z) / Math.log(BASE));
+    /* The conversation + composer column: the composer's ancestor whose parent
+       carries the title bar (the --titlebar-end-inset property). */
+    function contentCol() {
+        var inp = document.querySelector('[data-testid="code-prompt-input"]');
+        for (var n = inp; n && n.parentElement; n = n.parentElement) {
+            if ((n.parentElement.className || "").indexOf("--titlebar-end-inset") >= 0) return n;
+        }
+        return null;
     }
 
-    function applyLevel(lv) {
-        lv = Math.max(MIN, Math.min(MAX, lv));
-        if (webFrame) webFrame.setZoomLevel(lv);
-        else if (document.body) document.body.style.zoom = String(Math.pow(BASE, lv));
-        return lv;
-    }
-
-    /* The level saved for a conversation, or the base when it has none. */
-    function savedLevel(sid) {
+    function savedLevel(id) {
         try {
-            var v = localStorage.getItem(keyFor(sid));
-            if (v != null && v !== "") return parseFloat(v);
+            var v = localStorage.getItem(keyFor(id));
+            if (v != null && v !== "") return Math.max(MIN, Math.min(MAX, parseFloat(v)));
         } catch (e) {}
         return 0;
     }
 
-    function applyFor(sid) {
-        applyLevel(savedLevel(sid));
+    /* Set the current conversation's zoom on the column, only when it differs
+       (an unchanged write is still a mutation that would wake the observer). */
+    function apply() {
+        var col = contentCol();
+        if (!col) return;
+        var want = String(Math.pow(BASE, savedLevel(sid())));
+        if (col.style.zoom !== want) col.style.zoom = want;
     }
 
     window.__ccd.patch("zoom", function () {
-        var sessions = window.__ccdSessions;
-        var cur = sessions ? sessions.current() : null;
-        applyFor(cur);
-        /* Re-apply the new conversation's own level on every switch. */
-        if (sessions) sessions.onCurrent(function (id) { applyFor(id); });
+        apply();
+        if (window.__ccdSessions) window.__ccdSessions.onCurrent(apply);
+        /* Re-apply when the app rebuilds the column (a switch, a view change). */
+        if (window.__ccWatch) window.__ccWatch.on(apply);
 
         window.addEventListener("wheel", function (e) {
             if (!e.ctrlKey) return;
             e.preventDefault();
-            var lv = applyLevel(getLevel() + (e.deltaY < 0 ? STEP : -STEP));
-            var sid = sessions ? sessions.current() : null;
-            try { localStorage.setItem(keyFor(sid), String(lv)); } catch (x) { /* private mode */ }
+            var id = sid();
+            var lv = Math.max(MIN, Math.min(MAX, savedLevel(id) + (e.deltaY < 0 ? STEP : -STEP)));
+            try { localStorage.setItem(keyFor(id), String(lv)); } catch (x) { /* private mode */ }
+            apply();
         }, { passive: false, capture: true });
     });
 })();
