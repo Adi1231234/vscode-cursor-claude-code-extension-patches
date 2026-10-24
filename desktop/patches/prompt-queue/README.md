@@ -79,13 +79,39 @@ is on screen, one item per run, the phone steers it there, each queue draws
 only its own), the `ui-*` screenshots, then `queue-send` (a real submit) last:
 the stand-in send leaves the page showing Stop, so it goes on a fresh page.
 
+## Two kinds of conversation
+
+A conversation the app runs itself (`local_<uuid>`) and one run elsewhere over
+Remote Control (`session_`/`cse_<uuid>`, a CLI in Adi Tools, the phone, another
+machine) deliver their frames two different ways, so `desktop/lib/js/store.js`
+reads each from its own source:
+
+- **local**: frames on the app's own event stream (`ipc.js`); run state from
+  the session record (`isRunning`); can be sent to off screen
+  (`LocalSessions.sendMessage`).
+- **Remote Control**: frames on a per-conversation WebSocket
+  (`wss://claude.ai/v1/sessions/ws/<id>/subscribe`), which `remote-sub.js`
+  reads from the preload's own world - the same frames the page gets. No
+  off-screen send path, so its queue sends through the composer while the
+  conversation is on screen.
+
+Either way the frames are the same stream-json shape (`rows.js`), so stop,
+usage-limit and reply detection are the exact VS Code code, fed the same rows.
+
+## Checked in the real app (Windows Sandbox, `tools/sandbox`)
+
+Against a real Remote Control conversation: two queued messages each sent in
+their own turn, in order, the queue waiting for each to truly finish; the
+WebSocket fed the store (messages, and busy from the Stop button); a Stop
+mid-turn parked the queue and held the rest.
+
 ## Not checked yet
 
-Everything above ran in Chrome, not in the app itself: that comes after the
-fingerprint step. What only the app can show: that `LocalSessions_$_onEvent`
-carries every frame and the session record (`isRunning`), that
-`sendMessage(sessionId, text)` with the rest left out sends like the
-composer, that `getSession` answers with the record, and that a local
-conversation's address is `/code/local_<uuid>`. The app also has its own
-"resume after limit" (`LimitAutoResume`); with both armed, a limit could be
-followed by two "continue"s.
+- **Off-screen Remote Control sending.** The queue of a Remote Control
+  conversation that is not on screen reads correctly but cannot send yet (the
+  send is a device-signed request the page makes only for the composer's own
+  conversation); its items wait until it is on screen. Off-screen sending works
+  for local conversations.
+- **Usage-limit "continue"** was fed the right frames but not driven to a real
+  429 in the app; the app's own `LimitAutoResume`, if armed too, could add a
+  second "continue".

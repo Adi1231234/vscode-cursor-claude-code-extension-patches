@@ -20,6 +20,8 @@ ok(out.patches.includes('prompt-queue') && out.patches.includes('phone-queue'), 
 ok(/window\.__ccd\.style\("queue",/.test(out.renderer), 'the queue stylesheet is in, as one __ccd.style call');
 ok(/function ccPhoneListen/.test(out.main) && /CLAUDE_CODE_PLUGIN_DIRS/.test(out.main), 'the phone listener and its wiring are in the main payload');
 
+const run = (href) => { const win = {}; new vm.Script(out.renderer).runInNewContext({ window: win, location: { href }, require: () => { throw new Error('no electron'); } }); return win; };
+ok(Object.keys(run('about:blank')).length === 0, 'in an about:blank document of the window the payload does nothing');
 ok(webChannel('nothing here') === null, 'no prefix in the preload: none is guessed');
 ok(webChannel('"' + CH + '" "' + CH.replace('8b0b', '9c1c') + '"') === null, 'two different prefixes: none is guessed');
 const skipped = build({ mainViewText: '', skip: ['phone-queue'], stamp: 'x' });

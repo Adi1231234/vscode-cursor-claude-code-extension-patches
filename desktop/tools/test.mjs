@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const desk = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const jobs = ["lib/tests/build.test.js", "patches/phone-queue/tests/main.test.js"];
+const jobs = ["lib/tests/build.test.js", "lib/tests/rows.test.js", "patches/phone-queue/tests/main.test.js"];
 let bad = 0;
 for (const j of jobs) {
     try {

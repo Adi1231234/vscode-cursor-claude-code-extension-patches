@@ -4,21 +4,30 @@
    signals found from the composer (lib/js/ccStore.js). Our desktop code runs
    in the preload's isolated world: same DOM, none of the page's JS objects. So
    this builds a store of the same shape from what the isolated world does see,
-   and the queue and the shared runtimes run on it unchanged:
-     sessionId   the app's id for the conversation (local_<uuid>)
-     busy        a signal: a run is going. From the app's own session record
-                 (isRunning, through the event stream) and, while the
-                 conversation is on screen, also the composer's Stop button,
-                 which the app shows the moment it takes a message. Either one
-                 holds it busy, so it falls only when the whole run is over
+   and the queue and the shared runtimes run on it unchanged. There are two
+   kinds of conversation, and the frames reach us two ways:
+     - one the app runs itself (local_<uuid>): its frames are on the app's own
+       event stream (ipc.js), and its run state is the app's session record
+       (isRunning); it can be sent to off screen (LocalSessions.sendMessage).
+     - one run elsewhere, over Remote Control (session_/cse_<uuid>, a CLI in
+       Adi Tools, the phone, another machine): its frames are NOT on that
+       stream. The page reads them from a WebSocket per conversation, and so
+       does remote-sub.js, from this isolated world - the same frames. It has
+       no off-screen send path here, so its queue sends through the composer
+       while it is on screen.
+   The fields the queue reads, filled from whichever source:
+     sessionId   the app's id for the conversation
+     busy        a signal: a run is going. From the Stop button the app shows
+                 while a conversation is on screen (the moment it takes a
+                 message until the whole run is over) and, for a local
+                 conversation, its isRunning too
      messages    a signal: the rows seen since the page opened (rows.js)
      processIncomingMessage(frame)  called for every frame, before the rows
                  change - the method the queue decorates to read
                  rate_limit_event and result
      interrupt() called on a press of the Stop button, before the app sees it
-     send(text)  only while the conversation is NOT on screen: the app's own
-                 LocalSessions.sendMessage. On screen the queue types into the
-                 composer, as the person would. */
+     send(text)  only while the conversation is NOT on screen, and only for a
+                 local one. On screen the queue types into the composer. */
 window.__ccdStore = window.__ccdStore || (function () {
     var LIMIT = 600, TRIM = 100;   /* the store's own bound on its list */
 
@@ -40,9 +49,13 @@ window.__ccdStore = window.__ccdStore || (function () {
         };
     }
 
-    /* Attachments are typed into the composer, which only the conversation on
-       screen has; such an item waits there (the queue retries it). */
+    /* Off screen, a conversation the app runs itself is sent through the app's
+       own LocalSessions.sendMessage; a Remote Control conversation (its CLI
+       elsewhere) has no such path here, so its item waits until it is on
+       screen and goes through the composer. Attachments always wait - they go
+       through the composer. */
     function sendOffScreen(s, text, files) {
+        if (window.__ccdRemote.isRemote(s.sessionId)) return Promise.reject(new Error("a Remote Control conversation sends once it is on screen"));
         if (files && files.length) return Promise.reject(new Error("attachments are sent once the conversation is on screen"));
         return window.__ccdIpc.invoke("sendMessage", s.sessionId, text).then(function () {
             s.running = true;   /* until the app says otherwise: never two sends in one gap */
@@ -74,9 +87,15 @@ window.__ccdStore = window.__ccdStore || (function () {
                 s.messages.value = list;
             }
         };
+        var remote = window.__ccdRemote.isRemote(id);
         s.setOnScreen(false);
         s.refresh();
-        if (window.__ccdIpc.ready) {
+        if (remote) {
+            /* Its frames come on its own subscription (remote-sub.js), on screen
+               or not, so stop / usage-limit / replies are read the same way. */
+            s.running = false; s.refresh();
+            s.stopSub = window.__ccdRemote.subscribe(id, s.frame);
+        } else if (window.__ccdIpc.ready) {
             window.__ccdIpc.invoke("getSession", id).then(function (rec) {
                 s.running = !!(rec && rec.isRunning);
                 s.refresh();

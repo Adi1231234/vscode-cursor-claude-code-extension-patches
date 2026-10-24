@@ -32,6 +32,7 @@ const RUNTIME = [
     "lib/js/ccWatch.js",
     "desktop/lib/js/ipc.js",
     "desktop/lib/js/rows.js",
+    "desktop/lib/js/remote-sub.js",
     "desktop/lib/js/store.js",
     "desktop/lib/js/session.js",
 ];
@@ -85,7 +86,8 @@ function build({ mainViewText, skip = [], stamp }) {
         main.push(...patchParts(dir, "main"));
     }
     const channel = webChannel(mainViewText || "");
-    let rendererText = renderer.join(SEP).split("__CCD_VERSION__").join(stamp);
+    const guarded = [fromRepo("desktop/lib/js/guard-open.js")].concat(renderer, [fromRepo("desktop/lib/js/guard-close.js")]);
+    let rendererText = guarded.join(SEP).split("__CCD_VERSION__").join(stamp);
     if (channel) rendererText = rendererText.split("__CCD_WEB_CHANNEL__").join(channel);
     return { renderer: rendererText, main: main.join(SEP), patches: names, channel };
 }
