@@ -1,10 +1,12 @@
 # prompt-queue renderer fragments, concatenated in this order by apply.ps1.
-# session/store are pure state; busy/compose read the DOM; enqueue/drive wire
-# behaviour; panel draws the list (and injects its own style on init).
+# session/store are pure state; busy/compose read the DOM; enqueue (Alt+Enter),
+# add-button and stop-park are the gestures; drive sends; panel draws the list.
 queue/session.js
 queue/busy.js
 queue/store.js
 queue/compose.js
 queue/enqueue.js
+queue/add-button.js
+queue/stop-park.js
 queue/drive.js
 queue/panel.js

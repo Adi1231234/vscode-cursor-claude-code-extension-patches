@@ -18,8 +18,15 @@ what the desktop Code tab loads (`claude.ai/epitaxy`).
   conversation. Pure state.
 - `compose.js` - the one place that touches the editor: read text, clear,
   insert, and send (clear + insert + click the app's own Send button).
-- `enqueue.js` - Enter while busy adds the draft to the queue (capture phase,
-  ahead of the editor; idle Enter is left alone).
+- `enqueue.js` - opt-in only, as in the VS Code queue: plain Enter and Send are
+  never touched. Alt+Enter (capture phase, ahead of the editor) commits the draft
+  through `__ccq.commitDraft`. An add while idle parks the queue first
+  (idle-hold), so you build a batch and release it with Resume.
+- `add-button.js` - the add-to-queue ghost button just left of Send, wearing the
+  class list and `data-cds` attributes of the app's own microphone button, with
+  a styled tooltip naming Alt+Enter. Click = the same commit.
+- `stop-park.js` - clicking Stop parks a non-empty queue: a stopped run is not a
+  finished one, and the busy signal alone cannot tell them apart.
 - `drive.js` - on each finish, if not paused and the composer is clear, send the
   next item; an item is dropped only once its send is confirmed by the next
   start, else retried.
@@ -31,9 +38,11 @@ what the desktop Code tab loads (`claude.ai/epitaxy`).
 
 Built against anchors confirmed live on `claude.ai/code` (the editor
 `code-prompt-input`, `code-prompt-send`, `code-prompt-stop`, `ChatComposer`).
-Offline checks pass (integrity, parse). The live behaviour - Enter-to-enqueue
-interception and the real send - is verified in the sandbox integration pass
-with a local environment, where a send is free and expected.
+Verified live in a real Chrome on `claude.ai/code`, the payload run in an
+isolated world as the preload runs it: the button lands before the send cell
+with the app's look, Alt+Enter and a click each queue the draft and clear the
+box, an idle add parks the queue, and nothing is sent. The drain (Resume, and
+an add while busy going out after the turn) is unchanged and not yet driven live.
 
 ## Not yet ported from the webview queue
 
