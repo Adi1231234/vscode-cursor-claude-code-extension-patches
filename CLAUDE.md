@@ -387,6 +387,19 @@ Need another minified name? Detect it once in `Extension.ps1` and add it to `$Ct
   `patches/prompt-queue/saved/` (a queue saved here, loaded in the next chat)
   possible. It survives a real window reload too, which is how the queue's own
   per-session persistence has always worked.
+- **A link that opens inside the editor is the editor's choice, not ours.** Every
+  link in the panel (an answer's markdown, the Remote Control message) is a plain
+  `<a>` that the webview shell hands to the editor's opener. VS Code then opens
+  http(s) links to `localhost`, `*.localhost`, `127.0.0.1`, `[::1]`, `0.0.0.0` or
+  `[::]` in its own browser tab whenever `workbench.browser.openLocalhostLinks`
+  is on, and sends every other link to the OS browser. The default is off, but
+  it is an A/B experiment setting and some installs get it on without any
+  settings entry (cached in `memento/experiment.service.memento` in
+  `globalStorage/state.vscdb`). Measured 2026-11-05 in the lab with trusted
+  clicks and a hook on the main process's `shell.openExternal`: on, a
+  `127.0.0.1` link became an editor tab; off, it went to the browser. The fix is
+  `"workbench.browser.openLocalhostLinks": false` in the user's settings (per
+  profile), not a patch.
 - **Never wrap `window.acquireVsCodeApi`.** Reassigning it (to intercept the VS Code messaging api) silently breaks the whole Cursor webview - the panel renders blank. Read what you need from the session object or the webview URL (`?session=<uuid>` carries the conversation id) instead.
 - **A patch's two halves do not load at the same moment, and the host half is
   the one that goes stale.** `webview/index.js` is read when a panel opens, so
